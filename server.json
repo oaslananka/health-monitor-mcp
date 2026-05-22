@@ -1,0 +1,58 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.oaslananka/mcp-health-monitor",
+  "title": "MCP Health Monitor",
+  "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipeline status",
+  "repository": {
+    "url": "https://github.com/oaslananka/mcp-health-monitor",
+    "source": "github"
+  },
+  "version": "1.0.3",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "mcp-health-monitor",
+      "version": "1.0.3",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "HEALTH_MONITOR_DB",
+          "description": "Custom path for the SQLite database",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "HEALTH_MONITOR_AUTO_CHECK",
+          "description": "Set to '1' to enable background scheduled checks",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "HEALTH_MONITOR_ENCRYPTION_KEY",
+          "description": "Key material used to encrypt Azure DevOps PAT tokens",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "HEALTH_MONITOR_RETENTION_DAYS",
+          "description": "Number of days to retain health check history",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "HEALTH_MONITOR_MAX_CONCURRENCY",
+          "description": "Maximum number of concurrent scheduled checks",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

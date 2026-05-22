@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  setup:
+    cmds:
+      - corepack enable
+      - corepack prepare pnpm@11.0.9 --activate
+      - pnpm install --frozen-lockfile
+  ci:
+    cmds:
+      - pnpm run ci
+  build:
+    cmds:
+      - pnpm run build
+  test:
+    cmds:
+      - pnpm test

@@ -1,0 +1,101 @@
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+
+function readJson(path) {
+  return JSON.parse(fs.readFileSync(path, 'utf8'));
+}
+
+function resolveCommand(command) {
+  if (process.platform === 'win32' && command === 'npm') {
+    return 'npm.cmd';
+  }
+
+  return command;
+}
+
+function run(command, args) {
+  const result = spawnSync(resolveCommand(command), args, { encoding: 'utf8' });
+
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout?.trim() ?? '',
+    stderr: result.stderr?.trim() ?? result.error?.message ?? ''
+  };
+}
+
+function npmVersionExists(name, version) {
+  const result = run('npm', ['view', `${name}@${version}`, 'version', '--json']);
+
+  if (result.status !== 0) {
+    return false;
+  }
+
+  try {
+    return JSON.parse(result.stdout) === version;
+  } catch {
+    return result.stdout.replace(/^"|"$/g, '') === version;
+  }
+}
+
+const packageJson = readJson('package.json');
+const mcpJson = readJson('mcp.json');
+const serverJson = readJson('server.json');
+const releaseManifest = fs.existsSync('.release-please-manifest.json')
+  ? readJson('.release-please-manifest.json')
+  : {};
+const tagName = `v${packageJson.version}`;
+const blockers = [];
+const states = [];
+
+if (packageJson.version !== mcpJson.version || packageJson.version !== serverJson.version) {
+  blockers.push('package, mcp.json, and server.json versions are not synchronized');
+}
+
+if (releaseManifest['.'] !== packageJson.version) {
+  blockers.push('release-please manifest is not synchronized with package version');
+}
+
+if (packageJson.mcpName !== serverJson.name || packageJson.mcpName !== mcpJson.mcpName) {
+  blockers.push('MCP identity metadata is not synchronized');
+}
+
+const tagLookup = run('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tagName}`]);
+if (tagLookup.status === 0) {
+  states.push('tag-created');
+}
+
+const gitStatus = run('git', ['status', '--porcelain']);
+const npmExists = npmVersionExists(packageJson.name, packageJson.version);
+
+if (npmExists) {
+  blockers.push(`npm package ${packageJson.name}@${packageJson.version} already exists`);
+  states.push('npm-published');
+}
+
+if (!states.length) {
+  states.push('no-release');
+}
+
+if (blockers.length) {
+  states.push('blocked');
+}
+
+const result = {
+  package: packageJson.name,
+  version: packageJson.version,
+  tag_name: tagName,
+  states,
+  safe_to_publish: blockers.length === 0 && gitStatus.stdout.length === 0 && !npmExists,
+  blockers,
+  next_safe_command: blockers.length
+    ? 'Resolve blockers before publishing.'
+    : 'Open or merge the release-please release pull request; do not publish from a local machine.',
+  surfaces: {
+    npm: true,
+    mcp_registry: true,
+    docker_ghcr: false,
+    github_release: true
+  }
+};
+
+console.log(JSON.stringify(result, null, 2));

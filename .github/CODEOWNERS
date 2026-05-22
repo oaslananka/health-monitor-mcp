@@ -1,0 +1,30 @@
+# CODEOWNERS — mcp-health-monitor
+# GitHub automatically requests review from these owners on every PR.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @oaslananka
+
+# Core monitoring logic — extra scrutiny
+src/checker.ts       @oaslananka
+src/scheduler.ts     @oaslananka
+src/alerts.ts        @oaslananka
+src/webhooks.ts      @oaslananka
+
+# Database schema changes — review carefully
+src/migrations.ts    @oaslananka
+src/db.ts            @oaslananka
+
+# CI/CD pipeline changes
+.azure/              @oaslananka
+.github/workflows/  @oaslananka
+azure-pipelines.yml  @oaslananka
+
+# Release, package, and security metadata
+package.json                     @oaslananka
+pnpm-lock.yaml                   @oaslananka
+release-please-config.json       @oaslananka
+.release-please-manifest.json    @oaslananka
+server.json                      @oaslananka
+mcp.json                         @oaslananka
+SECURITY.md                      @oaslananka

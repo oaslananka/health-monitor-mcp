@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release-please:
+    name: Release Please
+    if: github.repository == 'oaslananka/mcp-health-monitor'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      version: ${{ steps.release.outputs.version }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@8b8fd2cc23b2e18957157a9d923d75aa0c6f6ad5
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  release-assets:
+    name: Release Assets
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.15.0'
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci:check
+      - run: pnpm pack --json > pack.json
+      - run: |
+          TARBALL="$(node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('pack.json','utf8')); console.log(p[0].filename)")"
+          sha256sum "$TARBALL" > SHA256SUMS
+          echo "tarball=$TARBALL" >> "$GITHUB_ENV"
+
+      - uses: actions/attest-build-provenance@b3e506e8c389afc651c5bacf2b8f2a1ea0557215
+        with:
+          subject-path: ${{ env.tarball }}
+
+      - name: Attach release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ needs.release-please.outputs.tag_name }}" "$tarball" SHA256SUMS pack.json --clobber
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: release-assets-${{ needs.release-please.outputs.version }}
+          path: |
+            *.tgz
+            SHA256SUMS
+            pack.json

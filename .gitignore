@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.mcp-health-monitor/
+coverage/
+.TEMP/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npmrc.local
+.env
+.env.*
+*.tgz
+review-thread-summary.json
+release-state.json

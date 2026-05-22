@@ -1,0 +1,55 @@
+name: Publish npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      approval_phrase:
+        description: Exact approval phrase required for production publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    name: Publish npm
+    if: github.repository == 'oaslananka/mcp-health-monitor' && inputs.approval_phrase == 'APPROVE_RELEASE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: npm-production
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.15.0'
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci
+
+      - name: Verify release state
+        run: |
+          node scripts/release-state.mjs > release-state.json
+          node -e "const s=require('./release-state.json'); if (!s.safe_to_publish) { console.error(JSON.stringify(s, null, 2)); process.exit(1); }"
+
+      - name: Publish package
+        run: npm publish --access public --provenance

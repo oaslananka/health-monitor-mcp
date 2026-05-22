@@ -1,0 +1,54 @@
+{
+  "name": "mcp-health-monitor",
+  "version": "1.0.3",
+  "mcpName": "io.github.oaslananka/mcp-health-monitor",
+  "description": "Monitor your MCP servers: health checks, uptime, response times, and Azure DevOps pipeline status",
+  "transport": "stdio",
+  "command": "npx",
+  "args": [
+    "-y",
+    "mcp-health-monitor"
+  ],
+  "env": {
+    "HEALTH_MONITOR_DB": {
+      "description": "Custom path for the SQLite database (optional)",
+      "required": false,
+      "default": "~/.mcp-health-monitor/health.db"
+    },
+    "HEALTH_MONITOR_AUTO_CHECK": {
+      "description": "Set to '1' to enable background scheduled checks",
+      "required": false,
+      "default": "0"
+    },
+    "HEALTH_MONITOR_ENCRYPTION_KEY": {
+      "description": "Key material used to encrypt Azure DevOps PAT tokens",
+      "required": false
+    },
+    "HEALTH_MONITOR_RETENTION_DAYS": {
+      "description": "Number of days to retain health check history",
+      "required": false,
+      "default": "30"
+    },
+    "HEALTH_MONITOR_MAX_CONCURRENCY": {
+      "description": "Maximum number of concurrent scheduled checks",
+      "required": false,
+      "default": "5"
+    }
+  },
+  "tools": [
+    "register_server",
+    "check_server",
+    "check_all",
+    "get_uptime",
+    "get_dashboard",
+    "get_report",
+    "list_servers",
+    "unregister_server",
+    "set_alert",
+    "get_monitor_stats",
+    "register_azure_pipelines",
+    "check_pipeline_status",
+    "get_pipeline_logs",
+    "check_all_projects"
+  ]
+}

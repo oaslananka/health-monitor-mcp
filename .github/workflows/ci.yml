@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  validate:
+    name: Validate
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.15.0'
+          cache: pnpm
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci:check
+      - run: pnpm run security
+      - run: pnpm run check:metadata
+      - run: pnpm run check:package
+      - run: pnpm run release:dry-run
+
+  workflow-security:
+    name: Workflow Security
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        run: |
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
+      - name: Run zizmor
+        run: |
+          python3 -m pip install --user zizmor==1.24.1
+          python3 -m zizmor --offline --min-severity low .github/workflows
+
+      - name: Run Gitleaks
+        run: |
+          go run github.com/gitleaks/gitleaks/v8@v8.30.0 detect --no-git --redact --source .
+
+  docker:
+    name: Docker Build
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Build image
+        run: docker build -t mcp-health-monitor:ci .
+
+      - name: CLI smoke
+        run: docker run --rm mcp-health-monitor:ci node dist/mcp.js --version
+
+  codeql:
+    name: CodeQL
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@3ce22a6e336a7fcc318bc58ae1986395bdc83ba7
+        with:
+          languages: javascript-typescript
+
+      - uses: github/codeql-action/analyze@3ce22a6e336a7fcc318bc58ae1986395bdc83ba7

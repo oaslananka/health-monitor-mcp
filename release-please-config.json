@@ -1,0 +1,9 @@
+{
+  "release-type": "node",
+  "packages": {
+    ".": {
+      "package-name": "mcp-health-monitor",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

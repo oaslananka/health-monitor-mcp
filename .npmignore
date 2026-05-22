@@ -1,0 +1,14 @@
+src/
+test/
+.azure/
+.github/
+docs/
+.vscode/
+jest.config.cjs
+eslint.config.mjs
+tsconfig*.json
+AGENTS.md
+.prettierrc.json
+.editorconfig
+*.md.bak
+.TEMP/

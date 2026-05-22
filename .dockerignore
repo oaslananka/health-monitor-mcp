@@ -1,0 +1,17 @@
+.git
+.github
+.azure
+node_modules
+dist
+npm-debug.log
+coverage
+.TEMP
+.env
+.env.*
+.npmrc
+package-lock.json
+*.log
+*.tgz
+*.vsix
+review-thread-summary.json
+release-state.json

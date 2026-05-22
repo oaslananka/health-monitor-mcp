@@ -1,0 +1,164 @@
+import type Database from 'better-sqlite3';
+
+type Migration = {
+  version: number;
+  description: string;
+  up: (db: Database.Database) => void;
+};
+
+function addColumnIfMissing(
+  db: Database.Database,
+  tableName: string,
+  columnName: string,
+  definition: string
+): void {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+
+  if (!columns.some((column) => column.name === columnName)) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  }
+}
+
+const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    description: 'initial schema',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS servers (
+          name TEXT PRIMARY KEY,
+          type TEXT NOT NULL,
+          url TEXT,
+          command TEXT,
+          args TEXT DEFAULT '[]',
+          tags TEXT DEFAULT '[]',
+          alert_on_down INTEGER DEFAULT 1,
+          check_interval_minutes INTEGER DEFAULT 5,
+          created_at INTEGER NOT NULL,
+          last_checked INTEGER,
+          last_status TEXT DEFAULT 'unknown',
+          last_response_time_ms INTEGER,
+          consecutive_failures INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS health_checks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          server_name TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          response_time_ms INTEGER,
+          tool_count INTEGER,
+          error_message TEXT,
+          tools_snapshot TEXT,
+          FOREIGN KEY (server_name) REFERENCES servers(name) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS alerts (
+          server_name TEXT PRIMARY KEY,
+          max_response_time_ms INTEGER,
+          min_uptime_percent REAL,
+          consecutive_failures_before_alert INTEGER DEFAULT 3,
+          FOREIGN KEY (server_name) REFERENCES servers(name) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS azure_pipelines (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          group_name TEXT NOT NULL,
+          organization TEXT NOT NULL,
+          project TEXT NOT NULL,
+          pipeline_name TEXT NOT NULL,
+          pipeline_id INTEGER,
+          pat_token_encrypted TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          UNIQUE(group_name, pipeline_name)
+        );
+
+        CREATE TABLE IF NOT EXISTS pipeline_runs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          group_name TEXT NOT NULL,
+          pipeline_name TEXT NOT NULL,
+          build_id INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          result TEXT,
+          build_number TEXT,
+          start_time TEXT,
+          finish_time TEXT,
+          recorded_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_health_server_time
+          ON health_checks(server_name, timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_health_timestamp
+          ON health_checks(timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_pipeline_runs_group_time
+          ON pipeline_runs(group_name, recorded_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_pipeline_runs_build
+          ON pipeline_runs(build_id DESC);
+      `);
+    }
+  },
+  {
+    version: 2,
+    description: 'add response time analytics support',
+    up: (db) => {
+      addColumnIfMissing(db, 'servers', 'response_time_updated_at', 'INTEGER');
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_health_server_time_response
+          ON health_checks(server_name, timestamp DESC, response_time_ms);
+      `);
+    }
+  },
+  {
+    version: 3,
+    description: 'dedupe pipeline runs by stable build key',
+    up: (db) => {
+      db.exec(`
+        DELETE FROM pipeline_runs
+        WHERE id NOT IN (
+          SELECT MAX(id)
+          FROM pipeline_runs
+          GROUP BY group_name, pipeline_name, build_id
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_pipeline_runs_stable_key
+          ON pipeline_runs(group_name, pipeline_name, build_id);
+      `);
+    }
+  }
+];
+
+export function runMigrations(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version INTEGER PRIMARY KEY,
+      description TEXT NOT NULL,
+      applied_at INTEGER NOT NULL
+    )
+  `);
+
+  const appliedVersions = new Set(
+    (
+      db.prepare('SELECT version FROM schema_migrations ORDER BY version ASC').all() as Array<{
+        version: number;
+      }>
+    ).map((row) => row.version)
+  );
+
+  for (const migration of MIGRATIONS) {
+    if (appliedVersions.has(migration.version)) {
+      continue;
+    }
+
+    const apply = db.transaction(() => {
+      migration.up(db);
+      db.prepare(
+        `
+          INSERT INTO schema_migrations (version, description, applied_at)
+          VALUES (?, ?, ?)
+        `
+      ).run(migration.version, migration.description, Date.now());
+    });
+
+    apply();
+  }
+}

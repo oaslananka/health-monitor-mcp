@@ -1,0 +1,116 @@
+{
+  "name": "mcp-health-monitor",
+  "version": "1.0.3",
+  "description": "MCP server for monitoring other MCP servers — track health, uptime, tool errors, response times, and Azure DevOps pipeline status",
+  "type": "module",
+  "packageManager": "pnpm@11.0.9",
+  "main": "./dist/mcp.js",
+  "types": "./dist/mcp.d.ts",
+  "mcpName": "io.github.oaslananka/mcp-health-monitor",
+  "bin": {
+    "mcp-health-monitor": "dist/mcp.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/mcp.js",
+      "types": "./dist/mcp.d.ts"
+    },
+    "./app": {
+      "import": "./dist/app.js",
+      "types": "./dist/app.d.ts"
+    },
+    "./checker": {
+      "import": "./dist/checker.js",
+      "types": "./dist/checker.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{ recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "build:clean": "pnpm run build",
+    "start": "node dist/mcp.js",
+    "start:http": "node dist/server-http.js",
+    "dev": "node --loader ts-node/esm src/mcp.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:test": "eslint \"test/**/*.ts\"",
+    "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=test[/\\\\]unit[/\\\\]",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=test[/\\\\]integration[/\\\\]",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "security": "pnpm audit --audit-level moderate",
+    "check:metadata": "node scripts/validate-mcp-metadata.mjs",
+    "check:package": "pnpm pack --dry-run",
+    "release:dry-run": "node scripts/release-state.mjs --dry-run",
+    "ci:check": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm test && pnpm run test:integration",
+    "ci": "pnpm run ci:check && pnpm run security && pnpm run check:metadata && pnpm run check:package && pnpm run release:dry-run",
+    "prepare": "pnpm run build",
+    "prepublishOnly": "node scripts/prepublish-check.mjs"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=11"
+  },
+  "homepage": "https://github.com/oaslananka/mcp-health-monitor",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oaslananka/mcp-health-monitor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/oaslananka/mcp-health-monitor/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "monitoring",
+    "health-check",
+    "uptime",
+    "azure-devops",
+    "devops",
+    "ai",
+    "claude",
+    "llm",
+    "mcp-server",
+    "sqlite",
+    "observability"
+  ],
+  "author": "Osman Aslan <oaslananka@gmail.com>",
+  "license": "MIT",
+  "files": [
+    "dist/",
+    "mcp.json",
+    "server.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.27.1",
+    "better-sqlite3": "12.8.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/jest": "29.5.14",
+    "@types/node": "20.19.0",
+    "@typescript-eslint/eslint-plugin": "8.30.0",
+    "@typescript-eslint/parser": "8.30.0",
+    "eslint": "9.39.4",
+    "globals": "17.4.0",
+    "jest": "29.7.0",
+    "prettier": "3.5.3",
+    "ts-jest": "29.3.2",
+    "ts-node": "10.9.2",
+    "typescript": "5.8.3"
+  }
+}

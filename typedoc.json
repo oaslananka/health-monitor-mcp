@@ -1,0 +1,23 @@
+{
+  "entryPoints": [
+    "src/mcp.ts",
+    "src/app.ts",
+    "src/checker.ts",
+    "src/types.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "docs/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "name": "mcp-health-monitor",
+  "includeVersion": true,
+  "skipErrorChecking": false,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "cleanOutputDir": true,
+  "githubPages": false,
+  "hideGenerator": true,
+  "sort": ["source-order"]
+}

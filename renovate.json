@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "schedule": ["before 6am on monday"],
+  "rangeStrategy": "pin",
+  "automerge": false,
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "development tooling"
+    },
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "runtime dependencies"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "addLabels": ["dependency:major"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["workflows-only"]
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "pinDigests": true
+    }
+  ]
+}
