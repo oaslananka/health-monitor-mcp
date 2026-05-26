@@ -35,9 +35,11 @@ Verified against the npm registry on 2026-04-07:
 | `@modelcontextprotocol/sdk` | `1.29.0` |
 | `better-sqlite3` | `12.8.0` |
 | `node-fetch` | `3.3.2` |
+| `qs` | `6.15.2` |
 | `zod` | `4.3.6` |
 | `typescript` | `6.0.2` |
 | `jest` | `30.3.0` |
+| `@jest/globals` | `30.4.1` |
 | `ts-jest` | `29.4.9` |
 | `eslint` | `10.2.0` |
 | `@typescript-eslint/parser` | `8.58.0` |
@@ -58,9 +60,11 @@ Newer registry releases exist, but v1.0 compatibility for this repo intentionall
 | ------- | ------- | ------ |
 | `@modelcontextprotocol/sdk` | `1.27.1` | Keep MCP client/server behavior aligned with the current v1.0 codebase. |
 | `better-sqlite3` | `12.8.0` | Stable native SQLite binding validated for Node 24 environments while retaining the package's Node >=20 support range. |
+| `qs` | `6.15.2` | Security override for the transitive Express dependency path until upstream lock resolution no longer selects vulnerable `qs` releases. |
 | `zod` | `3.25.76` | Preserve the existing schema-first API without v4 breaking changes while avoiding the incomplete `3.25.0` package payload. |
 | `typescript` | `5.8.3` | Modern strict TypeScript without adopting the v6 toolchain yet. |
 | `jest` | `29.7.0` | Stay on the established Jest major used by the repo. |
+| `@jest/globals` | `29.7.0` | Direct dependency required for explicit ESM Jest imports under pnpm's strict dependency layout. |
 | `ts-jest` | `29.3.2` | Compatible with Jest 29 and ESM TypeScript tests. |
 | `eslint` | `9.39.4` | Patched ESLint 9 line that resolves the current plugin-kit advisory without changing majors. |
 | `@typescript-eslint/parser` | `8.30.0` | Compatible with ESLint 9 and current TS 5.x usage. |

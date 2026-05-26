@@ -178,9 +178,11 @@ describe('azure-devops', () => {
         } as Response;
       }
 
-      if (
-        fetchMock.mock.calls.filter(([requestedUrl]) => String(requestedUrl) === value).length === 1
-      ) {
+      const matchingLogRequests = fetchMock.mock.calls.filter(
+        ([requestedUrl]: Parameters<typeof fetch>) => String(requestedUrl) === value
+      );
+
+      if (matchingLogRequests.length === 1) {
         return {
           ok: false,
           status: 503,
