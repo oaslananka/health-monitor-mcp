@@ -13,23 +13,12 @@ function resolveCommand(command) {
   return command;
 }
 
-function quoteArg(arg) {
-  if (/^[A-Za-z0-9_./:@=-]+$/.test(arg)) {
-    return arg;
-  }
-
-  return `"${arg.replace(/"/g, '\\"')}"`;
-}
-
 function runStep(label, command, args) {
   console.log(`=== ${label} ===`);
   const resolvedCommand = resolveCommand(command);
   const result =
     process.platform === 'win32'
-      ? spawnSync([resolvedCommand, ...args].map(quoteArg).join(' '), {
-          stdio: 'inherit',
-          shell: true
-        })
+      ? spawnSync('cmd.exe', ['/d', '/s', '/c', resolvedCommand, ...args], { stdio: 'inherit' })
       : spawnSync(resolvedCommand, args, { stdio: 'inherit' });
 
   if (result.error) {
