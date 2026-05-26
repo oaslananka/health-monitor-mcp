@@ -41,6 +41,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ci:check
       - run: pnpm run security
+      - name: Install REUSE
+        run: python3 -m pip install --user reuse==6.2.0
+      - run: pnpm run security:supply-chain
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: supply-chain-evidence
+          path: security-evidence/
       - run: pnpm run check:metadata
       - run: pnpm run check:package
       - run: pnpm run release:dry-run

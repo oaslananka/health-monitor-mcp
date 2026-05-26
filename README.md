@@ -6,6 +6,7 @@
 [![npm version](https://img.shields.io/npm/v/mcp-health-monitor)](https://www.npmjs.com/package/mcp-health-monitor)
 [![npm downloads](https://img.shields.io/npm/dm/mcp-health-monitor)](https://www.npmjs.com/package/mcp-health-monitor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/oaslananka/health-monitor-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/oaslananka/health-monitor-mcp)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 
 ## What This Does

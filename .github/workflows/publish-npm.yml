@@ -44,6 +44,8 @@ jobs:
           corepack prepare pnpm@11.0.9 --activate
 
       - run: pnpm install --frozen-lockfile
+      - name: Install REUSE
+        run: python3 -m pip install --user reuse==6.2.0
       - run: pnpm run ci
 
       - name: Verify release state

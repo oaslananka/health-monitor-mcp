@@ -40,3 +40,29 @@ The default HTTP bind host is `127.0.0.1`. Binding to a non-loopback host requir
 Raw `stdio` process execution is disabled in HTTP mode unless the deployment is explicitly
 trusted local and sets `HEALTH_MONITOR_ALLOW_STDIO=1`. Remote connector
 profiles always block raw `stdio` execution.
+
+## Supply-Chain Evidence
+
+`pnpm run security:supply-chain` writes ignored evidence under `security-evidence/`:
+
+- `sbom.cyclonedx.json` from `pnpm sbom --prod --sbom-format cyclonedx`
+- `sbom.spdx.json` from `pnpm sbom --prod --sbom-format spdx`
+- `licenses.json` from `pnpm licenses list --prod --json`
+
+The gate also enforces a production dependency license allowlist of MIT, ISC, Apache-2.0,
+BSD-2-Clause, and BSD-3-Clause, then runs `reuse lint` for repository-level SPDX/REUSE
+compliance. CI uploads the evidence directory as a workflow artifact. Release jobs attach SBOMs
+to GitHub Releases and verify the uploaded tarball checksum by downloading the release assets back
+from GitHub.
+
+Install REUSE locally before running the full CI script:
+
+```bash
+python -m pip install --user reuse==6.2.0
+pnpm run ci
+```
+
+```powershell
+python -m pip install --user reuse==6.2.0
+pnpm run ci
+```

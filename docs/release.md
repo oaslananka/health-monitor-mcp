@@ -30,6 +30,16 @@ Production npm publishing is guarded by `.github/workflows/publish-npm.yml`:
   tracked worktree, an existing release tag for the package version, and an unpublished npm version
 - npm trusted publishing/provenance through GitHub OIDC
 
+Release artifacts include:
+
+- npm tarball
+- `SHA256SUMS`
+- `pack.json`
+- CycloneDX and SPDX SBOMs
+
+The release workflow downloads the uploaded assets back from GitHub and verifies the tarball
+checksum before uploading the same evidence directory as a workflow artifact.
+
 Configure the npm trusted publisher for package `mcp-health-monitor` with:
 
 - Repository: `oaslananka/health-monitor-mcp`
