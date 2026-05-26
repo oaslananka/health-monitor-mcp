@@ -14,12 +14,11 @@ The first public npm package target is `health-monitor-mcp@1.0.0`; do not publis
 `mcp-health-monitor` or any `1.0.5` artifact as the first public registry release. Keep
 `mcp-health-monitor` only as a backwards-compatible CLI alias.
 
-Release Please creates component-prefixed tags such as `health-monitor-mcp-v1.0.0`. The
-release config pins the first generated release PR with `release-as: 1.0.0`; remove that override
-in the first post-release maintenance PR after `health-monitor-mcp-v1.0.0` is tagged. The release
-workflow also accepts `workflow_dispatch` inputs for `tag_name` and `version` so maintainers can
-rerun asset generation for an existing GitHub Release if a previous asset upload failed after the
-tag and release were already created.
+Release Please creates component-prefixed tags such as `health-monitor-mcp-v1.0.0`. The first
+generated release PR was pinned to `1.0.0`; do not keep a persistent `release-as` override after
+that tag exists. The release workflow also accepts `workflow_dispatch` inputs for `tag_name` and
+`version` so maintainers can rerun asset generation for an existing GitHub Release if a previous
+asset upload failed after the tag and release were already created.
 
 ## Publish Gate
 
