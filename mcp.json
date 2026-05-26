@@ -1,13 +1,13 @@
 {
-  "name": "mcp-health-monitor",
-  "version": "1.0.5",
-  "mcpName": "io.github.oaslananka/mcp-health-monitor",
+  "name": "health-monitor-mcp",
+  "version": "1.0.0",
+  "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor your MCP servers: health checks, uptime, response times, and Azure DevOps pipeline status",
   "transport": "stdio",
   "command": "npx",
   "args": [
     "-y",
-    "mcp-health-monitor"
+    "health-monitor-mcp"
   ],
   "env": {
     "HEALTH_MONITOR_DB": {

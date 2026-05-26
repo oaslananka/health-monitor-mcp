@@ -10,12 +10,11 @@ Commits and synchronized through:
 - `CHANGELOG.md`
 
 Manual version inputs, manual tags, and local package publishing are not part of the release path.
-The npm package is not publicly installable as of 2026-05-26 because the package was unpublished
-before the current release line. Keep user-facing install docs pointed at the verified GitHub
-Release tarball until `npm view mcp-health-monitor version` succeeds for the current package
-version.
+The first public npm package target is `health-monitor-mcp@1.0.0`; do not publish
+`mcp-health-monitor` or any `1.0.5` artifact as the first public registry release. Keep
+`mcp-health-monitor` only as a backwards-compatible CLI alias.
 
-Release Please creates component-prefixed tags such as `mcp-health-monitor-v1.0.5`. The
+Release Please creates component-prefixed tags such as `health-monitor-mcp-v1.0.0`. The
 release workflow also accepts `workflow_dispatch` inputs for `tag_name` and `version` so maintainers
 can rerun asset generation for an existing GitHub Release if a previous asset upload failed after
 the tag and release were already created.
@@ -39,13 +38,13 @@ Release artifacts include:
 - `pack.json`
 - CycloneDX and SPDX SBOMs
 
-The v1.0.5 GitHub Release currently includes `mcp-health-monitor-1.0.5.tgz`, `SHA256SUMS`, and
-`pack.json`.
+The first public GitHub Release must include `health-monitor-mcp-1.0.0.tgz`, `SHA256SUMS`,
+`pack.json`, and SBOM assets.
 
 The release workflow downloads the uploaded assets back from GitHub and verifies the tarball
 checksum before uploading the same evidence directory as a workflow artifact.
 
-Configure the npm trusted publisher for package `mcp-health-monitor` with:
+Configure the npm trusted publisher for package `health-monitor-mcp` with:
 
 - Repository: `oaslananka/health-monitor-mcp`
 - Workflow: `.github/workflows/publish-npm.yml`

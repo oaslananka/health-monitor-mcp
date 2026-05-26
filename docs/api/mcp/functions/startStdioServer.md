@@ -1,8 +1,8 @@
-[**mcp-health-monitor v1.0.5**](../../README.md)
+[**health-monitor-mcp v1.0.0**](../../README.md)
 
 ***
 
-[mcp-health-monitor](../../README.md) / [mcp](../README.md) / startStdioServer
+[health-monitor-mcp](../../README.md) / [mcp](../README.md) / startStdioServer
 
 # Function: startStdioServer()
 

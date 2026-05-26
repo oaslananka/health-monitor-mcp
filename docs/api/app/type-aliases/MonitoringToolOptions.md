@@ -1,8 +1,8 @@
-[**mcp-health-monitor v1.0.5**](../../README.md)
+[**health-monitor-mcp v1.0.0**](../../README.md)
 
 ***
 
-[mcp-health-monitor](../../README.md) / [app](../README.md) / MonitoringToolOptions
+[health-monitor-mcp](../../README.md) / [app](../README.md) / MonitoringToolOptions
 
 # Type Alias: MonitoringToolOptions
 

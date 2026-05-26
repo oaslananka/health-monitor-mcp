@@ -1,8 +1,8 @@
-[**mcp-health-monitor v1.0.5**](../../README.md)
+[**health-monitor-mcp v1.0.0**](../../README.md)
 
 ***
 
-[mcp-health-monitor](../../README.md) / [types](../README.md) / RegisterAzurePipelineInput
+[health-monitor-mcp](../../README.md) / [types](../README.md) / RegisterAzurePipelineInput
 
 # Type Alias: RegisterAzurePipelineInput
 

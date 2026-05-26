@@ -24,8 +24,8 @@ body:
     id: version
     attributes:
       label: Package version
-      description: Use `mcp-health-monitor --version`, `npm ls mcp-health-monitor`, or the release tag.
-      placeholder: 1.0.5
+      description: Use `health-monitor-mcp --version`, `npm ls health-monitor-mcp`, or the release tag.
+      placeholder: 1.0.0
     validations:
       required: true
   - type: dropdown

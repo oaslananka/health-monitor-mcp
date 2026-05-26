@@ -17,7 +17,7 @@ const serverJson = readJson('server.json');
 const releaseManifest = readJson('.release-please-manifest.json');
 const errors = [];
 
-if (packageJson.name !== 'mcp-health-monitor') {
+if (packageJson.name !== 'health-monitor-mcp') {
   errors.push(`package name mismatch: ${packageJson.name}`);
 }
 

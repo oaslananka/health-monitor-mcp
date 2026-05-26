@@ -13,5 +13,5 @@ function resolveVersion(): string {
   }
 }
 
-export const MONITOR_NAME = 'mcp-health-monitor';
+export const MONITOR_NAME = 'health-monitor-mcp';
 export const MONITOR_VERSION = resolveVersion();

@@ -1,4 +1,4 @@
-# mcp-health-monitor
+# health-monitor-mcp
 
 > MCP server health monitoring, uptime tracking, Azure DevOps pipeline status,
 > and alert evaluation through natural-language tools.
@@ -11,31 +11,31 @@
 
 ## What This Does
 
-`mcp-health-monitor` keeps a registry of the MCP servers you care about, performs real MCP
+`health-monitor-mcp` keeps a registry of the MCP servers you care about, performs real MCP
 handshakes against them, records health history in SQLite, and reports uptime, latency, and
 alert thresholds back through MCP tools. It also tracks Azure DevOps pipelines so app health
 and delivery health can be checked from the same place.
 
 ## Quick Start
 
-The verified v1.0.5 package artifact is available from GitHub Releases. Public npm installation is
-blocked until npm package ownership and trusted publishing are completed.
+The first public npm release target is `health-monitor-mcp@1.0.0`. If npm still returns `E404`,
+the publish gate has not completed yet.
 
 ```bash
-npm install -g https://github.com/oaslananka/health-monitor-mcp/releases/download/mcp-health-monitor-v1.0.5/mcp-health-monitor-1.0.5.tgz
-mcp-health-monitor --version
+npm install -g health-monitor-mcp
+health-monitor-mcp --version
 ```
 
-Example desktop MCP client entry after installing the release tarball:
+Example desktop MCP client entry after installing the package:
 
 ```json
 {
-  "name": "mcp-health-monitor",
-  "version": "1.0.5",
-  "mcpName": "io.github.oaslananka/mcp-health-monitor",
+  "name": "health-monitor-mcp",
+  "version": "1.0.0",
+  "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipelines",
   "transport": "stdio",
-  "command": "mcp-health-monitor",
+  "command": "health-monitor-mcp",
   "args": []
 }
 ```
@@ -64,7 +64,7 @@ Example desktop MCP client entry after installing the release tarball:
 Register a pipeline group with an org, project, pipeline names, and a PAT:
 
 ```text
-register_azure_pipelines name="mcp-health-monitor" organization="oaslananka" project="open-source" pipeline_names=["mcp-health-monitor CI","mcp-health-monitor Publish"] pat_token="..."
+register_azure_pipelines name="health-monitor-mcp" organization="oaslananka" project="open-source" pipeline_names=["Health Monitor CI","Publish npm"] pat_token="..."
 ```
 
 PAT tokens are encrypted in the local SQLite database with AES-256-GCM when
@@ -107,8 +107,8 @@ startup.
 Build and run:
 
 ```bash
-docker build -t mcp-health-monitor .
-docker run --rm mcp-health-monitor node dist/mcp.js --version
+docker build -t health-monitor-mcp .
+docker run --rm health-monitor-mcp node dist/mcp.js --version
 ```
 
 HTTP mode binds to loopback by default. For a remote HTTP deployment, require a bearer token and
@@ -120,7 +120,7 @@ docker run --rm \
   -e HOST=0.0.0.0 \
   -e HEALTH_MONITOR_PROFILE=remote-safe \
   -e HEALTH_MONITOR_HTTP_TOKEN=change-me \
-  mcp-health-monitor
+  health-monitor-mcp
 curl -X POST \
   --oauth2-bearer "$HEALTH_MONITOR_HTTP_TOKEN" \
   -H "Content-Type: application/json" \

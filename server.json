@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.oaslananka/mcp-health-monitor",
+  "name": "io.github.oaslananka/health-monitor-mcp",
   "title": "MCP Health Monitor",
   "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipeline status",
   "repository": {
     "url": "https://github.com/oaslananka/health-monitor-mcp",
     "source": "github"
   },
-  "version": "1.0.5",
+  "version": "1.0.0",
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "mcp-health-monitor",
-      "version": "1.0.5",
+      "identifier": "health-monitor-mcp",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       },

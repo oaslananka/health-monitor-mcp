@@ -1,8 +1,8 @@
-[**mcp-health-monitor v1.0.5**](../../README.md)
+[**health-monitor-mcp v1.0.0**](../../README.md)
 
 ***
 
-[mcp-health-monitor](../../README.md) / [policy](../README.md) / STDIO\_DISABLED\_MESSAGE
+[health-monitor-mcp](../../README.md) / [policy](../README.md) / STDIO\_DISABLED\_MESSAGE
 
 # Variable: STDIO\_DISABLED\_MESSAGE
 
