@@ -6,7 +6,7 @@ import Database from 'better-sqlite3';
 
 import { runMigrations } from './migrations.js';
 
-const DEFAULT_DB_PATH = path.join(os.homedir(), '.mcp-health-monitor', 'health.db');
+const DEFAULT_DB_PATH = path.join(os.homedir(), '.health-monitor-mcp', 'health.db');
 
 let cachedDb: Database.Database | null = null;
 let cachedDbPath: string | null = null;

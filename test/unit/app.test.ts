@@ -489,7 +489,7 @@ describe('app tool registration', () => {
     });
 
     await registerAzure.handler({
-      name: 'mcp-health-monitor',
+      name: 'health-monitor-mcp',
       organization: 'oaslananka',
       project: 'open-source',
       pipeline_names: ['known', 'empty-build', 'missing'],
@@ -499,7 +499,7 @@ describe('app tool registration', () => {
     const pipelineStatus = parseJson(await checkPipelineStatus.handler({}));
     const logs = parseJson(
       await getPipelineLogs.handler({
-        group_name: 'mcp-health-monitor',
+        group_name: 'health-monitor-mcp',
         pipeline_name: 'known',
         failed_only: true
       })
@@ -530,7 +530,7 @@ describe('app tool registration', () => {
     );
     expect(logs).toEqual(
       expect.objectContaining({
-        group: 'mcp-health-monitor',
+        group: 'health-monitor-mcp',
         pipeline: 'known',
         build_id: 91,
         logs: expect.stringContaining('=== Build (failed) ===')
@@ -542,7 +542,7 @@ describe('app tool registration', () => {
         mcp_servers: [expect.objectContaining({ name: 'portfolio-server', status: 'up' })],
         azure_pipelines: [
           expect.objectContaining({
-            group: 'mcp-health-monitor',
+            group: 'health-monitor-mcp',
             pipelines: expect.arrayContaining([
               expect.objectContaining({ pipeline: 'known', status: 'failed' }),
               expect.objectContaining({ pipeline: 'empty-build', status: 'unknown' }),
@@ -562,18 +562,18 @@ describe('app tool registration', () => {
     ).rejects.toThrow('Pipeline not registered: unknown-group/known');
     await expect(
       getPipelineLogs.handler({
-        group_name: 'mcp-health-monitor',
+        group_name: 'health-monitor-mcp',
         pipeline_name: 'empty-build',
         failed_only: true
       })
     ).rejects.toThrow('No recent builds found');
     await expect(
       getPipelineLogs.handler({
-        group_name: 'mcp-health-monitor',
+        group_name: 'health-monitor-mcp',
         pipeline_name: 'missing',
         failed_only: true
       })
-    ).rejects.toThrow('Pipeline ID not resolved for mcp-health-monitor/missing');
+    ).rejects.toThrow('Pipeline ID not resolved for health-monitor-mcp/missing');
   });
 
   it('creates an MCP server instance with versioned metadata', async () => {

@@ -98,7 +98,7 @@ This reports:
 Default database path:
 
 ```text
-~/.mcp-health-monitor/health.db
+~/.health-monitor-mcp/health.db
 ```
 
 Override path with:

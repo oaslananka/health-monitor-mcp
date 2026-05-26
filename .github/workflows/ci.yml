@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          node-version: '24.15.0'
+          node-version: "24.15.0"
 
       - name: Enable pnpm
         run: |
@@ -86,10 +86,10 @@ jobs:
           persist-credentials: false
 
       - name: Build image
-        run: docker build -t mcp-health-monitor:ci .
+        run: docker build -t health-monitor-mcp:ci .
 
       - name: CLI smoke
-        run: docker run --rm mcp-health-monitor:ci node dist/mcp.js --version
+        run: docker run --rm health-monitor-mcp:ci node dist/mcp.js --version
 
   codeql:
     name: CodeQL Analysis

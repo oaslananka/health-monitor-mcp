@@ -7,9 +7,11 @@
   ],
   "entryPointStrategy": "resolve",
   "out": "docs/api",
-  "plugin": ["typedoc-plugin-markdown"],
+  "plugin": [
+    "typedoc-plugin-markdown"
+  ],
   "readme": "none",
-  "name": "mcp-health-monitor",
+  "name": "health-monitor-mcp",
   "includeVersion": true,
   "skipErrorChecking": false,
   "excludePrivate": true,
@@ -19,5 +21,7 @@
   "cleanOutputDir": true,
   "githubPages": false,
   "hideGenerator": true,
-  "sort": ["source-order"]
+  "sort": [
+    "source-order"
+  ]
 }

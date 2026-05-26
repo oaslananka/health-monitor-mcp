@@ -1,6 +1,6 @@
 node_modules/
 dist/
-.mcp-health-monitor/
+.health-monitor-mcp/
 coverage/
 .TEMP/
 .codex-checkpoints/

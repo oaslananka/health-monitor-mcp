@@ -1,17 +1,17 @@
-# mcp-health-monitor
+# health-monitor-mcp
 
 > MCP server health monitoring, uptime tracking, Azure DevOps pipeline status,
 > and alert evaluation through natural-language tools.
 
-[![npm version](https://img.shields.io/npm/v/mcp-health-monitor)](https://www.npmjs.com/package/mcp-health-monitor)
-[![npm downloads](https://img.shields.io/npm/dm/mcp-health-monitor)](https://www.npmjs.com/package/mcp-health-monitor)
+[![npm version](https://img.shields.io/npm/v/health-monitor-mcp)](https://www.npmjs.com/package/health-monitor-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/health-monitor-mcp)](https://www.npmjs.com/package/health-monitor-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/oaslananka/health-monitor-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/oaslananka/health-monitor-mcp)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 
 ## What This Does
 
-`mcp-health-monitor` keeps a registry of the MCP servers you care about, performs real MCP
+`health-monitor-mcp` keeps a registry of the MCP servers you care about, performs real MCP
 handshakes against them, records health history in SQLite, and reports uptime, latency, and
 alert thresholds back through MCP tools. It also tracks Azure DevOps pipelines so app health
 and delivery health can be checked from the same place.
@@ -21,48 +21,48 @@ and delivery health can be checked from the same place.
 Run the monitor over stdio:
 
 ```bash
-npx -y mcp-health-monitor
+npx -y health-monitor-mcp
 ```
 
 Example desktop MCP client entry:
 
 ```json
 {
-  "name": "mcp-health-monitor",
+  "name": "health-monitor-mcp",
   "version": "1.0.4",
-  "mcpName": "io.github.oaslananka/mcp-health-monitor",
+  "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipelines",
   "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "mcp-health-monitor"]
+  "args": ["-y", "health-monitor-mcp"]
 }
 ```
 
 ## Tools Reference
 
-| Tool | Purpose | Typical prompt |
-| ---- | ------- | -------------- |
-| `register_server` | Save an MCP server to monitor | `Register https://example.com/mcp as prod-gateway` |
-| `check_server` | Run a live health check for one server | `Check prod-gateway now` |
-| `check_all` | Check all registered servers | `Check all my MCP servers` |
-| `get_uptime` | Return uptime plus latency stats | `Show 24h uptime for prod-gateway` |
-| `get_dashboard` | Return JSON dashboard data | `Give me a 24h dashboard` |
-| `get_report` | Return a Markdown report | `Generate a Markdown health report for 24h` |
-| `list_servers` | Show registered servers | `List all monitored servers` |
-| `unregister_server` | Remove a server | `Stop monitoring local-debugger` |
-| `set_alert` | Configure thresholds | `Alert if prod-gateway exceeds 500ms or drops below 99% uptime` |
-| `get_monitor_stats` | Show monitor-level stats | `How many checks has the monitor recorded?` |
-| `register_azure_pipelines` | Register Azure pipeline groups | `Track CI and Publish pipelines for my repo` |
-| `check_pipeline_status` | Read latest Azure pipeline runs | `Check pipeline status for my release group` |
-| `get_pipeline_logs` | Fetch Azure build logs | `Show the failed logs for the latest Publish build` |
-| `check_all_projects` | Combine MCP and Azure health | `Check all projects` |
+| Tool                       | Purpose                                | Typical prompt                                                  |
+| -------------------------- | -------------------------------------- | --------------------------------------------------------------- |
+| `register_server`          | Save an MCP server to monitor          | `Register https://example.com/mcp as prod-gateway`              |
+| `check_server`             | Run a live health check for one server | `Check prod-gateway now`                                        |
+| `check_all`                | Check all registered servers           | `Check all my MCP servers`                                      |
+| `get_uptime`               | Return uptime plus latency stats       | `Show 24h uptime for prod-gateway`                              |
+| `get_dashboard`            | Return JSON dashboard data             | `Give me a 24h dashboard`                                       |
+| `get_report`               | Return a Markdown report               | `Generate a Markdown health report for 24h`                     |
+| `list_servers`             | Show registered servers                | `List all monitored servers`                                    |
+| `unregister_server`        | Remove a server                        | `Stop monitoring local-debugger`                                |
+| `set_alert`                | Configure thresholds                   | `Alert if prod-gateway exceeds 500ms or drops below 99% uptime` |
+| `get_monitor_stats`        | Show monitor-level stats               | `How many checks has the monitor recorded?`                     |
+| `register_azure_pipelines` | Register Azure pipeline groups         | `Track CI and Publish pipelines for my repo`                    |
+| `check_pipeline_status`    | Read latest Azure pipeline runs        | `Check pipeline status for my release group`                    |
+| `get_pipeline_logs`        | Fetch Azure build logs                 | `Show the failed logs for the latest Publish build`             |
+| `check_all_projects`       | Combine MCP and Azure health           | `Check all projects`                                            |
 
 ## Azure DevOps Integration
 
 Register a pipeline group with an org, project, pipeline names, and a PAT:
 
 ```text
-register_azure_pipelines name="mcp-health-monitor" organization="oaslananka" project="open-source" pipeline_names=["mcp-health-monitor CI","mcp-health-monitor Publish"] pat_token="..."
+register_azure_pipelines name="health-monitor-mcp" organization="oaslananka" project="open-source" pipeline_names=["health-monitor-mcp CI","health-monitor-mcp Publish"] pat_token="..."
 ```
 
 PAT tokens are encrypted in the local SQLite database with AES-256-GCM when
@@ -74,18 +74,18 @@ PAT tokens are encrypted in the local SQLite database with AES-256-GCM when
 
 Use `set_alert` to configure one server:
 
-| Field | Meaning |
-| ----- | ------- |
-| `max_response_time_ms` | Alert when a check exceeds this latency |
-| `min_uptime_percent` | Alert when the selected uptime window drops below this value |
-| `consecutive_failures_before_alert` | Alert after this many non-up results in a row |
+| Field                               | Meaning                                                      |
+| ----------------------------------- | ------------------------------------------------------------ |
+| `max_response_time_ms`              | Alert when a check exceeds this latency                      |
+| `min_uptime_percent`                | Alert when the selected uptime window drops below this value |
+| `consecutive_failures_before_alert` | Alert after this many non-up results in a row                |
 
 Alerts are evaluated inline by `check_server`, `check_all`, and `get_dashboard`. Webhook delivery
 is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 
 ## Data Storage
 
-- Default database path: `~/.mcp-health-monitor/health.db`
+- Default database path: `~/.health-monitor-mcp/health.db`
 - Override path: `HEALTH_MONITOR_DB=/custom/path/health.db`
 - Optional background scheduler: `HEALTH_MONITOR_AUTO_CHECK=1`
 - HTTP MCP endpoint token: `HEALTH_MONITOR_HTTP_TOKEN=...`
@@ -103,8 +103,8 @@ startup.
 Build and run:
 
 ```bash
-docker build -t mcp-health-monitor .
-docker run --rm mcp-health-monitor node dist/mcp.js --version
+docker build -t health-monitor-mcp .
+docker run --rm health-monitor-mcp node dist/mcp.js --version
 ```
 
 HTTP mode binds to loopback by default. For a remote HTTP deployment, require a bearer token and
@@ -116,7 +116,7 @@ docker run --rm \
   -e HOST=0.0.0.0 \
   -e HEALTH_MONITOR_PROFILE=remote-safe \
   -e HEALTH_MONITOR_HTTP_TOKEN=change-me \
-  mcp-health-monitor
+  health-monitor-mcp
 curl -X POST \
   --oauth2-bearer "$HEALTH_MONITOR_HTTP_TOKEN" \
   -H "Content-Type: application/json" \
