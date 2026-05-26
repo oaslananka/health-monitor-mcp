@@ -14,7 +14,12 @@ function resolveCommand(command) {
 }
 
 function run(command, args) {
-  const result = spawnSync(resolveCommand(command), args, { encoding: 'utf8' });
+  const result =
+    process.platform === 'win32'
+      ? spawnSync('cmd.exe', ['/d', '/s', '/c', resolveCommand(command), ...args], {
+          encoding: 'utf8'
+        })
+      : spawnSync(resolveCommand(command), args, { encoding: 'utf8' });
 
   return {
     status: result.status ?? 1,
