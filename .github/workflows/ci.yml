@@ -32,7 +32,6 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: '24.15.0'
-          cache: pnpm
 
       - name: Enable pnpm
         run: |
@@ -63,11 +62,11 @@ jobs:
       - name: Run zizmor
         run: |
           python3 -m pip install --user zizmor==1.24.1
-          python3 -m zizmor --offline --min-severity low .github/workflows
+          "$HOME/.local/bin/zizmor" --offline --min-severity low .github/workflows
 
       - name: Run Gitleaks
         run: |
-          go run github.com/gitleaks/gitleaks/v8@v8.30.0 detect --no-git --redact --source .
+          go run github.com/zricethezav/gitleaks/v8@v8.30.0 detect --no-git --redact --source .
 
   docker:
     name: Docker Build
