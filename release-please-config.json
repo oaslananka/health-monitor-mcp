@@ -4,6 +4,7 @@
     ".": {
       "package-name": "health-monitor-mcp",
       "changelog-path": "CHANGELOG.md",
+      "release-as": "1.0.0",
       "extra-files": [
         {
           "type": "json",
