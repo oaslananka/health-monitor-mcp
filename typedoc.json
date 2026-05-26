@@ -3,6 +3,8 @@
     "src/mcp.ts",
     "src/app.ts",
     "src/checker.ts",
+    "src/config.ts",
+    "src/policy.ts",
     "src/types.ts"
   ],
   "entryPointStrategy": "resolve",
@@ -18,6 +20,7 @@
   "excludeExternals": true,
   "cleanOutputDir": true,
   "githubPages": false,
+  "gitRevision": "main",
   "hideGenerator": true,
   "sort": ["source-order"]
 }

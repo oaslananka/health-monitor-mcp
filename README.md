@@ -136,6 +136,7 @@ pnpm run test:integration
 pnpm run lint
 pnpm run lint:test
 pnpm run format:check
+pnpm run docs:api:check
 ```
 
 Release CI uses Node 24 LTS. The package remains declared for Node `>=20` until a future major
@@ -153,6 +154,8 @@ High-level module map:
 - `src/scheduler.ts`: Optional background auto-check loop
 
 More detail lives in [architecture.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/architecture.md).
+Decision rationale lives in [docs/adr](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/adr/README.md),
+and generated API docs live in [docs/api](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/api/README.md).
 
 ## Roadmap
 

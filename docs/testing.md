@@ -18,6 +18,8 @@ pnpm run test:coverage
 pnpm run lint
 pnpm run lint:test
 pnpm run typecheck
+pnpm run docs:api
+pnpm run docs:api:check
 ```
 
 Security-focused local checks:

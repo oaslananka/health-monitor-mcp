@@ -316,6 +316,7 @@ export async function checkServer(
   };
 }
 
+/** @internal */
 export function setCheckerRuntimeForTests(overrides: Partial<CheckerRuntime>): void {
   checkerRuntime = {
     ...checkerRuntime,
@@ -323,6 +324,7 @@ export function setCheckerRuntimeForTests(overrides: Partial<CheckerRuntime>): v
   };
 }
 
+/** @internal */
 export function resetCheckerRuntimeForTests(): void {
   checkerRuntime = createDefaultRuntime();
 }

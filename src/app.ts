@@ -69,7 +69,10 @@ type ToolResponse = {
   }>;
 };
 
-type ToolConfig = {
+/**
+ * Metadata and schema passed when registering an MCP tool with the server SDK.
+ */
+export type ToolConfig = {
   title?: string;
   description?: string;
   inputSchema?: object;
@@ -80,11 +83,17 @@ type ToolConfig = {
   };
 };
 
-type ToolRegistrar = {
+/**
+ * Minimal tool-registration surface used by the monitor server factory.
+ */
+export type ToolRegistrar = {
   registerTool: (name: string, config: ToolConfig, handler: unknown) => unknown;
 };
 
-type MonitoringToolOptions = RuntimePolicyOptions;
+/**
+ * Runtime policy options accepted by the monitor tool registration helpers.
+ */
+export type MonitoringToolOptions = RuntimePolicyOptions;
 
 function formatResponse(payload: unknown): ToolResponse {
   return {
