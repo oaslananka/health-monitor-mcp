@@ -15,6 +15,8 @@ pnpm run format:check
 pnpm run lint
 pnpm run lint:test
 pnpm run typecheck
+pnpm run docs:api
+pnpm run docs:api:check
 pnpm test
 pnpm run test:integration
 pnpm run build

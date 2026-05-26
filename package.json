@@ -40,6 +40,8 @@
     "lint:fix": "eslint --fix \"src/**/*.ts\" \"test/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "docs:api": "typedoc",
+    "docs:api:check": "pnpm run docs:api && node scripts/check-clean-path.mjs docs/api",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=test[/\\\\]unit[/\\\\]",
     "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=test[/\\\\]integration[/\\\\]",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
@@ -52,7 +54,7 @@
     "check:metadata": "node scripts/validate-mcp-metadata.mjs",
     "check:package": "pnpm pack --dry-run",
     "release:dry-run": "node scripts/release-state.mjs --dry-run",
-    "ci:check": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm test && pnpm run test:integration",
+    "ci:check": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm run docs:api:check && pnpm test && pnpm run test:integration",
     "ci": "pnpm run ci:check && pnpm run security && pnpm run security:supply-chain && pnpm run check:metadata && pnpm run check:package && pnpm run release:dry-run",
     "prepare": "pnpm run build",
     "prepublishOnly": "node scripts/prepublish-check.mjs"
@@ -116,6 +118,8 @@
     "prettier": "3.5.3",
     "ts-jest": "29.3.2",
     "ts-node": "10.9.2",
+    "typedoc": "0.28.19",
+    "typedoc-plugin-markdown": "4.11.0",
     "typescript": "5.8.3"
   }
 }

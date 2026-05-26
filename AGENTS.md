@@ -18,6 +18,7 @@ If you update repository workflow rules here, keep those files aligned. If a
 tool-specific file and `AGENTS.md` ever disagree, follow `AGENTS.md`.
 
 ## Environment Check
+
 Before changing code:
 
 1. Detect the OS and runtime:
@@ -28,54 +29,59 @@ Before changing code:
 4. Establish a baseline with `pnpm run build && pnpm test && pnpm run lint` once dependencies are installed.
 
 ## Registry Reference
-Verified against the npm registry on 2026-04-07:
 
-| Package | Latest stable |
-| ------- | ------------- |
-| `@modelcontextprotocol/sdk` | `1.29.0` |
-| `better-sqlite3` | `12.8.0` |
-| `node-fetch` | `3.3.2` |
-| `qs` | `6.15.2` |
-| `zod` | `4.3.6` |
-| `typescript` | `6.0.2` |
-| `jest` | `30.3.0` |
-| `@jest/globals` | `30.4.1` |
-| `ts-jest` | `29.4.9` |
-| `eslint` | `10.2.0` |
-| `@typescript-eslint/parser` | `8.58.0` |
-| `@typescript-eslint/eslint-plugin` | `8.58.0` |
-| `@types/node` | `25.5.2` |
-| `@types/jest` | `30.0.0` |
-| `@types/better-sqlite3` | `7.6.13` |
-| `prettier` | `3.8.1` |
-| `ts-node` | `10.9.2` |
-| `@eslint/js` | `10.0.1` |
-| `globals` | `17.4.0` |
+Verified against the npm registry on 2026-04-07. TypeDoc entries were refreshed on 2026-05-26:
+
+| Package                            | Latest stable |
+| ---------------------------------- | ------------- |
+| `@modelcontextprotocol/sdk`        | `1.29.0`      |
+| `better-sqlite3`                   | `12.8.0`      |
+| `node-fetch`                       | `3.3.2`       |
+| `qs`                               | `6.15.2`      |
+| `zod`                              | `4.3.6`       |
+| `typescript`                       | `6.0.2`       |
+| `jest`                             | `30.3.0`      |
+| `@jest/globals`                    | `30.4.1`      |
+| `ts-jest`                          | `29.4.9`      |
+| `eslint`                           | `10.2.0`      |
+| `@typescript-eslint/parser`        | `8.58.0`      |
+| `@typescript-eslint/eslint-plugin` | `8.58.0`      |
+| `@types/node`                      | `25.5.2`      |
+| `@types/jest`                      | `30.0.0`      |
+| `@types/better-sqlite3`            | `7.6.13`      |
+| `prettier`                         | `3.8.1`       |
+| `ts-node`                          | `10.9.2`      |
+| `typedoc`                          | `0.28.19`     |
+| `typedoc-plugin-markdown`          | `4.11.0`      |
+| `@eslint/js`                       | `10.0.1`      |
+| `globals`                          | `17.4.0`      |
 
 Newer registry releases exist, but v1.0 compatibility for this repo intentionally keeps the approved pins below.
 
 ## Approved Dependency Pins
 
-| Package | Version | Reason |
-| ------- | ------- | ------ |
-| `@modelcontextprotocol/sdk` | `1.27.1` | Keep MCP client/server behavior aligned with the current v1.0 codebase. |
-| `better-sqlite3` | `12.8.0` | Stable native SQLite binding validated for Node 24 environments while retaining the package's Node >=20 support range. |
-| `qs` | `6.15.2` | Security override for the transitive Express dependency path until upstream lock resolution no longer selects vulnerable `qs` releases. |
-| `zod` | `3.25.76` | Preserve the existing schema-first API without v4 breaking changes while avoiding the incomplete `3.25.0` package payload. |
-| `typescript` | `5.8.3` | Modern strict TypeScript without adopting the v6 toolchain yet. |
-| `jest` | `29.7.0` | Stay on the established Jest major used by the repo. |
-| `@jest/globals` | `29.7.0` | Direct dependency required for explicit ESM Jest imports under pnpm's strict dependency layout. |
-| `ts-jest` | `29.3.2` | Compatible with Jest 29 and ESM TypeScript tests. |
-| `eslint` | `9.39.4` | Patched ESLint 9 line that resolves the current plugin-kit advisory without changing majors. |
-| `@typescript-eslint/parser` | `8.30.0` | Compatible with ESLint 9 and current TS 5.x usage. |
-| `@typescript-eslint/eslint-plugin` | `8.30.0` | Match the parser and flat config transition. |
-| `@types/node` | `20.19.0` | Keep typings aligned with the supported Node 20 runtime line. |
-| `@types/jest` | `29.5.14` | Match the Jest 29 test surface. |
-| `@types/better-sqlite3` | `7.6.13` | Latest compatible typings for the pinned runtime dependency. |
-| `prettier` | `3.5.3` | Stable formatter version for v1.0. |
-| `ts-node` | `10.9.2` | Stable ESM-compatible TypeScript runner for local development. |
-| `@eslint/js` | `9.39.4` | Match the patched ESLint 9 flat-config baseline. |
-| `globals` | `17.4.0` | Shared runtime globals for flat ESLint configuration. |
+| Package                            | Version   | Reason                                                                                                                                  |
+| ---------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `@modelcontextprotocol/sdk`        | `1.27.1`  | Keep MCP client/server behavior aligned with the current v1.0 codebase.                                                                 |
+| `better-sqlite3`                   | `12.8.0`  | Stable native SQLite binding validated for Node 24 environments while retaining the package's Node >=20 support range.                  |
+| `qs`                               | `6.15.2`  | Security override for the transitive Express dependency path until upstream lock resolution no longer selects vulnerable `qs` releases. |
+| `zod`                              | `3.25.76` | Preserve the existing schema-first API without v4 breaking changes while avoiding the incomplete `3.25.0` package payload.              |
+| `typescript`                       | `5.8.3`   | Modern strict TypeScript without adopting the v6 toolchain yet.                                                                         |
+| `jest`                             | `29.7.0`  | Stay on the established Jest major used by the repo.                                                                                    |
+| `@jest/globals`                    | `29.7.0`  | Direct dependency required for explicit ESM Jest imports under pnpm's strict dependency layout.                                         |
+| `ts-jest`                          | `29.3.2`  | Compatible with Jest 29 and ESM TypeScript tests.                                                                                       |
+| `eslint`                           | `9.39.4`  | Patched ESLint 9 line that resolves the current plugin-kit advisory without changing majors.                                            |
+| `@typescript-eslint/parser`        | `8.30.0`  | Compatible with ESLint 9 and current TS 5.x usage.                                                                                      |
+| `@typescript-eslint/eslint-plugin` | `8.30.0`  | Match the parser and flat config transition.                                                                                            |
+| `@types/node`                      | `20.19.0` | Keep typings aligned with the supported Node 20 runtime line.                                                                           |
+| `@types/jest`                      | `29.5.14` | Match the Jest 29 test surface.                                                                                                         |
+| `@types/better-sqlite3`            | `7.6.13`  | Latest compatible typings for the pinned runtime dependency.                                                                            |
+| `prettier`                         | `3.5.3`   | Stable formatter version for v1.0.                                                                                                      |
+| `ts-node`                          | `10.9.2`  | Stable ESM-compatible TypeScript runner for local development.                                                                          |
+| `typedoc`                          | `0.28.19` | Current maintained TypeDoc 0.28 line compatible with TypeScript 5.8.x and Node >=18.                                                    |
+| `typedoc-plugin-markdown`          | `4.11.0`  | Current Markdown plugin release for TypeDoc 0.28.x, used to generate repository-native API docs.                                        |
+| `@eslint/js`                       | `9.39.4`  | Match the patched ESLint 9 flat-config baseline.                                                                                        |
+| `globals`                          | `17.4.0`  | Shared runtime globals for flat ESLint configuration.                                                                                   |
 
 - Use these versions unless the user explicitly requests a dependency strategy change.
 - If a dependency issue appears, read the official documentation first; do not change versions as the first response.

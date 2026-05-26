@@ -44,3 +44,16 @@ User prompt
 - Automatic schema migrations via `schema_migrations`
 - Health history stored in `health_checks`
 - Azure pipeline definitions stored in `azure_pipelines`
+
+## Decision Records
+
+Architecture decisions are tracked in [docs/adr](adr/README.md). Start there for the rationale
+behind transport policy, PAT encryption, SQLite state, and release evidence.
+
+## Generated API Reference
+
+The generated API reference lives in [docs/api](api/README.md) and is rebuilt with:
+
+```bash
+pnpm run docs:api
+```
