@@ -12,7 +12,7 @@ Tracked states include:
 The script also reports:
 
 - package name and version
-- expected tag name
+- expected tag name and checked tag candidates
 - metadata blockers
 - whether the target npm version already exists
 - `safe_to_publish`

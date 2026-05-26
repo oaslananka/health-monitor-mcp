@@ -37,6 +37,21 @@ function npmVersionExists(name, version) {
   }
 }
 
+function resolveReleaseTag(packageName, version) {
+  const candidates = [`${packageName}-v${version}`, `v${version}`];
+  const existing = candidates.find((candidate) => tagExists(candidate));
+
+  return {
+    tagName: existing ?? candidates[0],
+    tagCandidates: candidates,
+    tagExists: Boolean(existing)
+  };
+}
+
+function tagExists(tagName) {
+  return run('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tagName}`]).status === 0;
+}
+
 const packageJson = readJson('package.json');
 const mcpJson = readJson('mcp.json');
 const serverJson = readJson('server.json');
@@ -44,7 +59,7 @@ const requireTag = process.argv.includes('--require-tag');
 const releaseManifest = fs.existsSync('.release-please-manifest.json')
   ? readJson('.release-please-manifest.json')
   : {};
-const tagName = `v${packageJson.version}`;
+const releaseTag = resolveReleaseTag(packageJson.name, packageJson.version);
 const blockers = [];
 const states = [];
 
@@ -60,16 +75,15 @@ if (packageJson.mcpName !== serverJson.name || packageJson.mcpName !== mcpJson.m
   blockers.push('MCP identity metadata is not synchronized');
 }
 
-const tagLookup = run('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tagName}`]);
-if (tagLookup.status === 0) {
+if (releaseTag.tagExists) {
   states.push('tag-created');
 }
 
 const gitStatus = run('git', ['status', '--porcelain', '--untracked-files=no']);
 const npmExists = npmVersionExists(packageJson.name, packageJson.version);
 
-if (requireTag && tagLookup.status !== 0) {
-  blockers.push(`release tag ${tagName} does not exist`);
+if (requireTag && !releaseTag.tagExists) {
+  blockers.push(`release tag ${releaseTag.tagName} does not exist`);
 }
 
 if (gitStatus.stdout.length > 0) {
@@ -93,7 +107,8 @@ if (blockers.length) {
 const result = {
   package: packageJson.name,
   version: packageJson.version,
-  tag_name: tagName,
+  tag_name: releaseTag.tagName,
+  tag_candidates: releaseTag.tagCandidates,
   states,
   safe_to_publish: blockers.length === 0,
   blockers,

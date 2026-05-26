@@ -13,6 +13,11 @@ Manual version inputs, manual tags, and local package publishing are not part of
 The unpublished `mcp-health-monitor@1.0.3` version is intentionally skipped because npm registry
 policy does not allow reusing a previously published version after unpublish.
 
+Release Please creates component-prefixed tags such as `mcp-health-monitor-v1.0.5`. The
+release workflow also accepts `workflow_dispatch` inputs for `tag_name` and `version` so maintainers
+can rerun asset generation for an existing GitHub Release if a previous asset upload failed after
+the tag and release were already created.
+
 ## Publish Gate
 
 Production npm publishing is guarded by `.github/workflows/publish-npm.yml`:

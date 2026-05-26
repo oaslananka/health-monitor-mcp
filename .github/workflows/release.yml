@@ -4,6 +4,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Existing release tag to attach assets to
+        required: true
+        type: string
+      version:
+        description: SemVer version for release artifact naming
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,7 +28,7 @@ defaults:
 jobs:
   release-please:
     name: Release Please
-    if: github.repository == 'oaslananka/health-monitor-mcp'
+    if: github.repository == 'oaslananka/health-monitor-mcp' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -40,18 +49,20 @@ jobs:
   release-assets:
     name: Release Assets
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ always() && github.repository == 'oaslananka/health-monitor-mcp' && (needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '' && inputs.version != '')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: write
       id-token: write
       attestations: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name || needs.release-please.outputs.tag_name }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ inputs.tag_name || needs.release-please.outputs.tag_name }}
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
@@ -91,11 +102,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ needs.release-please.outputs.tag_name }}" "$tarball" SHA256SUMS pack.json --clobber
+          gh release upload "$RELEASE_TAG" "$tarball" SHA256SUMS pack.json --clobber
 
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: release-assets-${{ needs.release-please.outputs.version }}
+          name: release-assets-${{ inputs.version || needs.release-please.outputs.version }}
           path: |
             *.tgz
             SHA256SUMS
