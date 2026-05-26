@@ -35,6 +35,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   declared as Node `>=20`.
 - Configured release automation for GitHub Actions and npm trusted publishing with provenance.
 
+### Fixed
+
+- Restored the publishable package path for the first public npm release.
+- Restored CI typecheck and security audit gates.
+- Removed shell quoting from the prepublish package-state check.
+
 ### Security
 
 - Encrypt Azure DevOps PAT tokens with AES-256-GCM when `HEALTH_MONITOR_ENCRYPTION_KEY` is set.
