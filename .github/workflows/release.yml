@@ -66,7 +66,20 @@ jobs:
       - run: pnpm run ci:check
       - run: pnpm pack --json > pack.json
       - run: |
-          TARBALL="$(node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('pack.json','utf8')); console.log(p[0].filename)")"
+          TARBALL="$(
+            node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const pack = JSON.parse(fs.readFileSync('pack.json', 'utf8'));
+          const entry = Array.isArray(pack) ? pack[0] : pack;
+
+          if (!entry?.filename) {
+            throw new Error('pnpm pack did not report a filename');
+          }
+
+          console.log(entry.filename);
+          NODE
+          )"
           sha256sum "$TARBALL" > SHA256SUMS
           echo "tarball=$TARBALL" >> "$GITHUB_ENV"
 
