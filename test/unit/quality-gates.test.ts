@@ -80,4 +80,18 @@ describe('quality gate regression checks', () => {
     expect(ciWorkflow).toContain('pnpm run security:supply-chain');
     expect(ciWorkflow).toContain('pnpm run release:dry-run');
   });
+
+  it('keeps npm publish retries idempotent and registry-verified', () => {
+    const publishWorkflow = readProjectText('.github/workflows/publish-npm.yml');
+    const verifyScript = readProjectText('scripts/verify-npm-package.mjs');
+
+    expect(publishWorkflow).toContain('node scripts/release-state.mjs --require-tag');
+    expect(publishWorkflow).toContain('npm_published=');
+    expect(publishWorkflow).toContain(
+      'npm publish --access public --provenance || node scripts/verify-npm-package.mjs'
+    );
+    expect(publishWorkflow).toContain('node scripts/verify-npm-package.mjs');
+    expect(verifyScript).toContain("npm', ['pack', '--json', '--dry-run']");
+    expect(verifyScript).toContain("'dist.integrity'");
+  });
 });

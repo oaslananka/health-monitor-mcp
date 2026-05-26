@@ -31,6 +31,9 @@ Production npm publishing is guarded by `.github/workflows/publish-npm.yml`:
 - `scripts/release-state.mjs --require-tag` with `safe_to_publish=true`, which requires a clean
   tracked worktree, an existing release tag for the package version, and an unpublished npm version
 - npm trusted publishing/provenance through GitHub OIDC
+- registry verification with `scripts/verify-npm-package.mjs`, which compares the published
+  `dist.integrity` value with a local `npm pack --dry-run` result and makes publish retries
+  idempotent once the exact version is visible on npm
 
 Release artifacts include:
 

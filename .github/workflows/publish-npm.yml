@@ -49,9 +49,30 @@ jobs:
       - run: pnpm run ci
 
       - name: Verify release state
+        id: release-state
         run: |
           node scripts/release-state.mjs --require-tag > release-state.json
-          node -e "const s=require('./release-state.json'); if (!s.safe_to_publish) { console.error(JSON.stringify(s, null, 2)); process.exit(1); }"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const state = JSON.parse(fs.readFileSync('release-state.json', 'utf8'));
+          const publishedBlocker = `npm package ${state.package}@${state.version} already exists`;
+          const alreadyPublished =
+            state.states.includes('npm-published') &&
+            state.blockers.length === 1 &&
+            state.blockers[0] === publishedBlocker;
+
+          if (!state.safe_to_publish && !alreadyPublished) {
+            console.error(JSON.stringify(state, null, 2));
+            process.exit(1);
+          }
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `npm_published=${alreadyPublished}\n`);
+          NODE
 
       - name: Publish package
-        run: npm publish --access public --provenance
+        if: steps.release-state.outputs.npm_published != 'true'
+        run: npm publish --access public --provenance || node scripts/verify-npm-package.mjs
+
+      - name: Verify npm package
+        run: node scripts/verify-npm-package.mjs
