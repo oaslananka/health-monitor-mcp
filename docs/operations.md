@@ -30,3 +30,27 @@ outside the repository. The monitor never prints decrypted PAT values.
 The runtime image runs as the non-root `node` user and uses `HOST=127.0.0.1` by default. For remote
 HTTP service deployment, set `HOST=0.0.0.0`, `HEALTH_MONITOR_PROFILE=remote-safe`, and
 `HEALTH_MONITOR_HTTP_TOKEN`.
+
+## Repository Protection
+
+The `main` branch must remain protected through GitHub branch protection. Required checks are:
+
+- `Validate`
+- `Workflow Security`
+- `Docker Build`
+- `CodeQL Analysis`
+- `Review Thread Gate`
+
+Actions must be restricted to selected actions, require SHA pinning when supported by the account,
+allow GitHub-owned actions, and allow only the pinned `googleapis/release-please-action` SHA used by
+the release workflow.
+
+Verify the live settings with:
+
+```bash
+gh api repos/oaslananka/health-monitor-mcp/branches/main/protection
+gh api repos/oaslananka/health-monitor-mcp/actions/permissions
+gh api repos/oaslananka/health-monitor-mcp/actions/permissions/selected-actions
+```
+
+PowerShell uses the same `gh api` commands.
