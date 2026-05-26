@@ -10,8 +10,10 @@ Commits and synchronized through:
 - `CHANGELOG.md`
 
 Manual version inputs, manual tags, and local package publishing are not part of the release path.
-The unpublished `mcp-health-monitor@1.0.3` version is intentionally skipped because npm registry
-policy does not allow reusing a previously published version after unpublish.
+The npm package is not publicly installable as of 2026-05-26 because the package was unpublished
+before the current release line. Keep user-facing install docs pointed at the verified GitHub
+Release tarball until `npm view mcp-health-monitor version` succeeds for the current package
+version.
 
 Release Please creates component-prefixed tags such as `mcp-health-monitor-v1.0.5`. The
 release workflow also accepts `workflow_dispatch` inputs for `tag_name` and `version` so maintainers
@@ -36,6 +38,9 @@ Release artifacts include:
 - `SHA256SUMS`
 - `pack.json`
 - CycloneDX and SPDX SBOMs
+
+The v1.0.5 GitHub Release currently includes `mcp-health-monitor-1.0.5.tgz`, `SHA256SUMS`, and
+`pack.json`.
 
 The release workflow downloads the uploaded assets back from GitHub and verifies the tarball
 checksum before uploading the same evidence directory as a workflow artifact.

@@ -3,8 +3,8 @@
 > MCP server health monitoring, uptime tracking, Azure DevOps pipeline status,
 > and alert evaluation through natural-language tools.
 
-[![npm version](https://img.shields.io/npm/v/mcp-health-monitor)](https://www.npmjs.com/package/mcp-health-monitor)
-[![npm downloads](https://img.shields.io/npm/dm/mcp-health-monitor)](https://www.npmjs.com/package/mcp-health-monitor)
+[![CI](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml)
+[![Release](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/oaslananka/health-monitor-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/oaslananka/health-monitor-mcp)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
@@ -18,23 +18,25 @@ and delivery health can be checked from the same place.
 
 ## Quick Start
 
-Run the monitor over stdio:
+The verified v1.0.5 package artifact is available from GitHub Releases. Public npm installation is
+blocked until npm package ownership and trusted publishing are completed.
 
 ```bash
-npx -y mcp-health-monitor
+npm install -g https://github.com/oaslananka/health-monitor-mcp/releases/download/mcp-health-monitor-v1.0.5/mcp-health-monitor-1.0.5.tgz
+mcp-health-monitor --version
 ```
 
-Example desktop MCP client entry:
+Example desktop MCP client entry after installing the release tarball:
 
 ```json
 {
   "name": "mcp-health-monitor",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "mcpName": "io.github.oaslananka/mcp-health-monitor",
   "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipelines",
   "transport": "stdio",
-  "command": "npx",
-  "args": ["-y", "mcp-health-monitor"]
+  "command": "mcp-health-monitor",
+  "args": []
 }
 ```
 
@@ -93,7 +95,9 @@ is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 - Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
 - Local-only stdio checks over HTTP: `HEALTH_MONITOR_ALLOW_STDIO=1`
 - HTTP server health endpoint: `GET /health`
-- Example configuration: [`.env.example`](https://github.com/oaslananka/health-monitor-mcp/blob/main/.env.example)
+
+Configuration is environment-variable driven; use the variables above directly in your shell,
+service manager, or MCP client environment block.
 
 The DB uses WAL mode on file-backed databases and applies schema migrations automatically on
 startup.
@@ -136,7 +140,9 @@ pnpm run test:integration
 pnpm run lint
 pnpm run lint:test
 pnpm run format:check
+pnpm run test:coverage
 pnpm run docs:api:check
+pnpm run ci
 ```
 
 Release CI uses Node 24 LTS. The package remains declared for Node `>=20` until a future major
@@ -150,7 +156,7 @@ High-level module map:
 - `src/checker.ts`: Live MCP connectivity probes with retry/backoff
 - `src/registry.ts`: SQLite read/write paths for servers, checks, and pipeline records
 - `src/db.ts` + `src/migrations.ts`: Connection setup and schema upgrades
-- `src/server-http.ts` + `src/mcp.ts`: HTTP and stdio entrypoints
+- `src/server-http.ts` + `src/mcp.ts`: HTTP and stdio entrypoints for local MCP clients and packaged CLI usage
 - `src/scheduler.ts`: Optional background auto-check loop
 
 More detail lives in [architecture.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/architecture.md).

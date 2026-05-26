@@ -1,5 +1,19 @@
 # Usage
 
+## Install and Run
+
+The current verified public artifact is the GitHub Release tarball for v1.0.5. The npm package name
+is reserved for the project, but public npm installation is blocked until package ownership and
+trusted publishing are completed.
+
+```bash
+npm install -g https://github.com/oaslananka/health-monitor-mcp/releases/download/mcp-health-monitor-v1.0.5/mcp-health-monitor-1.0.5.tgz
+mcp-health-monitor --version
+```
+
+After installing the tarball, configure desktop MCP clients to run the `mcp-health-monitor`
+binary directly.
+
 ## Register a Server
 
 Register an HTTP MCP server:

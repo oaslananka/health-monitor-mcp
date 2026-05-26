@@ -11,6 +11,7 @@ pnpm install --frozen-lockfile
 Common local gates:
 
 ```bash
+pnpm run ci
 pnpm run format:check
 pnpm run lint
 pnpm run lint:test
@@ -19,6 +20,7 @@ pnpm run docs:api
 pnpm run docs:api:check
 pnpm test
 pnpm run test:integration
+pnpm run test:coverage
 pnpm run build
 pnpm run check:metadata
 pnpm run check:package
