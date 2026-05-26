@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and support
+    url: https://github.com/oaslananka/health-monitor-mcp/discussions
+    about: Ask usage questions, share ideas, and get help that is not a tracked defect.
+  - name: Security vulnerability
+    url: https://github.com/oaslananka/health-monitor-mcp/security/policy
+    about: Report suspected vulnerabilities privately through the security policy.
+  - name: Support policy
+    url: https://github.com/oaslananka/health-monitor-mcp/blob/main/SUPPORT.md
+    about: Read the supported channels, response targets, and escalation paths.

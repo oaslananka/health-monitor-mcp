@@ -170,6 +170,10 @@ Read [SECURITY.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/SE
 ## Contributing
 
 See [contributing.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/contributing.md) for setup, standards, and PR expectations.
+Governance, triage labels, and maintainer response targets are documented in
+[governance.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/governance.md).
+Usage questions belong in [GitHub Discussions](https://github.com/oaslananka/health-monitor-mcp/discussions);
+tracked work should use the repository issue forms.
 
 ## License
 

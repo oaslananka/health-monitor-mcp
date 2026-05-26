@@ -1,0 +1,68 @@
+name: Release or CI blocker
+description: Report a failing required check, package publication blocker, or release artifact problem.
+title: '[BLOCKER] '
+labels:
+  - type:task
+  - priority:P0
+  - area:release
+  - risk:high
+assignees:
+  - oaslananka
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this only when a required check, release, package, or public artifact is blocked.
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What release, installation path, or required check is blocked?
+    validations:
+      required: true
+  - type: input
+    id: run
+    attributes:
+      label: Workflow, PR, release, or package URL
+      placeholder: https://github.com/oaslananka/health-monitor-mcp/actions/runs/...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Failure evidence
+      description: Paste the key redacted error lines and the failing command or step.
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Blocked surface
+      options:
+        - Required PR check
+        - Main branch CI
+        - Release workflow
+        - npm publishing
+        - GitHub Release artifact
+        - MCP registry metadata
+        - Security scan
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: next
+    attributes:
+      label: Known next action
+      description: If known, include the smallest command, config, or external action that unblocks the issue.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I removed secrets, tokens, PATs, cookies, and private keys from this report.
+          required: true
+        - label: I agree to follow the repository Code of Conduct.
+          required: true

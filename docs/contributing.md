@@ -18,6 +18,9 @@ pnpm run test:integration
 - Add or update tests for every new tool or behavior change
 - Update `CHANGELOG.md` for user-visible changes
 - Run `pnpm run ci` before opening a PR
+- Use the issue forms for bugs, feature requests, release blockers, and governance gaps
+- Follow the label, triage, support, and response policies in [governance.md](governance.md)
+- Ask usage questions in GitHub Discussions instead of opening a tracking issue
 
 ## Commit Convention
 
@@ -34,3 +37,5 @@ Examples:
 - [ ] New tests were added or existing tests were updated
 - [ ] `CHANGELOG.md` was updated for notable changes
 - [ ] `README.md` was updated if a tool API or runtime workflow changed
+- [ ] The PR links the issue it resolves
+- [ ] Evidence for public artifacts, package publication, or docs updates is included when relevant

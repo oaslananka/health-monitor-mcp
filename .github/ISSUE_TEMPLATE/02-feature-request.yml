@@ -1,0 +1,68 @@
+name: Feature request
+description: Propose a new capability or behavior change.
+title: '[FEATURE] '
+labels:
+  - type:enhancement
+  - priority:P3
+  - area:dx
+  - risk:low
+assignees:
+  - oaslananka
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for product or developer-experience improvements. Security concerns belong in the private vulnerability channel.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or operator problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest useful change.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Runtime monitoring
+        - Azure DevOps integration
+        - Alerts and reports
+        - Storage and migrations
+        - CI, release, or packaging
+        - Documentation
+        - Developer experience
+        - Governance
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: List workarounds, smaller versions, or reasons not to build this.
+    validations:
+      required: false
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation idea
+      description: How should maintainers know the change works?
+      placeholder: Unit test, integration test, docs example, release artifact check...
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I agree to follow the repository Code of Conduct.
+          required: true

@@ -1,0 +1,96 @@
+name: Bug report
+description: Report a reproducible defect in the package, CLI, MCP tools, or workflows.
+title: '[BUG] '
+labels:
+  - type:bug
+  - priority:P2
+  - risk:medium
+assignees:
+  - oaslananka
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Do not include tokens, PATs, private URLs, or database contents.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken, and what impact does it have?
+      placeholder: The health monitor reports...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: Use `mcp-health-monitor --version`, `npm ls mcp-health-monitor`, or the release tag.
+      placeholder: 1.0.5
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      multiple: true
+      options:
+        - MCP stdio server
+        - HTTP MCP endpoint
+        - Azure DevOps integration
+        - SQLite storage or migrations
+        - Alerts or dashboard reports
+        - CI, release, or packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include the smallest command, config, or MCP tool call that reproduces the issue.
+      placeholder: |
+        1. Run ...
+        2. Register ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Node version, package manager, deployment mode, and database/storage details.
+      placeholder: |
+        OS:
+        Node:
+        pnpm/npm:
+        Transport:
+        Database path:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste redacted logs only. This field is rendered as shell output.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed secrets, tokens, PATs, cookies, and private keys from this report.
+          required: true
+        - label: I agree to follow the repository Code of Conduct.
+          required: true

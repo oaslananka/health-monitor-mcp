@@ -1,0 +1,41 @@
+name: Docs or governance
+description: Request documentation, templates, policy, label, or contributor workflow changes.
+title: '[DOCS] '
+labels:
+  - type:docs
+  - priority:P2
+  - area:docs
+  - risk:low
+assignees:
+  - oaslananka
+body:
+  - type: textarea
+    id: gap
+    attributes:
+      label: Gap
+      description: What documentation, template, or governance detail is missing or stale?
+    validations:
+      required: true
+  - type: textarea
+    id: audience
+    attributes:
+      label: Audience and impact
+      description: Who is affected, and what decision or workflow is currently unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected update
+      description: List files, examples, or policy language that should change.
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I checked README.md, docs/, SUPPORT.md, and existing issues first.
+          required: true
+        - label: I agree to follow the repository Code of Conduct.
+          required: true
