@@ -54,7 +54,7 @@
     "check:metadata": "node scripts/validate-mcp-metadata.mjs",
     "check:package": "pnpm pack --dry-run",
     "release:dry-run": "node scripts/release-state.mjs --dry-run",
-    "ci:check": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm run docs:api:check && pnpm test && pnpm run test:integration",
+    "ci:check": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm run docs:api:check && pnpm run test:coverage",
     "ci": "pnpm run ci:check && pnpm run security && pnpm run security:supply-chain && pnpm run check:metadata && pnpm run check:package && pnpm run release:dry-run",
     "prepare": "pnpm run build",
     "prepublishOnly": "node scripts/prepublish-check.mjs"

@@ -39,7 +39,7 @@ jobs:
           corepack prepare pnpm@11.0.9 --activate
 
       - run: pnpm install --frozen-lockfile
-      - name: Run build, lint, tests, and API docs check
+      - name: Run build, lint, coverage, and API docs check
         run: pnpm run ci:check
       - run: pnpm run security
       - name: Install REUSE
