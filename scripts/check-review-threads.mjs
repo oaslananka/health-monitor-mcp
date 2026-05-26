@@ -82,8 +82,21 @@ const response = runGhGraphql(query, {
   name,
   number: Number(prNumber)
 });
-const pullRequest = response.repository.pullRequest;
-const unresolved = pullRequest.reviewThreads.nodes.filter((thread) => {
+const graphData = response.data ?? response;
+const pullRequest = graphData.repository?.pullRequest;
+
+if (!pullRequest) {
+  const payload = {
+    ok: false,
+    error: `Pull request ${repository}#${prNumber} was not found in the GraphQL response`
+  };
+  writeSummary(payload);
+  console.error(JSON.stringify(payload, null, 2));
+  process.exit(1);
+}
+
+const reviewThreads = pullRequest.reviewThreads?.nodes ?? [];
+const unresolved = reviewThreads.filter((thread) => {
   if (thread.isResolved || thread.isOutdated) {
     return false;
   }
