@@ -4,15 +4,6 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
-## [1.0.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.0.0...health-monitor-mcp-v1.0.0) (2026-05-26)
-
-
-### Bug Fixes
-
-* **ci:** restore typecheck and security audit ([79d4d37](https://github.com/oaslananka/health-monitor-mcp/commit/79d4d379edebba5e97ba4c84a5aa4b8c3408c9c3))
-* **release:** restore publishable package path ([fc55051](https://github.com/oaslananka/health-monitor-mcp/commit/fc55051fbe7f347e583fa22ad7cb4016031356f4))
-* **security:** remove shell quoting from prepublish check ([decdcaf](https://github.com/oaslananka/health-monitor-mcp/commit/decdcaf700d10dc7638ed31757a258b96ea4d62c))
-
 ## [Unreleased]
 
 ## [1.0.0] - 2026-05-26
@@ -43,6 +34,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Standardized package management on pnpm 11 with Node 24 CI while keeping package runtime support
   declared as Node `>=20`.
 - Configured release automation for GitHub Actions and npm trusted publishing with provenance.
+
+### Fixed
+
+- Restored the publishable package path for the first public npm release.
+- Restored CI typecheck and security audit gates.
+- Removed shell quoting from the prepublish package-state check.
 
 ### Security
 
