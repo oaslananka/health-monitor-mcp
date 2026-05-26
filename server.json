@@ -4,15 +4,15 @@
   "title": "MCP Health Monitor",
   "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipeline status",
   "repository": {
-    "url": "https://github.com/oaslananka/mcp-health-monitor",
+    "url": "https://github.com/oaslananka/health-monitor-mcp",
     "source": "github"
   },
-  "version": "1.0.3",
+  "version": "1.0.4",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-health-monitor",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "transport": {
         "type": "stdio"
       },

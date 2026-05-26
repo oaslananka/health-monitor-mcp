@@ -28,7 +28,7 @@ Example desktop MCP client entry:
 ```json
 {
   "name": "mcp-health-monitor",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "mcpName": "io.github.oaslananka/mcp-health-monitor",
   "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipelines",
   "transport": "stdio",
@@ -67,7 +67,7 @@ register_azure_pipelines name="mcp-health-monitor" organization="oaslananka" pro
 PAT tokens are encrypted in the local SQLite database with AES-256-GCM when
 `HEALTH_MONITOR_ENCRYPTION_KEY` is set. Local insecure storage is available only when
 `HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE=1` is explicitly set. See
-[credential storage notes](https://github.com/oaslananka/mcp-health-monitor/blob/main/docs/security.md).
+[credential storage notes](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/security.md).
 
 ## Alert Configuration
 
@@ -92,7 +92,7 @@ is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 - Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
 - Local-only stdio checks over HTTP: `HEALTH_MONITOR_ALLOW_STDIO=1`
 - HTTP server health endpoint: `GET /health`
-- Example configuration: [`.env.example`](https://github.com/oaslananka/mcp-health-monitor/blob/main/.env.example)
+- Example configuration: [`.env.example`](https://github.com/oaslananka/health-monitor-mcp/blob/main/.env.example)
 
 The DB uses WAL mode on file-backed databases and applies schema migrations automatically on
 startup.
@@ -151,11 +151,11 @@ High-level module map:
 - `src/server-http.ts` + `src/mcp.ts`: HTTP and stdio entrypoints
 - `src/scheduler.ts`: Optional background auto-check loop
 
-More detail lives in [architecture.md](https://github.com/oaslananka/mcp-health-monitor/blob/main/docs/architecture.md).
+More detail lives in [architecture.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/architecture.md).
 
 ## Roadmap
 
-Detailed milestone planning lives in [ROADMAP.md](https://github.com/oaslananka/mcp-health-monitor/blob/main/ROADMAP.md).
+Detailed milestone planning lives in [ROADMAP.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/ROADMAP.md).
 
 - [x] v1.0: Core monitoring, uptime, alerts, Azure pipelines, Markdown reports
 - [ ] v1.1: Webhook notifications for Slack, Discord, and custom endpoints
@@ -164,11 +164,11 @@ Detailed milestone planning lives in [ROADMAP.md](https://github.com/oaslananka/
 
 ## Security
 
-Read [SECURITY.md](https://github.com/oaslananka/mcp-health-monitor/blob/main/SECURITY.md) for vulnerability reporting and [docs/security.md](https://github.com/oaslananka/mcp-health-monitor/blob/main/docs/security.md) for implementation-specific storage details.
+Read [SECURITY.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/SECURITY.md) for vulnerability reporting and [docs/security.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/security.md) for implementation-specific storage details.
 
 ## Contributing
 
-See [contributing.md](https://github.com/oaslananka/mcp-health-monitor/blob/main/docs/contributing.md) for setup, standards, and PR expectations.
+See [contributing.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/contributing.md) for setup, standards, and PR expectations.
 
 ## License
 

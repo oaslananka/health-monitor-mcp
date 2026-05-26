@@ -23,7 +23,7 @@ defaults:
 jobs:
   publish:
     name: Publish npm
-    if: github.repository == 'oaslananka/mcp-health-monitor' && inputs.approval_phrase == 'APPROVE_RELEASE'
+    if: github.repository == 'oaslananka/health-monitor-mcp' && inputs.approval_phrase == 'APPROVE_RELEASE'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: npm-production
@@ -31,6 +31,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
@@ -47,7 +48,7 @@ jobs:
 
       - name: Verify release state
         run: |
-          node scripts/release-state.mjs > release-state.json
+          node scripts/release-state.mjs --require-tag > release-state.json
           node -e "const s=require('./release-state.json'); if (!s.safe_to_publish) { console.error(JSON.stringify(s, null, 2)); process.exit(1); }"
 
       - name: Publish package

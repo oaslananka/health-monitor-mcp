@@ -6,6 +6,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-26
+
 ### Added
 
 - Added bearer-token authentication for the HTTP MCP endpoint with remote-safe profile checks
@@ -19,6 +21,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Migrated package management and CI validation from npm lockfiles to pnpm 11
 - Hardened Docker runtime defaults with a digest-pinned Node 24 base image and non-root runtime user
 - Disabled raw stdio process execution in HTTP mode unless explicitly enabled for trusted local deployments
+- Corrected release and publish automation guards to target `oaslananka/health-monitor-mcp`
+- Updated public repository metadata and documentation links to the canonical GitHub repository
 
 ### Security
 

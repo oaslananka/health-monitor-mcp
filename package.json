@@ -1,6 +1,6 @@
 {
   "name": "mcp-health-monitor",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "MCP server for monitoring other MCP servers — track health, uptime, tool errors, response times, and Azure DevOps pipeline status",
   "type": "module",
   "packageManager": "pnpm@11.0.9",
@@ -57,13 +57,13 @@
     "node": ">=20",
     "pnpm": ">=11"
   },
-  "homepage": "https://github.com/oaslananka/mcp-health-monitor",
+  "homepage": "https://github.com/oaslananka/health-monitor-mcp",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oaslananka/mcp-health-monitor.git"
+    "url": "git+https://github.com/oaslananka/health-monitor-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/oaslananka/mcp-health-monitor/issues"
+    "url": "https://github.com/oaslananka/health-monitor-mcp/issues"
   },
   "keywords": [
     "mcp",

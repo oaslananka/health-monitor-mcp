@@ -19,7 +19,7 @@ defaults:
 jobs:
   release-please:
     name: Release Please
-    if: github.repository == 'oaslananka/mcp-health-monitor'
+    if: github.repository == 'oaslananka/health-monitor-mcp'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

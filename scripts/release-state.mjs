@@ -40,6 +40,7 @@ function npmVersionExists(name, version) {
 const packageJson = readJson('package.json');
 const mcpJson = readJson('mcp.json');
 const serverJson = readJson('server.json');
+const requireTag = process.argv.includes('--require-tag');
 const releaseManifest = fs.existsSync('.release-please-manifest.json')
   ? readJson('.release-please-manifest.json')
   : {};
@@ -64,8 +65,17 @@ if (tagLookup.status === 0) {
   states.push('tag-created');
 }
 
-const gitStatus = run('git', ['status', '--porcelain']);
+const gitStatus = run('git', ['status', '--porcelain', '--untracked-files=no']);
 const npmExists = npmVersionExists(packageJson.name, packageJson.version);
+
+if (requireTag && tagLookup.status !== 0) {
+  blockers.push(`release tag ${tagName} does not exist`);
+}
+
+if (gitStatus.stdout.length > 0) {
+  blockers.push('tracked working tree has uncommitted changes');
+  states.push('dirty');
+}
 
 if (npmExists) {
   blockers.push(`npm package ${packageJson.name}@${packageJson.version} already exists`);
@@ -85,7 +95,7 @@ const result = {
   version: packageJson.version,
   tag_name: tagName,
   states,
-  safe_to_publish: blockers.length === 0 && gitStatus.stdout.length === 0 && !npmExists,
+  safe_to_publish: blockers.length === 0,
   blockers,
   next_safe_command: blockers.length
     ? 'Resolve blockers before publishing.'
