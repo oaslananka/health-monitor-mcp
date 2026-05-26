@@ -1,6 +1,6 @@
 {
   "name": "mcp-health-monitor",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "MCP server for monitoring other MCP servers — track health, uptime, tool errors, response times, and Azure DevOps pipeline status",
   "type": "module",
   "packageManager": "pnpm@11.0.9",
