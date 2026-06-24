@@ -93,6 +93,7 @@ is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 - HTTP MCP endpoint token: `HEALTH_MONITOR_HTTP_TOKEN=...`
 - HTTP bind host: `HOST=127.0.0.1` by default
 - Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
+- Remote HTTP Origin allowlist: `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example`
 - Local stdio checks opt-in: `HEALTH_MONITOR_ALLOW_STDIO=1`
 - Optional stdio command allowlist: `HEALTH_MONITOR_STDIO_ALLOWLIST=node,npx`
 - HTTP server health endpoint: `GET /health`

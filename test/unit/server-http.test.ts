@@ -218,6 +218,15 @@ describe('server-http', () => {
         authToken: 'token',
         profile: 'remote-safe'
       })
+    ).toThrow('HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST');
+
+    expect(() =>
+      validateHttpStartupConfig({
+        host: '0.0.0.0',
+        authToken: 'token',
+        profile: 'remote-safe',
+        originAllowlist: ['https://client.example']
+      })
     ).not.toThrow();
   });
 
@@ -244,6 +253,56 @@ describe('server-http', () => {
 
       expect(result.statusCode).toBe(404);
       expect(result.body).toContain('Not Found');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('rejects MCP requests from origins outside the configured allowlist', async () => {
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      originAllowlist: ['https://allowed.example']
+    });
+    const port = await startServer(server);
+
+    try {
+      const result = await request(
+        port,
+        '/mcp',
+        'POST',
+        JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+        {
+          Authorization: 'Bearer local-test-token',
+          Origin: 'https://blocked.example'
+        }
+      );
+
+      expect(result.statusCode).toBe(403);
+      expect(result.body).toContain('Forbidden Origin');
+      expect(result.headers.vary).toBe('Origin');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('rejects explicit MCP Accept headers that cannot receive JSON or event streams', async () => {
+    const server = createHttpServer({ authToken: 'local-test-token' });
+    const port = await startServer(server);
+
+    try {
+      const result = await request(
+        port,
+        '/mcp',
+        'POST',
+        JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+        {
+          Authorization: 'Bearer local-test-token',
+          Accept: 'text/html'
+        }
+      );
+
+      expect(result.statusCode).toBe(406);
+      expect(result.body).toContain('Not Acceptable');
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

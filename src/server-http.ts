@@ -30,6 +30,7 @@ type MonitorServer = {
 
 type HttpServerOptions = {
   authToken?: string | undefined;
+  originAllowlist?: string[] | undefined;
   profile?: RuntimeProfile | undefined;
   allowStdio?: boolean | undefined;
   rateLimiter?: InMemoryRateLimiter;
@@ -40,6 +41,7 @@ type HttpStartupConfig = {
   authToken?: string | undefined;
   host: string;
   profile: RuntimeProfile;
+  originAllowlist?: string[] | undefined;
 };
 
 export class InMemoryRateLimiter {
@@ -106,6 +108,19 @@ function getAuthTokenFromOptions(options: HttpServerOptions): string | undefined
     : process.env.HEALTH_MONITOR_HTTP_TOKEN?.trim();
 }
 
+function parseCsvEnv(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function getOriginAllowlistFromOptions(options: HttpServerOptions): string[] {
+  return Object.hasOwn(options, 'originAllowlist')
+    ? (options.originAllowlist ?? [])
+    : parseCsvEnv(process.env.HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST);
+}
+
 function isLoopbackHost(host: string): boolean {
   const normalized = host.trim().toLowerCase();
   return (
@@ -131,6 +146,37 @@ export function validateHttpStartupConfig(config: HttpStartupConfig): void {
       'Non-loopback HTTP bind addresses require HEALTH_MONITOR_PROFILE=remote-safe, chatgpt, or claude'
     );
   }
+
+  if (!config.originAllowlist?.length) {
+    throw new Error(
+      'HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST is required for non-loopback HTTP bind addresses'
+    );
+  }
+}
+
+function isOriginAllowed(origin: string | string[] | undefined, allowlist: string[]): boolean {
+  if (!origin || Array.isArray(origin) || allowlist.length === 0) {
+    return true;
+  }
+
+  return allowlist.includes(origin);
+}
+
+function acceptsMcpResponse(accept: string | string[] | undefined): boolean {
+  if (!accept || Array.isArray(accept)) {
+    return true;
+  }
+
+  return accept
+    .split(',')
+    .map((entry) => entry.split(';')[0]?.trim().toLowerCase() ?? '')
+    .some(
+      (mediaType) =>
+        mediaType === '*/*' ||
+        mediaType === 'application/json' ||
+        mediaType === 'text/event-stream' ||
+        mediaType.endsWith('+json')
+    );
 }
 
 function isValidBearerToken(authorization: string | undefined, authToken: string): boolean {
@@ -246,6 +292,7 @@ async function handleMcpRequest(
 export function createHttpServer(options: HttpServerOptions = {}): http.Server {
   const limiter = options.rateLimiter ?? new InMemoryRateLimiter();
   const authToken = getAuthTokenFromOptions(options);
+  const originAllowlist = getOriginAllowlistFromOptions(options);
   const profile = options.profile ?? getRuntimeProfile();
   const policy = createRuntimePolicy({
     transport: 'http',
@@ -276,6 +323,16 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
 
     if (req.method !== 'POST') {
       jsonResponse(res, 405, { error: 'Method Not Allowed' }, { Allow: 'POST' });
+      return;
+    }
+
+    if (!isOriginAllowed(req.headers.origin, originAllowlist)) {
+      jsonResponse(res, 403, { error: 'Forbidden Origin' }, { Vary: 'Origin' });
+      return;
+    }
+
+    if (!acceptsMcpResponse(req.headers.accept)) {
+      jsonResponse(res, 406, { error: 'Not Acceptable' });
       return;
     }
 
@@ -313,9 +370,10 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
 export function startHttpServer(port = DEFAULT_PORT, host = DEFAULT_HOST): http.Server {
   const profile = getRuntimeProfile();
   const authToken = process.env.HEALTH_MONITOR_HTTP_TOKEN?.trim();
+  const originAllowlist = parseCsvEnv(process.env.HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST);
   const policy = createRuntimePolicy({ transport: 'http', profile });
 
-  validateHttpStartupConfig({ host, authToken, profile });
+  validateHttpStartupConfig({ host, authToken, profile, originAllowlist });
 
   if (isSchedulerEnabled()) {
     startScheduler(undefined, { allowStdio: policy.allowStdio });
@@ -324,7 +382,8 @@ export function startHttpServer(port = DEFAULT_PORT, host = DEFAULT_HOST): http.
   const server = createHttpServer({
     authToken,
     profile,
-    allowStdio: policy.allowStdio
+    allowStdio: policy.allowStdio,
+    originAllowlist
   });
 
   server.listen(port, host, () => {
