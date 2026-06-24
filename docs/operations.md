@@ -54,3 +54,19 @@ gh api repos/oaslananka/health-monitor-mcp/actions/permissions/selected-actions
 ```
 
 PowerShell uses the same `gh api` commands.
+
+## Remote HTTP Origin Policy
+
+Remote HTTP deployments must define the browser origins that are allowed to call `POST /mcp`:
+
+```bash
+HOST=0.0.0.0
+HEALTH_MONITOR_PROFILE=remote-safe
+HEALTH_MONITOR_HTTP_TOKEN=change-me
+HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://chat.example.com,https://ops.example.com
+```
+
+`GET /health` remains unauthenticated and only returns status/version. `GET /mcp` is intentionally
+not supported and returns `405 Method Not Allowed` with `Allow: POST`. Reverse proxies should
+preserve `Origin`, `Accept`, and `Authorization` headers and terminate TLS before forwarding to the
+loopback-bound service whenever possible.
