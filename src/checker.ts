@@ -8,6 +8,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 import { getHttpTimeoutMs } from './config.js';
+import { STDIO_DISABLED_MESSAGE, validateStdioCommandPolicy } from './policy.js';
 import { fetchWithTimeout } from './network.js';
 import { withRetry } from './retry.js';
 import { MONITOR_NAME, MONITOR_VERSION } from './version.js';
@@ -83,43 +84,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 function getRemainingTimeout(startedAt: number, timeoutMs: number): number {
   return timeoutMs - (Date.now() - startedAt);
-}
-
-function splitCommand(command: string): { command: string; args: string[] } {
-  const tokens: string[] = [];
-  let current = '';
-  let quote: '"' | "'" | null = null;
-
-  for (const character of command.trim()) {
-    if ((character === '"' || character === "'") && quote === null) {
-      quote = character;
-      continue;
-    }
-
-    if (quote !== null && character === quote) {
-      quote = null;
-      continue;
-    }
-
-    if (character === ' ' && quote === null) {
-      if (current) {
-        tokens.push(current);
-        current = '';
-      }
-      continue;
-    }
-
-    current += character;
-  }
-
-  if (current) {
-    tokens.push(current);
-  }
-
-  return {
-    command: tokens[0] ?? command,
-    args: tokens.slice(1)
-  };
 }
 
 async function attemptTransport(
@@ -243,13 +207,25 @@ export async function checkStdioServer(
   timeoutMs: number
 ): Promise<CheckResult> {
   const startedAt = Date.now();
+
+  try {
+    validateStdioCommandPolicy(command);
+  } catch (error) {
+    return {
+      status: 'error',
+      response_time_ms: null,
+      tool_count: null,
+      error_message: error instanceof Error ? error.message : 'Invalid stdio command',
+      tools: null
+    };
+  }
+
   const client = checkerRuntime.createClient();
-  const parsed = splitCommand(command);
 
   try {
     const transport = checkerRuntime.createStdioTransport({
-      command: parsed.command,
-      args: [...parsed.args, ...args],
+      command,
+      args,
       stderr: 'pipe'
     });
 
@@ -299,7 +275,7 @@ export async function checkServer(
         status: 'error',
         response_time_ms: null,
         tool_count: null,
-        error_message: 'stdio transport is disabled for this runtime profile',
+        error_message: STDIO_DISABLED_MESSAGE,
         tools: null
       };
     }

@@ -8,7 +8,7 @@
 
 > **checkStdioServer**(`command`, `args`, `timeoutMs`): `Promise`\<[`CheckResult`](../../types/interfaces/CheckResult.md)\>
 
-Defined in: [checker.ts:240](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/checker.ts#L240)
+Defined in: [checker.ts:204](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/checker.ts#L204)
 
 ## Parameters
 

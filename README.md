@@ -93,11 +93,15 @@ is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 - HTTP MCP endpoint token: `HEALTH_MONITOR_HTTP_TOKEN=...`
 - HTTP bind host: `HOST=127.0.0.1` by default
 - Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
-- Local-only stdio checks over HTTP: `HEALTH_MONITOR_ALLOW_STDIO=1`
+- Local stdio checks opt-in: `HEALTH_MONITOR_ALLOW_STDIO=1`
+- Optional stdio command allowlist: `HEALTH_MONITOR_STDIO_ALLOWLIST=node,npx`
 - HTTP server health endpoint: `GET /health`
 
 Configuration is environment-variable driven; use the variables above directly in your shell,
-service manager, or MCP client environment block.
+service manager, or MCP client environment block. Stdio monitoring launches local child
+processes and is disabled unless `HEALTH_MONITOR_ALLOW_STDIO=1` is set or an embedding
+application explicitly enables it through runtime policy. Keep the executable in `command` and
+put arguments in `args`; for example, use `command="npx" args=["mcp-debug-recorder"]`.
 
 The DB uses WAL mode on file-backed databases and applies schema migrations automatically on
 startup.

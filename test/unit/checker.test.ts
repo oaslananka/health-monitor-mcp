@@ -34,10 +34,13 @@ describe('checker', () => {
       close: jest.fn(async (): Promise<void> => undefined)
     };
 
+    const createStdioTransport = jest.fn(
+      (options: unknown) => ({ kind: 'stdio', options }) as unknown as Transport
+    );
+
     setCheckerRuntimeForTests({
       createClient: () => client,
-      createStdioTransport: (options: unknown) =>
-        ({ kind: 'stdio', options }) as unknown as Transport
+      createStdioTransport
     });
 
     const result = await checkStdioServer('npx', ['demo-tool'], 1000);
@@ -45,7 +48,39 @@ describe('checker', () => {
     expect(result.status).toBe('up');
     expect(result.tool_count).toBe(2);
     expect(client.connect).toHaveBeenCalledWith(expect.objectContaining({ kind: 'stdio' }));
+    expect(createStdioTransport).toHaveBeenCalledWith({
+      command: 'npx',
+      args: ['demo-tool'],
+      stderr: 'pipe'
+    });
     expect(client.close).toHaveBeenCalled();
+  });
+
+  it('rejects compound stdio commands before creating a transport', async () => {
+    const client = {
+      connect: jest.fn(async (_transport: unknown): Promise<void> => undefined),
+      listTools: jest.fn(async (): Promise<{ tools: Array<{ name: string }> }> => ({ tools: [] })),
+      close: jest.fn(async (): Promise<void> => undefined)
+    };
+    const createStdioTransport = jest.fn(
+      (options: unknown) => ({ kind: 'stdio', options }) as unknown as Transport
+    );
+
+    setCheckerRuntimeForTests({
+      createClient: () => client,
+      createStdioTransport
+    });
+
+    const result = await checkStdioServer('npx mcp-debug-recorder', [], 1000);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: 'error',
+        error_message: expect.stringContaining('single executable path')
+      })
+    );
+    expect(createStdioTransport).not.toHaveBeenCalled();
+    expect(client.connect).not.toHaveBeenCalled();
   });
 
   it('returns timeout for stdio server that hangs', async () => {

@@ -7,6 +7,7 @@ import { getDb, getResolvedDbPath } from './db.js';
 import {
   createRuntimePolicy,
   STDIO_DISABLED_MESSAGE,
+  validateStdioCommandPolicy,
   type RuntimePolicy,
   type RuntimePolicyOptions
 } from './policy.js';
@@ -279,8 +280,12 @@ export function registerMonitoringTools(
       }
     },
     async (input: RegisterServerInput) => {
-      if (input.type === 'stdio' && !policy.allowStdio) {
-        throw new Error(STDIO_DISABLED_MESSAGE);
+      if (input.type === 'stdio') {
+        if (!policy.allowStdio) {
+          throw new Error(STDIO_DISABLED_MESSAGE);
+        }
+
+        validateStdioCommandPolicy(input.command);
       }
 
       const result = registerServer(input);

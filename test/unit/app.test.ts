@@ -70,6 +70,8 @@ describe('app tool registration', () => {
   beforeEach(() => {
     process.env.HEALTH_MONITOR_ENCRYPTION_KEY =
       'test-key-material-that-is-at-least-32-characters-long';
+    delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
+    delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
     resetDbForTests();
     resetAzureDevopsFetchForTests();
     resetCheckerRuntimeForTests();
@@ -81,6 +83,8 @@ describe('app tool registration', () => {
     resetCheckerRuntimeForTests();
     delete process.env.HEALTH_MONITOR_DB;
     delete process.env.HEALTH_MONITOR_ENCRYPTION_KEY;
+    delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
+    delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
   });
 
   it('registers all monitoring tools including Azure pipeline tooling', async () => {
@@ -398,6 +402,57 @@ describe('app tool registration', () => {
         status: 'error',
         error_message: expect.stringContaining('stdio transport is disabled')
       })
+    );
+  });
+
+  it('requires explicit stdio opt-in by default', async () => {
+    const tools = createToolMap();
+    const registerServer = getTool(tools, 'register_server');
+
+    await expect(
+      registerServer.handler({
+        name: 'default-local-process',
+        type: 'stdio',
+        command: 'node',
+        args: ['server.js'],
+        tags: ['local'],
+        alert_on_down: true,
+        check_interval_minutes: 5
+      })
+    ).rejects.toThrow('stdio transport is disabled');
+  });
+
+  it('enforces stdio command allowlists during registration', async () => {
+    process.env.HEALTH_MONITOR_STDIO_ALLOWLIST = 'node';
+    const tools = createToolMap({ allowStdio: true });
+    const registerServer = getTool(tools, 'register_server');
+
+    await expect(
+      registerServer.handler({
+        name: 'blocked-local-process',
+        type: 'stdio',
+        command: 'python',
+        args: ['server.py'],
+        tags: ['local'],
+        alert_on_down: true,
+        check_interval_minutes: 5
+      })
+    ).rejects.toThrow('stdio command is not allowed');
+
+    const response = parseJson(
+      await registerServer.handler({
+        name: 'allowed-local-process',
+        type: 'stdio',
+        command: 'node',
+        args: ['server.js'],
+        tags: ['local'],
+        alert_on_down: true,
+        check_interval_minutes: 5
+      })
+    );
+
+    expect(response).toEqual(
+      expect.objectContaining({ registered: true, name: 'allowed-local-process' })
     );
   });
 

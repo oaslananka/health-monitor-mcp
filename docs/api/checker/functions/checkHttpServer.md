@@ -8,7 +8,7 @@
 
 > **checkHttpServer**(`url`, `timeoutMs`): `Promise`\<[`CheckResult`](../../types/interfaces/CheckResult.md)\>
 
-Defined in: [checker.ts:194](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/checker.ts#L194)
+Defined in: [checker.ts:158](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/checker.ts#L158)
 
 ## Parameters
 

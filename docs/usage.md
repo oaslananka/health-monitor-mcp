@@ -21,15 +21,22 @@ Register an HTTP MCP server:
 register_server name="mcp-ssh-tool" type="http" url="https://mcp-ssh-tool.onrender.com/mcp" tags=["devops","ssh"]
 ```
 
-Register a stdio server:
+Register a stdio server only after trusted local opt-in:
 
-```text
-register_server name="local-debugger" type="stdio" command="npx mcp-debug-recorder" args=[] tags=["local","debug"]
+```bash
+export HEALTH_MONITOR_ALLOW_STDIO=1
+export HEALTH_MONITOR_STDIO_ALLOWLIST=npx
 ```
 
-`stdio` registration and execution are intended for trusted local use. HTTP mode disables raw
-`stdio` process execution unless `HEALTH_MONITOR_ALLOW_STDIO=1` is set, and remote-safe profiles
-always block it.
+```text
+register_server name="local-debugger" type="stdio" command="npx" args=["mcp-debug-recorder"] tags=["local","debug"]
+```
+
+`stdio` registration and execution are intended for trusted local use only. The `command` field
+must be a single executable path or binary name; put all flags and package names in `args`. Raw
+`stdio` process execution is disabled unless `HEALTH_MONITOR_ALLOW_STDIO=1` is set or the embedding
+runtime explicitly enables it. Optional `HEALTH_MONITOR_STDIO_ALLOWLIST` entries must match the
+command exactly, and remote-safe profiles always block stdio.
 
 ## Run Health Checks
 

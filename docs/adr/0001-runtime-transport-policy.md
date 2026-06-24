@@ -30,3 +30,10 @@ centralizes the `stdio` versus `http` decision for tool handlers.
 pnpm run ci:check
 pnpm run docs:api
 ```
+
+## 2026-06-24 Update
+
+Stdio checks now require explicit opt-in even in the default local profile. Operators can enable
+trusted local stdio checks with `HEALTH_MONITOR_ALLOW_STDIO=1` and can restrict executable names
+with `HEALTH_MONITOR_STDIO_ALLOWLIST`. The monitor rejects compound command strings before creating
+a transport; arguments must be supplied through `args`.

@@ -8,7 +8,7 @@
 
 > **createRuntimePolicy**(`options?`): [`RuntimePolicy`](../interfaces/RuntimePolicy.md)
 
-Defined in: [policy.ts:24](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/policy.ts#L24)
+Defined in: [policy.ts:77](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/policy.ts#L77)
 
 ## Parameters
 

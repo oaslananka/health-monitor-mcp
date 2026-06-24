@@ -66,3 +66,20 @@ pnpm run ci
 python -m pip install --user reuse==6.2.0
 pnpm run ci
 ```
+
+## Local Stdio Monitoring
+
+Local stdio monitoring is disabled by default. Enable it only on trusted workstations:
+
+```bash
+export HEALTH_MONITOR_ALLOW_STDIO=1
+export HEALTH_MONITOR_STDIO_ALLOWLIST=npx,node,/usr/local/bin/my-mcp-server
+```
+
+Use a single executable in `command` and put every parameter in `args`:
+
+```text
+register_server name="local-debugger" type="stdio" command="npx" args=["mcp-debug-recorder"]
+```
+
+The command allowlist is optional but recommended. When set, entries must match the command exactly.
