@@ -1,13 +1,19 @@
 import http from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 
 import { createMonitorServer } from './app.js';
-import { getRuntimeProfile, isRemoteSafeProfile, type RuntimeProfile } from './config.js';
+import {
+  getBoundedIntegerEnv,
+  getRuntimeProfile,
+  isRemoteSafeProfile,
+  type RuntimeProfile
+} from './config.js';
 import { log } from './logging.js';
 import { createRuntimePolicy } from './policy.js';
 import { startScheduler, stopScheduler } from './scheduler.js';
@@ -16,6 +22,8 @@ import { MONITOR_VERSION } from './version.js';
 const DEFAULT_PORT = Number(process.env.PORT ?? 3000);
 const DEFAULT_HOST = process.env.HOST?.trim() || '127.0.0.1';
 const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
+const DEFAULT_SESSION_TTL_MS = 30 * 60 * 1000;
+const DEFAULT_MAX_SESSIONS = 100;
 
 type RateLimitResult = {
   allowed: boolean;
@@ -28,9 +36,131 @@ type MonitorServer = {
   close: () => Promise<void>;
 };
 
+type StatefulSession = {
+  server: MonitorServer;
+  transport: StreamableHTTPServerTransport;
+  expiresAt: number;
+};
+
+type SessionRuntimeOptions = {
+  ttlMs?: number | undefined;
+  maxSessions?: number | undefined;
+  now?: (() => number) | undefined;
+};
+
+export class HttpSessionRegistry {
+  private readonly sessions = new Map<string, StatefulSession>();
+  private readonly ttlMs: number;
+  private readonly maxSessions: number;
+  private readonly now: () => number;
+
+  public constructor(options: SessionRuntimeOptions = {}) {
+    this.ttlMs = options.ttlMs ?? DEFAULT_SESSION_TTL_MS;
+    this.maxSessions = options.maxSessions ?? DEFAULT_MAX_SESSIONS;
+    this.now = options.now ?? (() => Date.now());
+  }
+
+  public get size(): number {
+    this.pruneExpired();
+    return this.sessions.size;
+  }
+
+  public get(sessionId: string): StatefulSession | null {
+    this.pruneExpired();
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      return null;
+    }
+
+    session.expiresAt = this.now() + this.ttlMs;
+    return session;
+  }
+
+  public create(monitorFactory: () => MonitorServer): StatefulSession {
+    const server = monitorFactory();
+    let activeSessionId: string | undefined;
+
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      onsessioninitialized: (sessionId: string) => {
+        activeSessionId = sessionId;
+        this.register(sessionId, {
+          server,
+          transport,
+          expiresAt: this.now() + this.ttlMs
+        });
+      },
+      onsessionclosed: (sessionId: string) => {
+        void this.close(sessionId);
+      }
+    });
+
+    transport.onclose = () => {
+      if (activeSessionId) {
+        this.sessions.delete(activeSessionId);
+      }
+    };
+
+    return {
+      server,
+      transport,
+      expiresAt: this.now() + this.ttlMs
+    };
+  }
+
+  public async close(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      return;
+    }
+
+    this.sessions.delete(sessionId);
+    await Promise.allSettled([session.transport.close(), session.server.close()]);
+  }
+
+  public async closeAll(): Promise<void> {
+    const sessionIds = [...this.sessions.keys()];
+    await Promise.allSettled(sessionIds.map((sessionId) => this.close(sessionId)));
+  }
+
+  private register(sessionId: string, session: StatefulSession): void {
+    this.pruneExpired();
+
+    while (this.sessions.size >= this.maxSessions) {
+      const oldestSessionId = [...this.sessions.entries()].sort(
+        ([, left], [, right]) => left.expiresAt - right.expiresAt
+      )[0]?.[0];
+
+      if (!oldestSessionId) {
+        break;
+      }
+
+      void this.close(oldestSessionId);
+    }
+
+    this.sessions.set(sessionId, session);
+  }
+
+  private pruneExpired(): void {
+    const currentTime = this.now();
+
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (session.expiresAt <= currentTime) {
+        void this.close(sessionId);
+      }
+    }
+  }
+}
+
 type HttpServerOptions = {
   authToken?: string | undefined;
   originAllowlist?: string[] | undefined;
+  statefulSessions?: boolean | undefined;
+  sessionTtlMs?: number | undefined;
+  maxSessions?: number | undefined;
+  now?: (() => number) | undefined;
   profile?: RuntimeProfile | undefined;
   allowStdio?: boolean | undefined;
   rateLimiter?: InMemoryRateLimiter;
@@ -119,6 +249,33 @@ function getOriginAllowlistFromOptions(options: HttpServerOptions): string[] {
   return Object.hasOwn(options, 'originAllowlist')
     ? (options.originAllowlist ?? [])
     : parseCsvEnv(process.env.HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST);
+}
+
+function isStatefulSessionsEnabled(options: HttpServerOptions): boolean {
+  return Object.hasOwn(options, 'statefulSessions')
+    ? options.statefulSessions === true
+    : process.env.HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS === '1';
+}
+
+function getSessionTtlMs(options: HttpServerOptions): number {
+  return Object.hasOwn(options, 'sessionTtlMs') && options.sessionTtlMs !== undefined
+    ? Math.max(1_000, options.sessionTtlMs)
+    : getBoundedIntegerEnv(
+        'HEALTH_MONITOR_HTTP_SESSION_TTL_MS',
+        DEFAULT_SESSION_TTL_MS,
+        60_000,
+        24 * 60 * 60 * 1000
+      );
+}
+
+function getMaxSessions(options: HttpServerOptions): number {
+  return Object.hasOwn(options, 'maxSessions') && options.maxSessions !== undefined
+    ? Math.max(1, options.maxSessions)
+    : getBoundedIntegerEnv('HEALTH_MONITOR_HTTP_MAX_SESSIONS', DEFAULT_MAX_SESSIONS, 1, 1_000);
+}
+
+function getHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? undefined : value;
 }
 
 function isLoopbackHost(host: string): boolean {
@@ -233,7 +390,7 @@ async function readRequestBody(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
-async function handleMcpRequest(
+async function handleStatelessMcpRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   monitorFactory: () => MonitorServer
@@ -289,10 +446,78 @@ async function handleMcpRequest(
   }
 }
 
+async function handleStatefulMcpRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  monitorFactory: () => MonitorServer,
+  sessionRegistry: HttpSessionRegistry
+): Promise<void> {
+  let parsedBody: unknown;
+
+  if (req.method === 'POST') {
+    try {
+      parsedBody = await readRequestBody(req);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'payload_too_large') {
+        jsonResponse(res, 413, { error: 'Payload too large' });
+        return;
+      }
+
+      jsonResponse(res, 400, { error: 'Parse error' });
+      return;
+    }
+  }
+
+  const sessionId = getHeaderValue(req.headers['mcp-session-id']);
+
+  if (sessionId) {
+    const session = sessionRegistry.get(sessionId);
+
+    if (!session) {
+      jsonResponse(res, 404, { error: 'MCP session not found or expired' });
+      return;
+    }
+
+    await session.transport.handleRequest(req, res, parsedBody);
+    return;
+  }
+
+  if (req.method !== 'POST' || !isInitializeRequest(parsedBody)) {
+    jsonResponse(res, 400, { error: 'MCP session ID is required for non-initialize requests' });
+    return;
+  }
+
+  const session = sessionRegistry.create(monitorFactory);
+
+  try {
+    await session.server.connect(session.transport as unknown as Transport);
+    await session.transport.handleRequest(req, res, parsedBody);
+  } catch (error) {
+    log('error', 'Failed to handle stateful HTTP MCP request', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+
+    await session.transport.close();
+    await session.server.close();
+
+    if (!res.headersSent) {
+      jsonResponse(res, 500, { error: 'Internal error' });
+    }
+  }
+}
+
 export function createHttpServer(options: HttpServerOptions = {}): http.Server {
   const limiter = options.rateLimiter ?? new InMemoryRateLimiter();
   const authToken = getAuthTokenFromOptions(options);
   const originAllowlist = getOriginAllowlistFromOptions(options);
+  const statefulSessions = isStatefulSessionsEnabled(options);
+  const sessionRegistry = statefulSessions
+    ? new HttpSessionRegistry({
+        ttlMs: getSessionTtlMs(options),
+        maxSessions: getMaxSessions(options),
+        now: options.now
+      })
+    : null;
   const profile = options.profile ?? getRuntimeProfile();
   const policy = createRuntimePolicy({
     transport: 'http',
@@ -308,7 +533,7 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
         allowStdio: policy.allowStdio
       }));
 
-  return http.createServer((req, res) => {
+  const server = http.createServer((req, res) => {
     const pathName = getRequestPath(req);
 
     if (req.method === 'GET' && pathName === '/health') {
@@ -321,8 +546,10 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
       return;
     }
 
-    if (req.method !== 'POST') {
-      jsonResponse(res, 405, { error: 'Method Not Allowed' }, { Allow: 'POST' });
+    const allowedMethods = statefulSessions ? ['POST', 'GET', 'DELETE'] : ['POST'];
+
+    if (!allowedMethods.includes(req.method ?? '')) {
+      jsonResponse(res, 405, { error: 'Method Not Allowed' }, { Allow: allowedMethods.join(', ') });
       return;
     }
 
@@ -363,8 +590,21 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
       return;
     }
 
-    void handleMcpRequest(req, res, monitorFactory);
+    if (sessionRegistry) {
+      void handleStatefulMcpRequest(req, res, monitorFactory, sessionRegistry);
+      return;
+    }
+
+    void handleStatelessMcpRequest(req, res, monitorFactory);
   });
+
+  server.on('close', () => {
+    if (sessionRegistry) {
+      void sessionRegistry.closeAll();
+    }
+  });
+
+  return server;
 }
 
 export function startHttpServer(port = DEFAULT_PORT, host = DEFAULT_HOST): http.Server {
@@ -383,7 +623,8 @@ export function startHttpServer(port = DEFAULT_PORT, host = DEFAULT_HOST): http.
     authToken,
     profile,
     allowStdio: policy.allowStdio,
-    originAllowlist
+    originAllowlist,
+    statefulSessions: process.env.HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS === '1'
   });
 
   server.listen(port, host, () => {

@@ -142,4 +142,17 @@ Authorization: Bearer change-me
 ```
 
 The default host is `127.0.0.1`. Binding to `0.0.0.0` or another non-loopback address requires
-`HEALTH_MONITOR_PROFILE=remote-safe`, `chatgpt`, or `claude`.
+`HEALTH_MONITOR_PROFILE=remote-safe`, `chatgpt`, or `claude`, plus an explicit
+`HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST`.
+
+Enable stateful Streamable HTTP sessions when clients need an `mcp-session-id` across requests:
+
+```bash
+HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS=1
+HEALTH_MONITOR_HTTP_SESSION_TTL_MS=1800000
+HEALTH_MONITOR_HTTP_MAX_SESSIONS=100
+```
+
+When stateful mode is enabled, initialize requests create the session header. Follow-up `POST`,
+`GET`, and `DELETE` requests must send `mcp-session-id`; missing session headers return `400`,
+and expired or evicted sessions return `404`.

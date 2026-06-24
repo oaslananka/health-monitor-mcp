@@ -41,6 +41,11 @@ Raw `stdio` process execution is disabled in HTTP mode unless the deployment is 
 trusted local and sets `HEALTH_MONITOR_ALLOW_STDIO=1`. Remote connector
 profiles always block raw `stdio` execution.
 
+Stateful Streamable HTTP sessions are opt-in with `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS=1`.
+They keep MCP transports alive between requests, so remote deployments should retain bearer token
+authentication, Origin allowlisting, TLS at the reverse proxy, and conservative session limits via
+`HEALTH_MONITOR_HTTP_SESSION_TTL_MS` and `HEALTH_MONITOR_HTTP_MAX_SESSIONS`.
+
 ## Supply-Chain Evidence
 
 `pnpm run security:supply-chain` writes ignored evidence under `security-evidence/`:

@@ -94,6 +94,9 @@ is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 - HTTP bind host: `HOST=127.0.0.1` by default
 - Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
 - Remote HTTP Origin allowlist: `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example`
+- Optional stateful HTTP sessions: `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS=1`
+- Stateful HTTP session TTL: `HEALTH_MONITOR_HTTP_SESSION_TTL_MS=1800000` by default
+- Stateful HTTP session cap: `HEALTH_MONITOR_HTTP_MAX_SESSIONS=100` by default
 - Local stdio checks opt-in: `HEALTH_MONITOR_ALLOW_STDIO=1`
 - Optional stdio command allowlist: `HEALTH_MONITOR_STDIO_ALLOWLIST=node,npx`
 - HTTP server health endpoint: `GET /health`
@@ -116,8 +119,8 @@ docker build -t health-monitor-mcp .
 docker run --rm health-monitor-mcp node dist/mcp.js --version
 ```
 
-HTTP mode binds to loopback by default. For a remote HTTP deployment, require a bearer token and
-the remote-safe profile:
+HTTP mode binds to loopback by default. For a remote HTTP deployment, require a bearer token,
+the remote-safe profile, and an Origin allowlist:
 
 ```bash
 docker run --rm \
@@ -125,10 +128,12 @@ docker run --rm \
   -e HOST=0.0.0.0 \
   -e HEALTH_MONITOR_PROFILE=remote-safe \
   -e HEALTH_MONITOR_HTTP_TOKEN=change-me \
+  -e HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example \
   health-monitor-mcp
 curl -X POST \
   --oauth2-bearer "$HEALTH_MONITOR_HTTP_TOKEN" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
   http://127.0.0.1:3000/mcp
 ```

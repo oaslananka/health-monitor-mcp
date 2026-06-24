@@ -7,6 +7,7 @@ The HTTP server defaults to `HOST=127.0.0.1`. Non-loopback bind addresses requir
 ```bash
 HEALTH_MONITOR_PROFILE=remote-safe
 HEALTH_MONITOR_HTTP_TOKEN=...
+HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example
 ```
 
 Use `chatgpt` or `claude` profiles only for remote connector experiments. They inherit the
@@ -24,12 +25,31 @@ outside the repository. The monitor never prints decrypted PAT values.
 - `HEALTH_MONITOR_HTTP_TIMEOUT_MS` defaults to `10000`.
 - `HEALTH_MONITOR_AZURE_TIMEOUT_MS` defaults to `10000`.
 - `HEALTH_MONITOR_WEBHOOK_TIMEOUT_MS` defaults to `5000`.
+- `HEALTH_MONITOR_HTTP_SESSION_TTL_MS` defaults to `1800000` when stateful HTTP sessions are enabled.
+- `HEALTH_MONITOR_HTTP_MAX_SESSIONS` defaults to `100` when stateful HTTP sessions are enabled.
+
+
+## Stateful Streamable HTTP Sessions
+
+Stateless HTTP mode remains the default and creates a fresh MCP transport for each `POST /mcp`
+request. Enable stateful Streamable HTTP sessions only when a client needs MCP session continuity:
+
+```bash
+HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS=1
+HEALTH_MONITOR_HTTP_SESSION_TTL_MS=1800000
+HEALTH_MONITOR_HTTP_MAX_SESSIONS=100
+```
+
+In stateful mode, initialize requests create an `mcp-session-id`. Follow-up `POST`, `GET`, and
+`DELETE` calls must include that header. Expired or evicted sessions return a deterministic `404`,
+and non-initialize requests without a session header return `400`. Keep bearer authentication,
+Origin allowlisting, and reverse-proxy TLS in place for all remote deployments.
 
 ## Docker
 
 The runtime image runs as the non-root `node` user and uses `HOST=127.0.0.1` by default. For remote
-HTTP service deployment, set `HOST=0.0.0.0`, `HEALTH_MONITOR_PROFILE=remote-safe`, and
-`HEALTH_MONITOR_HTTP_TOKEN`.
+HTTP service deployment, set `HOST=0.0.0.0`, `HEALTH_MONITOR_PROFILE=remote-safe`,
+`HEALTH_MONITOR_HTTP_TOKEN`, and `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST`.
 
 ## Repository Protection
 

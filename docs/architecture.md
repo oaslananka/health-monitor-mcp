@@ -34,7 +34,7 @@ User prompt
 ## Runtime Modes
 
 - `src/mcp.ts`: stdio server for local MCP clients and packaged CLI usage
-- `src/server-http.ts`: HTTP server exposing authenticated `POST /mcp` and public `GET /health`
+- `src/server-http.ts`: HTTP server exposing authenticated MCP over HTTP and public `GET /health`; optional stateful Streamable HTTP sessions are backed by an in-memory session registry with TTL and max-session limits
 - `src/policy.ts`: runtime profile policy for stdio execution in local and remote-safe modes
 - `src/scheduler.ts`: opt-in loop enabled with `HEALTH_MONITOR_AUTO_CHECK=1`
 

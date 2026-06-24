@@ -74,6 +74,30 @@ async function request(
   });
 }
 
+function initializeRequestBody(id = 1): string {
+  return JSON.stringify({
+    jsonrpc: '2.0',
+    id,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-06-18',
+      capabilities: {},
+      clientInfo: {
+        name: 'server-http-test',
+        version: '1.0.0'
+      }
+    }
+  });
+}
+
+function toolsListRequestBody(id = 2): string {
+  return JSON.stringify({
+    jsonrpc: '2.0',
+    id,
+    method: 'tools/list'
+  });
+}
+
 describe('server-http', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -303,6 +327,110 @@ describe('server-http', () => {
 
       expect(result.statusCode).toBe(406);
       expect(result.body).toContain('Not Acceptable');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('creates and reuses stateful MCP sessions', async () => {
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      statefulSessions: true
+    });
+    const port = await startServer(server);
+
+    try {
+      const initialized = await request(port, '/mcp', 'POST', initializeRequestBody(), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream'
+      });
+      const sessionId = initialized.headers['mcp-session-id'];
+
+      expect(initialized.statusCode).toBe(200);
+      expect(typeof sessionId).toBe('string');
+
+      const listed = await request(port, '/mcp', 'POST', toolsListRequestBody(), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream',
+        'mcp-session-id': String(sessionId)
+      });
+
+      expect(listed.statusCode).toBe(200);
+      expect(listed.body).toContain('tools');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('rejects missing or expired stateful MCP sessions deterministically', async () => {
+    let now = 1_000;
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      statefulSessions: true,
+      sessionTtlMs: 1_000,
+      now: () => now
+    });
+    const port = await startServer(server);
+
+    try {
+      const missing = await request(port, '/mcp', 'POST', toolsListRequestBody(), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream'
+      });
+      expect(missing.statusCode).toBe(400);
+      expect(missing.body).toContain('session ID is required');
+
+      const initialized = await request(port, '/mcp', 'POST', initializeRequestBody(), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream'
+      });
+      const sessionId = String(initialized.headers['mcp-session-id']);
+      expect(sessionId).toBeTruthy();
+
+      now = 2_001;
+      const expired = await request(port, '/mcp', 'POST', toolsListRequestBody(), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream',
+        'mcp-session-id': sessionId
+      });
+
+      expect(expired.statusCode).toBe(404);
+      expect(expired.body).toContain('not found or expired');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('evicts the oldest stateful MCP session when the max session cap is reached', async () => {
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      statefulSessions: true,
+      maxSessions: 1
+    });
+    const port = await startServer(server);
+
+    try {
+      const first = await request(port, '/mcp', 'POST', initializeRequestBody(1), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream'
+      });
+      const firstSessionId = String(first.headers['mcp-session-id']);
+
+      const second = await request(port, '/mcp', 'POST', initializeRequestBody(2), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream'
+      });
+      const secondSessionId = String(second.headers['mcp-session-id']);
+
+      expect(firstSessionId).not.toEqual(secondSessionId);
+
+      const evicted = await request(port, '/mcp', 'POST', toolsListRequestBody(3), {
+        Authorization: 'Bearer local-test-token',
+        Accept: 'application/json, text/event-stream',
+        'mcp-session-id': firstSessionId
+      });
+
+      expect(evicted.statusCode).toBe(404);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
