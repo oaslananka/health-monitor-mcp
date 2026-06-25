@@ -61,7 +61,7 @@
     "prepublishOnly": "node scripts/prepublish-check.mjs"
   },
   "engines": {
-    "node": ">=20",
+    "node": ">=24",
     "pnpm": ">=11"
   },
   "homepage": "https://github.com/oaslananka/health-monitor-mcp",

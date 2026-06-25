@@ -1,5 +1,10 @@
 # Development
 
+## Runtime Requirements
+
+- Node.js 24 LTS or newer
+- pnpm 11 or newer through Corepack
+
 Use pnpm through Corepack:
 
 ```bash
