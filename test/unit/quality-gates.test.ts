@@ -76,6 +76,9 @@ describe('quality gate regression checks', () => {
       }
     }
 
+    expect(packageJson.scripts['setup:security']).toContain('reuse==6.2.0');
+    expect(packageJson.scripts['security:reuse']).toBe('python -m reuse lint');
+    expect(ciWorkflow).toContain('reuse==6.2.0');
     expect(ciWorkflow).toContain('pnpm run ci:check');
     expect(ciWorkflow).toContain('pnpm run security:supply-chain');
     expect(ciWorkflow).toContain('pnpm run release:dry-run');
