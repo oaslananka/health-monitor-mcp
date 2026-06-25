@@ -270,4 +270,37 @@ describe('checker', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
+
+  it('returns stdio disabled error when policy disallows stdio checks', async () => {
+    await expect(
+      checkServer({ type: 'stdio', command: 'node', args: ['server.js'] }, 1_000, {
+        allowStdio: false
+      })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        status: 'error',
+        error_message: expect.stringContaining('stdio transport is disabled')
+      })
+    );
+  });
+
+  it('classifies stdio tool listing timeouts as timeout results', async () => {
+    const client = {
+      connect: jest.fn(async (_transport: unknown): Promise<void> => undefined),
+      listTools: jest.fn(() => new Promise<{ tools: Array<{ name: string }> }>(() => undefined)),
+      close: jest.fn(async (): Promise<void> => undefined)
+    };
+
+    setCheckerRuntimeForTests({
+      createClient: () => client,
+      createStdioTransport: (options: unknown) =>
+        ({ kind: 'stdio', options }) as unknown as Transport
+    });
+
+    const result = await checkStdioServer('node', ['server.js'], 25);
+
+    expect(result.status).toBe('timeout');
+    expect(result.error_message).toBe('timeout');
+    expect(client.close).toHaveBeenCalled();
+  });
 });

@@ -144,4 +144,77 @@ describe('scheduler', () => {
     expect(checkServer).toHaveBeenCalledTimes(5);
     expect(maxActive).toBe(2);
   });
+
+  it('returns without work when no servers are due', async () => {
+    const checkServer = jest.fn(async () => ({
+      status: 'up' as const,
+      response_time_ms: 50,
+      tool_count: 1,
+      error_message: null,
+      tools: ['health']
+    }));
+
+    setSchedulerRuntimeForTests({
+      listRegisteredServers: () => [createServer('fresh-server', { last_checked: 9_000 })],
+      checkServer,
+      recordHealthCheck: jest.fn(),
+      now: () => 10_000,
+      log: jest.fn() as unknown as typeof console.log
+    });
+
+    await runSchedulerCycle();
+
+    expect(checkServer).not.toHaveBeenCalled();
+  });
+
+  it('logs worker failures without recording a health check', async () => {
+    const recordHealthCheck = jest.fn();
+    const logMock = jest.fn() as unknown as typeof console.log;
+
+    setSchedulerRuntimeForTests({
+      listRegisteredServers: () => [createServer('broken-server')],
+      checkServer: jest.fn(async () => {
+        throw new Error('boom');
+      }),
+      recordHealthCheck,
+      now: () => 0,
+      log: logMock
+    });
+
+    await runSchedulerCycle();
+
+    expect(recordHealthCheck).not.toHaveBeenCalled();
+    expect(logMock).toHaveBeenCalledWith(
+      'error',
+      'Scheduled check failed',
+      expect.objectContaining({ name: 'broken-server', error: 'boom' })
+    );
+  });
+
+  it('passes scheduler stdio policy into scheduled checks', async () => {
+    const checkServer = jest.fn(async () => ({
+      status: 'up' as const,
+      response_time_ms: 50,
+      tool_count: 1,
+      error_message: null,
+      tools: ['health']
+    }));
+
+    setSchedulerRuntimeForTests({
+      listRegisteredServers: () => [createServer('stdio-policy-server')],
+      checkServer,
+      recordHealthCheck: jest.fn(),
+      now: () => 0,
+      log: jest.fn() as unknown as typeof console.log
+    });
+
+    startScheduler(1_000, { allowStdio: false });
+    await Promise.resolve();
+
+    expect(checkServer).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'stdio-policy-server' }),
+      8_000,
+      { allowStdio: false }
+    );
+  });
 });

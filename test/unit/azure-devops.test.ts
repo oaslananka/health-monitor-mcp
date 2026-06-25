@@ -243,4 +243,109 @@ describe('azure-devops', () => {
       'Azure DevOps request timed out'
     );
   });
+
+  it('filters malformed pipeline records and preserves null ids', async () => {
+    setAzureDevopsFetchForTests(
+      (async () =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            value: [
+              { id: 5, name: 'Valid' },
+              { id: 'bad', name: 'Missing numeric id' },
+              { id: 6 },
+              null
+            ]
+          }),
+          text: async () => ''
+        }) as Response) as typeof fetch
+    );
+
+    await expect(listPipelines('org', 'project', 'token')).resolves.toEqual([
+      { id: 5, name: 'Valid' },
+      { id: null, name: 'Missing numeric id' }
+    ]);
+  });
+
+  it('returns null for empty or malformed latest run payloads', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ value: [] }),
+        text: async () => ''
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ value: [{ id: 'bad', definition: {}, buildNumber: null }] }),
+        text: async () => ''
+      } as Response);
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    await expect(getLatestRun('org', 'project', 1, 'token')).resolves.toBeNull();
+    await expect(getLatestRun('org', 'project', 1, 'token')).resolves.toBeNull();
+  });
+
+  it.each([
+    ['inProgress', null, 'inProgress'],
+    ['notStarted', null, 'notStarted'],
+    ['completed', 'succeeded', 'succeeded'],
+    ['completed', 'canceled', 'canceled'],
+    ['completed', 'other', 'unknown']
+  ])('maps Azure run status %s/%s to %s', async (status, result, expectedStatus) => {
+    setAzureDevopsFetchForTests(
+      (async () =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            value: [
+              {
+                id: 9,
+                status,
+                result,
+                buildNumber: '20260625.1',
+                sourceBranch: 'refs/tags/v1.0.0',
+                definition: { name: 'CI' },
+                requestedFor: {}
+              }
+            ]
+          }),
+          text: async () => ''
+        }) as Response) as typeof fetch
+    );
+
+    await expect(getLatestRun('org', 'project', 1, 'token')).resolves.toEqual(
+      expect.objectContaining({
+        status: expectedStatus,
+        source_branch: 'refs/tags/v1.0.0',
+        requested_by: 'unknown'
+      })
+    );
+  });
+
+  it('returns a friendly message when no timeline logs are selectable', async () => {
+    setAzureDevopsFetchForTests(
+      (async () =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({ records: [{ name: 'build', result: 'succeeded' }] }),
+          text: async () => ''
+        }) as Response) as typeof fetch
+    );
+
+    await expect(getPipelineLogs('org', 'project', 42, 'token', true)).resolves.toBe(
+      'No failed steps found or logs not available yet.'
+    );
+  });
 });
