@@ -6,7 +6,23 @@ Use pnpm through Corepack:
 corepack enable
 corepack prepare pnpm@11.0.9 --activate
 pnpm install --frozen-lockfile
+pnpm run setup:security
 ```
+
+
+## Local Security Tooling
+
+The full local `pnpm run ci` path runs REUSE/SPDX compliance checks. Install the pinned REUSE
+version once before running the full gate:
+
+```bash
+pnpm run setup:security
+pnpm run security:supply-chain
+```
+
+The script installs `reuse==6.2.0` with Python user-site packages, matching the GitHub Actions
+workflow. If your shell cannot find user-site console scripts, `pnpm run security:reuse` still uses
+`python -m reuse lint` directly.
 
 Common local gates:
 
