@@ -7,7 +7,7 @@
 [![Release](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/oaslananka/health-monitor-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/oaslananka/health-monitor-mcp)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org)
 
 ## What This Does
 
@@ -155,8 +155,8 @@ pnpm run docs:api:check
 pnpm run ci
 ```
 
-Release CI uses Node 24 LTS. The package remains declared for Node `>=20` until a future major
-release narrows runtime compatibility.
+Runtime support targets Node 24 LTS or newer. CI, Docker, package metadata, and local development
+commands are aligned to Node `>=24`.
 
 ## Architecture
 
