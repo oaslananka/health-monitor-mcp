@@ -61,9 +61,13 @@ The `main` branch must remain protected through GitHub branch protection. Requir
 - `CodeQL Analysis`
 - `Review Thread Gate`
 
-Actions must be restricted to selected actions, require SHA pinning when supported by the account,
-allow GitHub-owned actions, and allow only the pinned `googleapis/release-please-action` SHA used by
-the release workflow.
+Actions must be restricted to selected actions, allow GitHub-owned actions, and allow only the
+pinned non-GitHub-owned actions required by the workflows: `googleapis/release-please-action` and
+`ossf/scorecard-action`. The live repository currently reports `sha_pinning_required=false`, so SHA
+pinning is enforced by workflow review and CODEOWNERS rather than by the account-level setting.
+
+Last verified: 2026-06-25. `main` branch protection is enabled with strict required checks,
+code-owner reviews, linear history, force-push protection, and deletion protection.
 
 Verify the live settings with:
 
