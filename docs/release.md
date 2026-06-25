@@ -57,3 +57,13 @@ Configure the npm trusted publisher for package `health-monitor-mcp` with:
 
 No Docker/GHCR, MCP Registry, marketplace, Cloudflare, or external connector publish is
 configured in this repository.
+
+## Verified npm And Release Settings
+
+Last verified: 2026-06-25.
+
+- `publish-npm.yml` grants `id-token: write` and publishes only from the guarded `npm-production` environment.
+- npm publish uses `npm publish --access public --provenance` and falls back to package verification if the package already exists.
+- `release.yml` grants `id-token: write` and `attestations: write` for release asset provenance.
+- Published npm package `health-monitor-mcp@1.0.0` exists with registry integrity metadata.
+- `scripts/release-state.mjs --dry-run` reports npm, MCP registry, and GitHub release surfaces present; GHCR remains intentionally tracked separately.
