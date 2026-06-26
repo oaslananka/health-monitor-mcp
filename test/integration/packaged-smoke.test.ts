@@ -92,7 +92,9 @@ describe('packaged MCP smoke tests', () => {
 
   it('packs the publish artifact with executable stdio and HTTP entrypoints', () => {
     const output = run('pnpm', ['pack', '--json', '--pack-destination', packDir]);
-    const packResult = JSON.parse(output) as { filename: string } | Array<{ filename: string }>;
+    const lines = output.trim().split('\n');
+    const jsonStr = lines.filter((line) => !line.startsWith('[WARN]')).join('\n');
+    const packResult = JSON.parse(jsonStr) as { filename: string } | Array<{ filename: string }>;
     const filename = Array.isArray(packResult) ? packResult[0]?.filename : packResult.filename;
 
     if (!filename) {
