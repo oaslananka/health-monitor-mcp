@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpError, ERROR_CODES, REMEDIATIONS } from './types.js';
 
 import { evaluateAlertState, setAlertConfig } from './alerts.js';
 import { getLatestRun, getPipelineLogs, listPipelines } from './azure-devops.js';
@@ -271,7 +272,7 @@ export function registerMonitoringTools(
     'register_server',
     {
       title: 'Register MCP Server',
-      description: 'Register an MCP server to monitor. Supports http, sse, and stdio transports.',
+      description: 'Register an MCP server to monitor. Accepts HTTP, SSE, and stdio servers.',
       inputSchema: RegisterServerSchema,
       annotations: {
         readOnlyHint: false,
@@ -282,7 +283,11 @@ export function registerMonitoringTools(
     async (input: RegisterServerInput) => {
       if (input.type === 'stdio') {
         if (!policy.allowStdio) {
-          throw new Error(STDIO_DISABLED_MESSAGE);
+          throw new McpError(
+            STDIO_DISABLED_MESSAGE,
+            ERROR_CODES.STDIO_DISABLED,
+            REMEDIATIONS.STDIO_DISABLED
+          );
         }
 
         validateStdioCommandPolicy(input.command);
@@ -382,7 +387,7 @@ export function registerMonitoringTools(
     {
       title: 'Check Server Health',
       description:
-        'Check the health of a registered MCP server, list tools, and measure response time.',
+        'Check the health of a registered MCP server, list tools, and measure response time. Returns detailed connection info.',
       inputSchema: CheckServerSchema,
       annotations: {
         readOnlyHint: true,
@@ -393,7 +398,11 @@ export function registerMonitoringTools(
     async (input: CheckServerInput) => {
       const registered = getServer(input.name);
       if (!registered) {
-        throw new Error(`Server not registered: ${input.name}`);
+        throw new McpError(
+          `Server not registered: ${input.name}`,
+          ERROR_CODES.SERVER_NOT_REGISTERED,
+          REMEDIATIONS.SERVER_NOT_REGISTERED
+        );
       }
 
       const result = await checkServerWithPolicy(registered, input.timeout_ms, policy);
@@ -416,7 +425,8 @@ export function registerMonitoringTools(
     'check_all',
     {
       title: 'Check All Servers',
-      description: 'Check health of all registered MCP servers in parallel.',
+      description:
+        'Check health of all registered MCP servers in parallel. Useful for system-wide diagnostic.',
       inputSchema: CheckAllSchema,
       annotations: {
         readOnlyHint: true,
@@ -498,11 +508,19 @@ export function registerMonitoringTools(
       const row = getAzurePipeline(input.group_name, input.pipeline_name);
 
       if (!row) {
-        throw new Error(`Pipeline not registered: ${input.group_name}/${input.pipeline_name}`);
+        throw new McpError(
+          `Pipeline not registered: ${input.group_name}/${input.pipeline_name}`,
+          ERROR_CODES.PIPELINE_NOT_REGISTERED,
+          REMEDIATIONS.PIPELINE_NOT_REGISTERED
+        );
       }
 
       if (!row.pipeline_id) {
-        throw new Error(`Pipeline ID not resolved for ${input.group_name}/${input.pipeline_name}`);
+        throw new McpError(
+          `Pipeline ID not resolved for ${input.group_name}/${input.pipeline_name}`,
+          ERROR_CODES.PIPELINE_NOT_RESOLVED,
+          REMEDIATIONS.PIPELINE_NOT_RESOLVED
+        );
       }
 
       const pat = decodePatToken(row.pat_token_encrypted);
@@ -518,7 +536,11 @@ export function registerMonitoringTools(
       }
 
       if (!buildId) {
-        throw new Error('No recent builds found');
+        throw new McpError(
+          'No recent builds found',
+          ERROR_CODES.NO_RECENT_BUILDS,
+          REMEDIATIONS.NO_RECENT_BUILDS
+        );
       }
 
       const logs = await getPipelineLogs(
@@ -850,7 +872,11 @@ export function registerMonitoringTools(
     },
     async (input: SetAlertInput) => {
       if (!getServer(input.name)) {
-        throw new Error(`Server not registered: ${input.name}`);
+        throw new McpError(
+          `Server not registered: ${input.name}`,
+          ERROR_CODES.SERVER_NOT_REGISTERED,
+          REMEDIATIONS.SERVER_NOT_REGISTERED
+        );
       }
 
       return formatResponse(setAlertConfig(input));

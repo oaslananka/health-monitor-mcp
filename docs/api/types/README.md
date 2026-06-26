@@ -6,6 +6,10 @@
 
 # types
 
+## Classes
+
+- [McpError](classes/McpError.md)
+
 ## Interfaces
 
 - [HealthRecord](interfaces/HealthRecord.md)
@@ -59,3 +63,5 @@
 - [CheckPipelineStatusSchema](variables/CheckPipelineStatusSchema.md)
 - [RegisteredPipelineLogsSchema](variables/RegisteredPipelineLogsSchema.md)
 - [CheckAllProjectsSchema](variables/CheckAllProjectsSchema.md)
+- [ERROR\_CODES](variables/ERROR_CODES.md)
+- [REMEDIATIONS](variables/REMEDIATIONS.md)
