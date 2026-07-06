@@ -1,0 +1,51 @@
+name: Monitoring Contract Tests
+
+on:
+  pull_request:
+    paths:
+      - README.md
+      - src/**
+      - skills/**/SKILL.md
+      - .claude-plugin/plugin.json
+      - .github/workflows/monitoring-contract-tests.yml
+  push:
+    branches: [main]
+    paths:
+      - README.md
+      - src/**
+      - skills/**/SKILL.md
+      - .claude-plugin/plugin.json
+      - .github/workflows/monitoring-contract-tests.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitoring-contract-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Validate monitoring skill contracts
+        run: |
+          set -euo pipefail
+          test -f skills/health-monitoring/SKILL.md
+          test -f skills/uptime-incident-triage/SKILL.md
+          test -f skills/alerting-dashboard/SKILL.md
+          grep -Riq "explicit approval" README.md skills/alerting-dashboard/SKILL.md skills/health-monitoring/SKILL.md
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          plugin=json.loads(Path('.claude-plugin/plugin.json').read_text())
+          required={'./skills/health-monitoring','./skills/uptime-incident-triage','./skills/alerting-dashboard'}
+          assert required.issubset(set(plugin['skills']))
+          source='\n'.join(p.read_text(errors='ignore') for p in Path('src').rglob('*.ts'))
+          for name in ['register_server','check_server','check_all','get_dashboard','get_uptime','set_alert']:
+              assert name in source, name
+          print('monitoring contracts ok')
+          PY
