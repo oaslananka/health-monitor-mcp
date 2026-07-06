@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "health-monitor-mcp",
+  "version": "1.0.0",
+  "description": "Health Monitor MCP plugin for service health checks, uptime monitoring, CI pipeline status, dashboards, and alerting workflows.",
+  "author": {
+    "name": "oaslananka",
+    "url": "https://github.com/oaslananka"
+  },
+  "skills": [
+    "./skills/health-monitoring",
+    "./skills/uptime-incident-triage",
+    "./skills/alerting-dashboard"
+  ]
+}

@@ -197,3 +197,23 @@ tracked work should use the repository issue forms.
 ## License
 
 MIT
+
+## Agent plugin and runtime configuration
+
+This repository owns the product-level agent plugin, MCP runtime configuration, and product-specific skills for `health-monitor-mcp`. The central [`agent-tools`](https://github.com/oaslananka/agent-tools) repository should catalog this plugin, but the manifest and workflow instructions live here so they stay synchronized with the actual MCP server package.
+
+| File | Purpose |
+| --- | --- |
+| [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) | Claude Code-valid product plugin manifest. |
+| [`.mcp.json`](.mcp.json) | Claude Code project-local MCP server configuration. |
+| [`.codex/config.example.toml`](.codex/config.example.toml) | Codex CLI MCP configuration example. |
+| [`.vscode/mcp.example.json`](.vscode/mcp.example.json) | VS Code / GitHub Copilot workspace MCP configuration example. |
+| [`opencode.example.jsonc`](opencode.example.jsonc) | OpenCode project MCP configuration example. |
+| `.opencode/skills/` | OpenCode-native mirrored skill definitions. |
+| [`docs/agent-runtime-config.md`](docs/agent-runtime-config.md) | Agent runtime setup and validation notes. |
+
+Validate plugin packaging locally:
+
+```bash
+claude plugin validate .
+```

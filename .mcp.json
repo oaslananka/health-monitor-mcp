@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "health-monitor-mcp": {
+      "command": "npx",
+      "args": ["health-monitor-mcp"],
+      "env": {
+        "HEALTH_MONITOR_TRANSPORT": "stdio"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "health-monitor-mcp": {
+      "type": "local",
+      "command": ["npx", "health-monitor-mcp"],
+      "enabled": true,
+      "environment": {
+        "HEALTH_MONITOR_TRANSPORT": "stdio"
+      },
+      "timeout": 15000
+    }
+  },
+  "permission": {
+    "skill": {
+      "health-monitoring": "allow",
+      "uptime-incident-triage": "allow",
+      "alerting-dashboard": "allow"
+    }
+  }
+}
