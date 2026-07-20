@@ -195,6 +195,16 @@ describe('server-http', () => {
     jest.restoreAllMocks();
   });
 
+  it('keeps Node header and request timeouts above the application body deadline', () => {
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      requestBodyTimeoutMs: 250
+    });
+
+    expect(server.requestTimeout).toBe(1_250);
+    expect(server.headersTimeout).toBe(1_250);
+  });
+
   it('serves a health response', async () => {
     const server = createHttpServer();
     const port = await startServer(server);
@@ -597,7 +607,7 @@ describe('server-http', () => {
         authToken: 'local-test-token',
         statefulSessions,
         maxRequestBodyBytes: Buffer.byteLength(body)
-      } as never);
+      });
       const port = await startServer(server);
 
       try {
@@ -627,7 +637,7 @@ describe('server-http', () => {
         statefulSessions,
         maxRequestBodyBytes: 32,
         monitorFactory
-      } as never);
+      });
       const port = await startServer(server);
       const streaming = openStreamingRequest(port, {
         Authorization: 'Bearer local-test-token',
@@ -665,7 +675,7 @@ describe('server-http', () => {
         statefulSessions,
         maxRequestBodyBytes: 32,
         monitorFactory
-      } as never);
+      });
       const port = await startServer(server);
       const streaming = openStreamingRequest(port, {
         Authorization: 'Bearer local-test-token',
@@ -702,7 +712,7 @@ describe('server-http', () => {
       maxRequestBodyBytes: 128,
       requestBodyTimeoutMs: 50,
       monitorFactory
-    } as never);
+    });
     const port = await startServer(server);
     const streaming = openStreamingRequest(
       port,
@@ -737,7 +747,7 @@ describe('server-http', () => {
       authToken: 'local-test-token',
       requestBodyTimeoutMs: 250,
       monitorFactory
-    } as never);
+    });
     const port = await startServer(server);
     const streaming = openStreamingRequest(port, {
       Authorization: 'Bearer local-test-token',

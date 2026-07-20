@@ -14,6 +14,7 @@ import {
   isRemoteSafeProfile,
   type RuntimeProfile
 } from './config.js';
+import { RequestBodyError, readRequestBody } from './http-body.js';
 import { log } from './logging.js';
 import { createRuntimePolicy } from './policy.js';
 import { startScheduler, stopScheduler } from './scheduler.js';
@@ -21,7 +22,9 @@ import { MONITOR_VERSION } from './version.js';
 
 const DEFAULT_PORT = Number(process.env.PORT ?? 3000);
 const DEFAULT_HOST = process.env.HOST?.trim() || '127.0.0.1';
-const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
+const DEFAULT_MAX_REQUEST_BODY_BYTES = 1024 * 1024;
+const DEFAULT_REQUEST_BODY_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_GRACE_MS = 1_000;
 const DEFAULT_SESSION_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_MAX_SESSIONS = 100;
 
@@ -165,6 +168,8 @@ type HttpServerOptions = {
   allowStdio?: boolean | undefined;
   rateLimiter?: InMemoryRateLimiter;
   monitorFactory?: () => MonitorServer;
+  maxRequestBodyBytes?: number | undefined;
+  requestBodyTimeoutMs?: number | undefined;
 };
 
 type HttpStartupConfig = {
@@ -274,6 +279,29 @@ function getMaxSessions(options: HttpServerOptions): number {
     : getBoundedIntegerEnv('HEALTH_MONITOR_HTTP_MAX_SESSIONS', DEFAULT_MAX_SESSIONS, 1, 1_000);
 }
 
+function getMaxRequestBodyBytes(options: HttpServerOptions): number {
+  return Object.hasOwn(options, 'maxRequestBodyBytes') && options.maxRequestBodyBytes !== undefined
+    ? Math.max(1, Math.floor(options.maxRequestBodyBytes))
+    : getBoundedIntegerEnv(
+        'HEALTH_MONITOR_HTTP_MAX_BODY_BYTES',
+        DEFAULT_MAX_REQUEST_BODY_BYTES,
+        1_024,
+        10 * 1024 * 1024
+      );
+}
+
+function getRequestBodyTimeoutMs(options: HttpServerOptions): number {
+  return Object.hasOwn(options, 'requestBodyTimeoutMs') &&
+    options.requestBodyTimeoutMs !== undefined
+    ? Math.max(1, Math.floor(options.requestBodyTimeoutMs))
+    : getBoundedIntegerEnv(
+        'HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS',
+        DEFAULT_REQUEST_BODY_TIMEOUT_MS,
+        1_000,
+        120_000
+      );
+}
+
 function getHeaderValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? undefined : value;
 }
@@ -355,65 +383,62 @@ function isMainModule(): boolean {
   return currentFile === entryFile;
 }
 
-async function readRequestBody(req: http.IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  let totalLength = 0;
+function bodyErrorPayload(code: number, message: string): Record<string, unknown> {
+  return {
+    jsonrpc: '2.0',
+    error: { code, message },
+    id: null
+  };
+}
 
-  return new Promise((resolve, reject) => {
-    req.on('data', (chunk: Buffer) => {
-      totalLength += chunk.length;
+function respondToBodyReadError(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  error: unknown
+): void {
+  const requestBodyError =
+    error instanceof RequestBodyError ? error : new RequestBodyError('parse_error');
 
-      if (totalLength > MAX_REQUEST_BODY_BYTES) {
-        reject(new Error('payload_too_large'));
-        return;
-      }
+  if (
+    requestBodyError.code === 'request_aborted' ||
+    res.destroyed ||
+    (req.destroyed && !req.complete)
+  ) {
+    return;
+  }
 
-      chunks.push(chunk);
+  if (requestBodyError.code === 'payload_too_large') {
+    res.shouldKeepAlive = false;
+    jsonResponse(res, 413, bodyErrorPayload(-32001, 'Payload too large'), {
+      Connection: 'close'
     });
+    return;
+  }
 
-    req.on('error', reject);
-
-    req.on('end', () => {
-      const body = Buffer.concat(chunks).toString('utf8');
-
-      if (body.length === 0) {
-        resolve({});
-        return;
-      }
-
-      try {
-        resolve(JSON.parse(body));
-      } catch {
-        reject(new Error('parse_error'));
-      }
+  if (requestBodyError.code === 'body_timeout') {
+    res.shouldKeepAlive = false;
+    jsonResponse(res, 408, bodyErrorPayload(-32002, 'Request body timeout'), {
+      Connection: 'close'
     });
-  });
+    return;
+  }
+
+  jsonResponse(res, 400, bodyErrorPayload(-32700, 'Parse error'));
 }
 
 async function handleStatelessMcpRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  monitorFactory: () => MonitorServer
+  monitorFactory: () => MonitorServer,
+  maxRequestBodyBytes: number,
+  requestBodyTimeoutMs: number
 ): Promise<void> {
   let parsedBody: unknown;
 
   try {
-    parsedBody = await readRequestBody(req);
+    parsedBody = await readRequestBody(req, maxRequestBodyBytes, requestBodyTimeoutMs);
   } catch (error) {
-    if (error instanceof Error && error.message === 'payload_too_large') {
-      jsonResponse(res, 413, {
-        jsonrpc: '2.0',
-        error: { code: -32001, message: 'Payload too large' },
-        id: null
-      });
-      return;
-    }
-
-    jsonResponse(res, 400, {
-      jsonrpc: '2.0',
-      error: { code: -32700, message: 'Parse error' },
-      id: null
-    });
+    respondToBodyReadError(req, res, error);
     return;
   }
 
@@ -450,20 +475,17 @@ async function handleStatefulMcpRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
   monitorFactory: () => MonitorServer,
-  sessionRegistry: HttpSessionRegistry
+  sessionRegistry: HttpSessionRegistry,
+  maxRequestBodyBytes: number,
+  requestBodyTimeoutMs: number
 ): Promise<void> {
   let parsedBody: unknown;
 
   if (req.method === 'POST') {
     try {
-      parsedBody = await readRequestBody(req);
+      parsedBody = await readRequestBody(req, maxRequestBodyBytes, requestBodyTimeoutMs);
     } catch (error) {
-      if (error instanceof Error && error.message === 'payload_too_large') {
-        jsonResponse(res, 413, { error: 'Payload too large' });
-        return;
-      }
-
-      jsonResponse(res, 400, { error: 'Parse error' });
+      respondToBodyReadError(req, res, error);
       return;
     }
   }
@@ -511,6 +533,8 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
   const authToken = getAuthTokenFromOptions(options);
   const originAllowlist = getOriginAllowlistFromOptions(options);
   const statefulSessions = isStatefulSessionsEnabled(options);
+  const maxRequestBodyBytes = getMaxRequestBodyBytes(options);
+  const requestBodyTimeoutMs = getRequestBodyTimeoutMs(options);
   const sessionRegistry = statefulSessions
     ? new HttpSessionRegistry({
         ttlMs: getSessionTtlMs(options),
@@ -591,12 +615,29 @@ export function createHttpServer(options: HttpServerOptions = {}): http.Server {
     }
 
     if (sessionRegistry) {
-      void handleStatefulMcpRequest(req, res, monitorFactory, sessionRegistry);
+      void handleStatefulMcpRequest(
+        req,
+        res,
+        monitorFactory,
+        sessionRegistry,
+        maxRequestBodyBytes,
+        requestBodyTimeoutMs
+      );
       return;
     }
 
-    void handleStatelessMcpRequest(req, res, monitorFactory);
+    void handleStatelessMcpRequest(
+      req,
+      res,
+      monitorFactory,
+      maxRequestBodyBytes,
+      requestBodyTimeoutMs
+    );
   });
+
+  const nodeRequestTimeoutMs = requestBodyTimeoutMs + REQUEST_TIMEOUT_GRACE_MS;
+  server.requestTimeout = nodeRequestTimeoutMs;
+  server.headersTimeout = nodeRequestTimeoutMs;
 
   server.on('close', () => {
     if (sessionRegistry) {

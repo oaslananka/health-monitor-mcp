@@ -50,6 +50,7 @@
 ### Task 3: Implement bounded body reading
 
 **Files:**
+- Create: `src/http-body.ts`
 - Modify: `src/server-http.ts`
 - Test: `test/unit/server-http.test.ts`
 

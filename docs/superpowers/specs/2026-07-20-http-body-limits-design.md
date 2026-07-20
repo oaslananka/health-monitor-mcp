@@ -33,7 +33,7 @@ A private `RequestBodyError` carries one of four stable codes:
 - `request_aborted`
 - `parse_error`
 
-`readRequestBody()` receives the byte and timeout limits. It validates `Content-Length`, starts a deadline, and installs named listeners. On any terminal condition it clears the timer and detaches every listener. On limit or timeout it clears retained chunks and switches the request to flowing discard mode. The HTTP error response includes `Connection: close`, so Node closes the connection after flushing the response rather than waiting for a hostile body to complete.
+`src/http-body.ts` owns `readRequestBody()`, which receives the byte and timeout limits. It validates `Content-Length`, starts a deadline, and installs named listeners. On any terminal condition it clears the timer and detaches every listener. On limit or timeout it clears retained chunks and switches the request to flowing discard mode. The HTTP error response includes `Connection: close`, so Node closes the connection after flushing the response rather than waiting for a hostile body to complete.
 
 A shared `respondToBodyReadError()` function serves both stateless and stateful POST paths:
 
@@ -46,7 +46,7 @@ All envelopes use `jsonrpc: "2.0"` and `id: null`, which is appropriate when the
 
 ## Server Timeouts
 
-`createHttpServer()` sets `server.requestTimeout` to the configured body timeout. The explicit body timer begins after headers are accepted and provides deterministic application behavior for slow/incomplete bodies. `Connection: close` is used for 408 and 413 responses.
+`createHttpServer()` sets Node request and header timeouts to the body timeout plus a 1000 ms transport grace period, ensuring the JSON-RPC body timer wins after headers are accepted. The explicit body timer begins after headers are accepted and provides deterministic application behavior for slow/incomplete bodies. `Connection: close` is used for 408 and 413 responses.
 
 ## Testing
 
