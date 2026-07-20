@@ -10,6 +10,15 @@ type PackageJson = {
   scripts: Record<string, string>;
 };
 
+type RenovateConfig = {
+  extends: string[];
+  labels?: string[];
+  dependencyDashboardLabels?: string[];
+  vulnerabilityAlerts?: { labels?: string[] };
+  packageRules?: Array<{ addLabels?: string[] }>;
+  'pre-commit'?: { enabled?: boolean };
+};
+
 type CoverageThreshold = {
   branches: number;
   functions: number;
@@ -82,6 +91,58 @@ describe('quality gate regression checks', () => {
     expect(ciWorkflow).toContain('pnpm run ci:check');
     expect(ciWorkflow).toContain('pnpm run security:supply-chain');
     expect(ciWorkflow).toContain('pnpm run release:dry-run');
+  });
+
+  it('keeps dependency automation and security tooling policy enforceable', () => {
+    const packageJson = readProjectJson<PackageJson>('package.json');
+    const renovateConfig = readProjectJson<RenovateConfig>('renovate.json');
+    const preCommitConfig = readProjectText('.pre-commit-config.yaml');
+    const semgrepWorkflow = readProjectText('.github/workflows/semgrep.yml');
+    const semgrepRules = readProjectText('.semgrep.yml');
+    const sonarConfig = readProjectText('.sonarcloud.properties');
+    const configuredLabels = [
+      ...(renovateConfig.labels ?? []),
+      ...(renovateConfig.dependencyDashboardLabels ?? []),
+      ...(renovateConfig.vulnerabilityAlerts?.labels ?? []),
+      ...(renovateConfig.packageRules ?? []).flatMap((rule) => rule.addLabels ?? [])
+    ];
+
+    expect(renovateConfig.extends).toContain('config:best-practices');
+    expect(renovateConfig['pre-commit']?.enabled).toBe(true);
+    expect(configuredLabels).not.toEqual(
+      expect.arrayContaining([
+        'automerge',
+        'ci',
+        'docker',
+        'github-actions',
+        'javascript',
+        'lockfile',
+        'major',
+        'requires-review',
+        'runtime',
+        'security'
+      ])
+    );
+
+    expect(preCommitConfig).toContain('pre-commit/pre-commit-hooks');
+    expect(preCommitConfig).toContain('semgrep/pre-commit');
+    expect(preCommitConfig).toContain('security:snyk');
+    expect(preCommitConfig).toContain('sonar-secrets');
+    expect(preCommitConfig).toContain('stages: [pre-push]');
+
+    expect(semgrepWorkflow).toContain('semgrep ci');
+    expect(semgrepWorkflow).toContain('SEMGREP_APP_TOKEN');
+    expect(semgrepWorkflow).toContain('semgrep/semgrep:1.170.0@sha256:');
+    expect(semgrepRules).toContain('no-runtime-stdout');
+    expect(semgrepRules).toContain('no-shell-true');
+
+    expect(sonarConfig).toContain('sonar.sources=src');
+    expect(sonarConfig).toContain('sonar.tests=test');
+    expect(sonarConfig).toContain('sonar.sourceEncoding=UTF-8');
+
+    expect(packageJson.scripts['security:semgrep']).toContain('semgrep scan');
+    expect(packageJson.scripts['security:snyk']).toContain('snyk test');
+    expect(packageJson.scripts['precommit:run']).toContain('pre-commit run');
   });
 
   it('keeps npm publish retries idempotent and registry-verified', () => {
