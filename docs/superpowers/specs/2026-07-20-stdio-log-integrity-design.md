@@ -125,8 +125,8 @@ The change follows TDD:
 Required validation commands:
 
 ```bash
-pnpm run test -- --runTestsByPath test/unit/logging.test.ts
-pnpm run test:integration -- --runTestsByPath test/integration/packaged-smoke.test.ts --runInBand
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath test/unit/logging.test.ts --runInBand
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath test/integration/packaged-smoke.test.ts --runInBand
 pnpm run typecheck
 pnpm run lint
 pnpm run format:check

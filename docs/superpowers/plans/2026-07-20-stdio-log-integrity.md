@@ -98,7 +98,7 @@ it('writes debug logs to stderr without using stdout', () => {
 Run:
 
 ```bash
-pnpm run test -- --runTestsByPath test/unit/logging.test.ts --runInBand
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath test/unit/logging.test.ts --runInBand
 ```
 
 Expected: FAIL because the current `debug` and `info` branches call `console.log`; failures must mention that stdout was called or stderr was not called.
@@ -186,7 +186,7 @@ it('keeps scheduler runtime logs off stdout in packaged stdio mode', async () =>
 Run:
 
 ```bash
-pnpm run test:integration -- --runTestsByPath test/integration/packaged-smoke.test.ts --runInBand
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath test/integration/packaged-smoke.test.ts --runInBand
 ```
 
 Expected: FAIL at `expect(stderr).toContain(...)` or `expect(stdout).toBe('')` because the current scheduler startup event is written through `console.log` to stdout. Existing package, version, and HTTP smoke tests must continue to execute.
@@ -234,7 +234,7 @@ Do not change serialization, redaction, types, or exports.
 - [ ] **Step 2: Run the focused unit test and verify GREEN**
 
 ```bash
-pnpm run test -- --runTestsByPath test/unit/logging.test.ts --runInBand
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath test/unit/logging.test.ts --runInBand
 ```
 
 Expected: PASS, 4 tests passing, 0 failing.
@@ -242,7 +242,7 @@ Expected: PASS, 4 tests passing, 0 failing.
 - [ ] **Step 3: Run the focused packaged integration test and verify GREEN**
 
 ```bash
-pnpm run test:integration -- --runTestsByPath test/integration/packaged-smoke.test.ts --runInBand
+node --experimental-vm-modules node_modules/jest/bin/jest.js --runTestsByPath test/integration/packaged-smoke.test.ts --runInBand
 ```
 
 Expected: PASS, including package contents, `--version`, scheduler stderr separation, and HTTP health smoke coverage.
