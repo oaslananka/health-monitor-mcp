@@ -225,19 +225,21 @@ describe('quality gate regression checks', () => {
     expect(packageJson.scripts['ci:check']).toContain('pnpm run test:ci');
 
     expect(ciWorkflow).toContain('codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f');
-    expect(ciWorkflow).toContain(
-      'codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3'
-    );
+    expect(
+      ciWorkflow.match(/codecov\/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f/g)
+    ).toHaveLength(2);
+    expect(ciWorkflow).not.toContain('codecov/test-results-action@');
     expect(ciWorkflow.match(/if: \$\{\{ !cancelled\(\) \}\}/g)).toHaveLength(2);
     expect(ciWorkflow).toContain('files: ./coverage/lcov.info');
-    expect(ciWorkflow).toContain('file: ./reports/junit/junit.xml');
+    expect(ciWorkflow).toContain('files: ./reports/junit/junit.xml');
+    expect(ciWorkflow).toContain('report_type: test_results');
     expect(ciWorkflow).toContain('token: ${{ secrets.CODECOV_TOKEN }}');
     expect(ciWorkflow).toContain('disable_search: true');
     expect(ciWorkflow).toContain('fail_ci_if_error: false');
     expect(ciWorkflow).not.toContain('id-token: write');
 
     expect(codecovConfig).toContain('target: auto');
-    expect(codecovConfig).toContain('target: 80%');
+    expect(codecovConfig.match(/target: auto/g)).toHaveLength(2);
     expect(codecovConfig.match(/informational: true/g)).toHaveLength(2);
     expect(codecovConfig).toContain('layout: "diff, flags, files"');
     expect(codecovConfig).toContain('unit-integration:');

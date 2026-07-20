@@ -41,6 +41,30 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Run build, lint, coverage, and API docs check
         run: pnpm run ci:check
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unit-integration
+          name: health-monitor-mcp
+          report_type: coverage
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./reports/junit/junit.xml
+          flags: unit-integration
+          name: health-monitor-mcp-tests
+          report_type: test_results
+          disable_search: true
+          fail_ci_if_error: false
       - run: pnpm run security
       - name: Install REUSE
         run: python3 -m pip install --user reuse==6.2.0
