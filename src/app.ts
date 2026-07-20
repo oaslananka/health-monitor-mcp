@@ -34,6 +34,7 @@ import {
   SetAlertSchema,
   UnregisterSchema
 } from './types.js';
+import { toolError } from './tool-errors.js';
 import { MONITOR_NAME, MONITOR_VERSION } from './version.js';
 import type {
   AlertEvaluation,
@@ -226,7 +227,8 @@ export function registerMonitoringTools(
     'register_server',
     {
       title: 'Register MCP Server',
-      description: 'Register an MCP server to monitor. Supports http, sse, and stdio transports.',
+      description:
+        'Register an MCP server. Use http for a Streamable HTTP MCP endpoint, sse only for legacy Server-Sent Events servers, and stdio only for a local executable explicitly allowed by runtime policy.',
       inputSchema: RegisterServerSchema,
       annotations: {
         readOnlyHint: false,
@@ -237,10 +239,28 @@ export function registerMonitoringTools(
     async (input: RegisterServerInput) => {
       if (input.type === 'stdio') {
         if (!policy.allowStdio) {
-          throw new Error(STDIO_DISABLED_MESSAGE);
+          return formatResponse(
+            toolError(
+              'STDIO_DISABLED',
+              STDIO_DISABLED_MESSAGE,
+              'Set HEALTH_MONITOR_ALLOW_STDIO=1 only for trusted local execution, then retry registration.'
+            )
+          );
         }
 
-        validateStdioCommandPolicy(input.command);
+        try {
+          validateStdioCommandPolicy(input.command);
+        } catch (error) {
+          return formatResponse(
+            toolError(
+              'STDIO_COMMAND_REJECTED',
+              error instanceof Error
+                ? error.message
+                : 'stdio command was rejected by runtime policy',
+              'Use one executable without shell syntax and, when configured, add it to HEALTH_MONITOR_STDIO_ALLOWLIST.'
+            )
+          );
+        }
       }
 
       const result = registerServer(input);
@@ -267,7 +287,13 @@ export function registerMonitoringTools(
     async (input: CheckServerInput) => {
       const registered = getServer(input.name);
       if (!registered) {
-        throw new Error(`Server not registered: ${input.name}`);
+        return formatResponse(
+          toolError(
+            'SERVER_NOT_FOUND',
+            `Server is not registered: ${input.name}`,
+            'Run register_server first, then retry the operation.'
+          )
+        );
       }
 
       const result = await checkServerWithPolicy(registered, input.timeout_ms, policy);
@@ -290,7 +316,8 @@ export function registerMonitoringTools(
     'check_all',
     {
       title: 'Check All Servers',
-      description: 'Check health of all registered MCP servers in parallel.',
+      description:
+        'Check all registered MCP servers with bounded concurrency from HEALTH_MONITOR_MAX_CONCURRENCY. Results preserve registration order; optional tags filter the targets.',
       inputSchema: CheckAllSchema,
       annotations: {
         readOnlyHint: true,
@@ -300,6 +327,18 @@ export function registerMonitoringTools(
     },
     async (input: CheckAllInput) => {
       const servers = listServers({ tags: input.tags });
+      if (servers.length === 0) {
+        return formatResponse(
+          toolError(
+            'NO_SERVERS_REGISTERED',
+            input.tags?.length
+              ? 'No registered servers match the requested tags.'
+              : 'No MCP servers are registered.',
+            'Run register_server first or adjust the tag filter, then retry check_all.'
+          )
+        );
+      }
+
       const maxConcurrency = getMaxConcurrency();
       const results = await mapWithConcurrency(servers, maxConcurrency, async (listedServer) => {
         const serverConfig = getServer(listedServer.name);
@@ -558,7 +597,13 @@ export function registerMonitoringTools(
     },
     async (input: SetAlertInput) => {
       if (!getServer(input.name)) {
-        throw new Error(`Server not registered: ${input.name}`);
+        return formatResponse(
+          toolError(
+            'SERVER_NOT_FOUND',
+            `Server is not registered: ${input.name}`,
+            'Run register_server first, then retry set_alert.'
+          )
+        );
       }
 
       return formatResponse(setAlertConfig(input));

@@ -79,19 +79,23 @@ const RegisterServerBaseSchema = z.object({
 
 export const RegisterServerSchema = z.discriminatedUnion('type', [
   RegisterServerBaseSchema.extend({
-    type: z.literal('http').describe('Streamable HTTP transport'),
-    url: HttpUrlSchema.describe('URL for http servers (e.g. https://example.com/mcp)'),
+    type: z.literal('http').describe('Streamable HTTP MCP transport'),
+    url: HttpUrlSchema.describe('Streamable HTTP MCP endpoint URL (e.g. https://example.com/mcp)'),
     command: CommandSchema.optional()
   }),
   RegisterServerBaseSchema.extend({
-    type: z.literal('sse').describe('Legacy SSE transport'),
-    url: HttpUrlSchema.describe('URL for sse servers (e.g. https://example.com/sse)'),
+    type: z.literal('sse').describe('Legacy Server-Sent Events transport for older MCP servers'),
+    url: HttpUrlSchema.describe('Legacy SSE endpoint URL (e.g. https://example.com/sse)'),
     command: CommandSchema.optional()
   }),
   RegisterServerBaseSchema.extend({
-    type: z.literal('stdio').describe('Local stdio transport'),
+    type: z
+      .literal('stdio')
+      .describe('Trusted local stdio process transport; explicit opt-in required'),
     url: HttpUrlSchema.optional(),
-    command: CommandSchema.describe('Command for stdio servers (e.g. npx mcp-debug-recorder)')
+    command: CommandSchema.describe(
+      'Single local executable for stdio servers; put flags and package names in args'
+    )
   })
 ]);
 
@@ -102,7 +106,11 @@ export const CheckServerSchema = z.object({
 
 export const CheckAllSchema = z.object({
   timeout_ms: z.number().int().min(1000).max(30000).default(5000),
-  tags: z.array(SafeTagSchema).max(20).optional().describe('Filter by tags')
+  tags: z
+    .array(SafeTagSchema)
+    .max(20)
+    .optional()
+    .describe('Filter targets by registered server tags')
 });
 
 export const GetUptimeSchema = z.object({

@@ -136,6 +136,7 @@ describe('app tool registration', () => {
       await getDashboard.handler({ hours: 24, include_tool_stats: true })
     );
     const emptyMonitorStats = parseJson(await getMonitorStats.handler({}));
+    const emptyCheckAll = parseJson(await checkAll.handler({ timeout_ms: 5_000 }));
 
     expect(emptyReport.content[0]?.text).toContain('| -- | -- | -- | -- | -- | -- | -- |');
     expect(emptyDashboard).toEqual(
@@ -154,6 +155,15 @@ describe('app tool registration', () => {
         total_servers_registered: 0,
         total_checks_performed: 0,
         monitoring_since: null
+      })
+    );
+    expect(emptyCheckAll).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'NO_SERVERS_REGISTERED',
+          remediation: expect.stringContaining('register_server')
+        })
       })
     );
 
@@ -328,11 +338,30 @@ describe('app tool registration', () => {
     );
     expect(removal).toEqual(expect.objectContaining({ unregistered: true, name: 'alpha' }));
 
-    await expect(setAlert.handler({ name: 'alpha', max_response_time_ms: 100 })).rejects.toThrow(
-      'Server not registered: alpha'
+    const missingAlert = parseJson(
+      await setAlert.handler({ name: 'alpha', max_response_time_ms: 100 })
     );
-    await expect(checkServer.handler({ name: 'missing', timeout_ms: 1000 })).rejects.toThrow(
-      'Server not registered: missing'
+    const missingCheck = parseJson(
+      await checkServer.handler({ name: 'missing', timeout_ms: 1000 })
+    );
+
+    expect(missingAlert).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'SERVER_NOT_FOUND',
+          remediation: expect.stringContaining('register_server')
+        })
+      })
+    );
+    expect(missingCheck).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'SERVER_NOT_FOUND',
+          remediation: expect.stringContaining('register_server')
+        })
+      })
     );
   });
 
@@ -341,8 +370,8 @@ describe('app tool registration', () => {
     const registerServer = getTool(tools, 'register_server');
     const checkServer = getTool(tools, 'check_server');
 
-    await expect(
-      registerServer.handler({
+    const disabledRegistration = parseJson(
+      await registerServer.handler({
         name: 'local-process',
         type: 'stdio',
         command: 'node',
@@ -351,7 +380,17 @@ describe('app tool registration', () => {
         alert_on_down: true,
         check_interval_minutes: 5
       })
-    ).rejects.toThrow('stdio transport is disabled');
+    );
+
+    expect(disabledRegistration).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'STDIO_DISABLED',
+          remediation: expect.stringContaining('HEALTH_MONITOR_ALLOW_STDIO=1')
+        })
+      })
+    );
 
     registerServerRecord({
       name: 'existing-local-process',
@@ -380,8 +419,8 @@ describe('app tool registration', () => {
     const tools = createToolMap();
     const registerServer = getTool(tools, 'register_server');
 
-    await expect(
-      registerServer.handler({
+    const result = parseJson(
+      await registerServer.handler({
         name: 'default-local-process',
         type: 'stdio',
         command: 'node',
@@ -390,7 +429,14 @@ describe('app tool registration', () => {
         alert_on_down: true,
         check_interval_minutes: 5
       })
-    ).rejects.toThrow('stdio transport is disabled');
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ code: 'STDIO_DISABLED' })
+      })
+    );
   });
 
   it('enforces stdio command allowlists during registration', async () => {
@@ -398,8 +444,8 @@ describe('app tool registration', () => {
     const tools = createToolMap({ allowStdio: true });
     const registerServer = getTool(tools, 'register_server');
 
-    await expect(
-      registerServer.handler({
+    const rejected = parseJson(
+      await registerServer.handler({
         name: 'blocked-local-process',
         type: 'stdio',
         command: 'python',
@@ -408,7 +454,17 @@ describe('app tool registration', () => {
         alert_on_down: true,
         check_interval_minutes: 5
       })
-    ).rejects.toThrow('stdio command is not allowed');
+    );
+
+    expect(rejected).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'STDIO_COMMAND_REJECTED',
+          remediation: expect.stringContaining('HEALTH_MONITOR_STDIO_ALLOWLIST')
+        })
+      })
+    );
 
     const response = parseJson(
       await registerServer.handler({
