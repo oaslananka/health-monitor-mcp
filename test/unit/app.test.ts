@@ -56,6 +56,7 @@ describe('app tool registration', () => {
   beforeEach(() => {
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
+    delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
     resetDbForTests();
     resetCheckerRuntimeForTests();
   });
@@ -66,6 +67,7 @@ describe('app tool registration', () => {
     delete process.env.HEALTH_MONITOR_DB;
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
+    delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
   });
 
   it('registers only the supported MCP health monitoring tools', async () => {
@@ -423,6 +425,52 @@ describe('app tool registration', () => {
     expect(response).toEqual(
       expect.objectContaining({ registered: true, name: 'allowed-local-process' })
     );
+  });
+
+  it('bounds interactive check_all concurrency and preserves server order', async () => {
+    process.env.HEALTH_MONITOR_MAX_CONCURRENCY = '1';
+    const tools = createToolMap();
+    const registerServer = getTool(tools, 'register_server');
+    const checkAll = getTool(tools, 'check_all');
+    let active = 0;
+    let maxActive = 0;
+
+    setCheckerRuntimeForTests({
+      createClient: () => ({
+        connect: async () => {
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          active -= 1;
+        },
+        listTools: async () => ({ tools: [{ name: 'health' }] }),
+        close: async () => undefined
+      }),
+      createStreamableTransport: (url: URL) => ({ kind: 'streamable', url }) as never,
+      createSseTransport: (url: URL) => ({ kind: 'sse', url }) as never,
+      fetchImpl: (async () =>
+        ({ ok: true, status: 200, statusText: 'OK' }) as Response) as typeof fetch
+    });
+
+    for (const name of ['first', 'second', 'third']) {
+      await registerServer.handler({
+        name,
+        type: 'http',
+        url: `https://${name}.example/mcp`,
+        tags: [],
+        alert_on_down: true,
+        check_interval_minutes: 5,
+        args: []
+      });
+    }
+
+    const result = parseJson(await checkAll.handler({ timeout_ms: 5_000 }));
+    const checks = result.results as Array<{ name: string }>;
+
+    expect(maxActive).toBe(1);
+    expect(result.max_concurrency).toBe(1);
+    expect(result.queued).toBe(2);
+    expect(checks.map((check) => check.name)).toEqual(['first', 'second', 'third']);
   });
 
   it('creates an MCP server instance with versioned metadata', async () => {

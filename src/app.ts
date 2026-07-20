@@ -2,6 +2,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { evaluateAlertState, setAlertConfig } from './alerts.js';
 import { checkServer } from './checker.js';
+import { getMaxConcurrency } from './config.js';
+import { mapWithConcurrency } from './concurrency.js';
 import { getDb, getResolvedDbPath } from './db.js';
 import {
   createRuntimePolicy,
@@ -298,39 +300,38 @@ export function registerMonitoringTools(
     },
     async (input: CheckAllInput) => {
       const servers = listServers({ tags: input.tags });
-      const results = await Promise.allSettled(
-        servers.map(async (listedServer) => {
-          const serverConfig = getServer(listedServer.name);
-          if (!serverConfig) {
-            return {
-              name: listedServer.name,
-              ...buildErrorResult(new Error(`Server not found: ${listedServer.name}`)),
-              alerts: {
-                has_alerts: false,
-                findings: []
-              }
-            };
-          }
+      const maxConcurrency = getMaxConcurrency();
+      const results = await mapWithConcurrency(servers, maxConcurrency, async (listedServer) => {
+        const serverConfig = getServer(listedServer.name);
+        if (!serverConfig) {
+          return {
+            name: listedServer.name,
+            ...buildErrorResult(new Error(`Server not found: ${listedServer.name}`)),
+            alerts: {
+              has_alerts: false,
+              findings: []
+            }
+          };
+        }
 
-          try {
-            const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
-            recordHealthCheck(listedServer.name, result);
-            return {
-              name: listedServer.name,
-              ...result,
-              alerts: enrichWithAlerts(listedServer.name, result)
-            };
-          } catch (error) {
-            const result = buildErrorResult(error);
-            recordHealthCheck(listedServer.name, result);
-            return {
-              name: listedServer.name,
-              ...result,
-              alerts: enrichWithAlerts(listedServer.name, result)
-            };
-          }
-        })
-      );
+        try {
+          const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
+          recordHealthCheck(listedServer.name, result);
+          return {
+            name: listedServer.name,
+            ...result,
+            alerts: enrichWithAlerts(listedServer.name, result)
+          };
+        } catch (error) {
+          const result = buildErrorResult(error);
+          recordHealthCheck(listedServer.name, result);
+          return {
+            name: listedServer.name,
+            ...result,
+            alerts: enrichWithAlerts(listedServer.name, result)
+          };
+        }
+      });
       const checks = results.map((result, index) =>
         result.status === 'fulfilled'
           ? result.value
@@ -348,6 +349,8 @@ export function registerMonitoringTools(
       return formatResponse({
         summary: `${upCount}/${checks.length} servers UP, ${checks.length - upCount} DOWN`,
         checked_at: new Date().toISOString(),
+        max_concurrency: maxConcurrency,
+        queued: Math.max(0, servers.length - maxConcurrency),
         results: checks
       });
     }
