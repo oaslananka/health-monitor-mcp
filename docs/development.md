@@ -12,8 +12,11 @@ corepack enable
 corepack prepare pnpm@11.0.9 --activate
 pnpm install --frozen-lockfile
 pnpm run setup:security
+python3 -m venv .venv-security
+. .venv-security/bin/activate
+python -m pip install -r requirements-security.txt
+pre-commit install --hook-type pre-commit
 ```
-
 
 ## Local Security Tooling
 
@@ -28,6 +31,9 @@ pnpm run security:supply-chain
 The script installs `reuse==6.2.0` with Python user-site packages, matching the GitHub Actions
 workflow. If your shell cannot find user-site console scripts, `pnpm run security:reuse` still uses
 `python -m reuse lint` directly.
+
+The staged dependency and scanner setup is documented in
+[security-tooling.md](security-tooling.md).
 
 Common local gates:
 
@@ -46,7 +52,10 @@ pnpm run build
 pnpm run check:metadata
 pnpm run check:package
 pnpm run release:dry-run
+pnpm run security:semgrep
+pre-commit run --all-files --hook-stage pre-commit
 ```
 
-`better-sqlite3` is the only approved install-time build dependency and is listed in
-`pnpm-workspace.yaml`.
+`better-sqlite3` and the exact pinned Snyk CLI are the only approved install-time build
+dependencies listed in `pnpm-workspace.yaml`. Snyk downloads its checksum-verified platform binary
+during installation.

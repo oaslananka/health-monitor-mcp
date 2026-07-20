@@ -7,6 +7,10 @@ corepack enable
 corepack prepare pnpm@11.0.9 --activate
 pnpm install --frozen-lockfile
 pnpm run build
+python3 -m venv .venv-security
+. .venv-security/bin/activate
+python -m pip install -r requirements-security.txt
+pre-commit install --hook-type pre-commit
 pnpm test
 pnpm run test:integration
 ```
@@ -17,9 +21,10 @@ pnpm run test:integration
 - Do not use `any` in `src/`
 - Add or update tests for every new tool or behavior change
 - Update `CHANGELOG.md` for user-visible changes
-- Run `pnpm run ci` before opening a PR
+- Run `pre-commit run --all-files --hook-stage pre-commit` and `pnpm run ci` before opening a PR
 - Use the issue forms for bugs, feature requests, release blockers, and governance gaps
 - Follow the label, triage, support, and response policies in [governance.md](governance.md)
+- Follow the staged scanner and bypass policy in [security-tooling.md](security-tooling.md)
 - Ask usage questions in GitHub Discussions instead of opening a tracking issue
 
 ## Commit Convention
@@ -33,6 +38,7 @@ Examples:
 
 ## PR Checklist
 
+- [ ] `pre-commit run --all-files --hook-stage pre-commit` passes
 - [ ] `pnpm run ci` passes
 - [ ] New tests were added or existing tests were updated
 - [ ] `CHANGELOG.md` was updated for notable changes

@@ -110,3 +110,43 @@ jobs:
           languages: javascript-typescript
 
       - uses: github/codeql-action/analyze@3ce22a6e336a7fcc318bc58ae1986395bdc83ba7
+
+  repository-policy:
+    name: Repository Policy
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.15.0'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.0.9 --activate
+
+      - run: pnpm install --frozen-lockfile
+      - name: Install pre-commit
+        run: python3 -m pip install --user -r requirements-security.txt
+      - name: Run deterministic repository hooks
+        run: |
+          "$HOME/.local/bin/pre-commit" run --all-files --hook-stage pre-commit
+
+  renovate-config:
+    name: Renovate Config
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: 'renovate/renovate:43.272.4@sha256:6aaa848f2e0660525a1a10bd6b24b8e5de806666915015eed1556a2b8eb283fc'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Validate Renovate configuration
+        run: renovate-config-validator renovate.json

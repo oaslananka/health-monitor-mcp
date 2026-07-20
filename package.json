@@ -59,7 +59,12 @@
     "ci": "pnpm run ci:check && pnpm run security && pnpm run security:supply-chain && pnpm run check:metadata && pnpm run check:package && pnpm run release:dry-run",
     "prepare": "pnpm run build",
     "prepublishOnly": "node scripts/prepublish-check.mjs",
-    "setup:security": "python -m pip install --user reuse==6.2.0"
+    "setup:security": "python -m pip install --user reuse==6.2.0",
+    "security:semgrep": "pre-commit run semgrep --all-files --hook-stage pre-commit",
+    "security:snyk": "snyk test --all-projects --severity-threshold=high",
+    "precommit:install": "pre-commit install --hook-type pre-commit",
+    "precommit:install:push": "pre-commit install --hook-type pre-push",
+    "precommit:run": "pre-commit run --all-files --hook-stage pre-commit"
   },
   "engines": {
     "node": ">=24",
@@ -118,6 +123,7 @@
     "globals": "17.4.0",
     "jest": "29.7.0",
     "prettier": "3.5.3",
+    "snyk": "1.1306.1",
     "ts-jest": "29.3.2",
     "ts-node": "10.9.2",
     "typedoc": "0.28.19",

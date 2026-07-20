@@ -140,7 +140,7 @@ describe('quality gate regression checks', () => {
     expect(sonarConfig).toContain('sonar.tests=test');
     expect(sonarConfig).toContain('sonar.sourceEncoding=UTF-8');
 
-    expect(packageJson.scripts['security:semgrep']).toContain('semgrep scan');
+    expect(packageJson.scripts['security:semgrep']).toContain('pre-commit run semgrep');
     expect(packageJson.scripts['security:snyk']).toContain('snyk test');
     expect(packageJson.scripts['precommit:run']).toContain('pre-commit run');
   });

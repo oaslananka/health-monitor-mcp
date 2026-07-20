@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+docs/api/
+security-evidence/
+.worktrees/
+*.tgz
+pnpm-lock.yaml

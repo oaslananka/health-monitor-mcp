@@ -1,0 +1,50 @@
+rules:
+  - id: health-monitor.no-runtime-stdout
+    message: "Runtime source must not write to stdout; MCP stdio reserves stdout for protocol messages."
+    severity: ERROR
+    languages: [typescript]
+    pattern-either:
+      - pattern: "console.log(...)"
+      - pattern: "process.stdout.write(...)"
+    paths:
+      include:
+        - /src/**/*.ts
+      exclude:
+        - /src/mcp.ts
+
+  - id: health-monitor.no-shell-true
+    message: "Avoid shell execution in child-process APIs; pass an executable and argument array directly."
+    severity: ERROR
+    languages: [typescript]
+    pattern-either:
+      - pattern: "exec(..., { ..., shell: true, ... })"
+      - pattern: "execFile(..., { ..., shell: true, ... })"
+      - pattern: "spawn(..., { ..., shell: true, ... })"
+      - pattern: "spawnSync(..., { ..., shell: true, ... })"
+      - pattern: "execSync(..., { ..., shell: true, ... })"
+    paths:
+      include:
+        - /src/**/*.ts
+
+  - id: health-monitor.no-dynamic-code-execution
+    message: "Dynamic code execution is forbidden in the monitoring runtime."
+    severity: ERROR
+    languages: [typescript]
+    pattern-either:
+      - pattern: "eval(...)"
+      - pattern: "new Function(...)"
+    paths:
+      include:
+        - /src/**/*.ts
+
+  - id: health-monitor.no-complete-environment-logging
+    message: "Do not pass the complete process environment into logs."
+    severity: ERROR
+    languages: [typescript]
+    pattern-either:
+      - pattern: "log(..., ..., process.env)"
+      - pattern: "log(..., ..., { ..., env: process.env, ... })"
+      - pattern: "console.$METHOD(..., process.env, ...)"
+    paths:
+      include:
+        - /src/**/*.ts

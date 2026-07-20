@@ -11,6 +11,7 @@ yarn-error.log*
 .npmrc.local
 .env
 .env.*
+.venv-security/
 *.tgz
 review-thread-summary.json
 release-state.json

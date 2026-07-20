@@ -1,18 +1,19 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Repository-local Renovate policy for health-monitor-mcp.",
+  "description": "Repository-local dependency and security tooling policy for health-monitor-mcp.",
   "extends": [
-    "config:recommended",
-    ":dependencyDashboard",
+    "config:best-practices",
     ":semanticCommits",
     ":semanticCommitTypeAll(chore)",
     ":separateMultipleMajorReleases",
-    "group:recommended",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
+  "pre-commit": {
+    "enabled": true
+  },
   "timezone": "Europe/Istanbul",
-  "labels": ["dependencies"],
-  "dependencyDashboardLabels": ["dependencies"],
+  "labels": ["dependencies", "area:dependencies"],
+  "dependencyDashboardLabels": ["dependencies", "area:dependencies"],
   "dependencyDashboardTitle": "Dependency Dashboard",
   "dependencyDashboardOSVVulnerabilitySummary": "unresolved",
   "assignees": ["oaslananka"],
@@ -22,16 +23,16 @@
   "commitHourlyLimit": 4,
   "rangeStrategy": "bump",
   "rebaseWhen": "conflicted",
-  "ignorePaths": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/coverage/**"],
+  "ignorePaths": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/.worktrees/**"],
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 6am on monday"],
     "automerge": false,
-    "addLabels": ["lockfile"]
+    "addLabels": ["area:dependencies", "type:task", "risk:low"]
   },
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security"],
+    "labels": ["dependencies", "area:security", "type:security", "priority:P0", "risk:high"],
     "prCreation": "immediate",
     "vulnerabilityFixStrategy": "highest"
   },
@@ -41,7 +42,7 @@
       "description": "Require explicit approval for major version changes.",
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true,
-      "addLabels": ["major", "requires-review"],
+      "addLabels": ["priority:P1", "risk:high", "needs:decision"],
       "prPriority": -5,
       "automerge": false
     },
@@ -49,38 +50,35 @@
       "description": "Apply npm release-age guard to reduce supply-chain churn.",
       "matchDatasources": ["npm"],
       "minimumReleaseAge": "3 days",
-      "prCreation": "not-pending",
       "internalChecksFilter": "strict",
-      "addLabels": ["javascript"]
+      "addLabels": ["area:dependencies"]
     },
     {
       "description": "Pin and group non-major GitHub Actions updates.",
       "matchManagers": ["github-actions"],
       "minimumReleaseAge": "3 days",
-      "prCreation": "not-pending",
       "internalChecksFilter": "strict",
       "pinDigests": true,
       "groupName": "GitHub Actions",
       "groupSlug": "github-actions",
-      "addLabels": ["ci", "github-actions"]
+      "addLabels": ["area:ci", "area:dependencies"]
     },
     {
       "description": "Group TypeScript quality toolchain updates.",
       "matchPackageNames": ["typescript", "ts-node", "tsx", "eslint", "eslint-*", "@eslint/**", "@typescript-eslint/**", "typescript-eslint", "prettier", "@types/**"],
       "groupName": "TypeScript quality toolchain",
       "groupSlug": "typescript-quality-toolchain",
-      "addLabels": ["javascript"]
+      "addLabels": ["area:ci", "area:dx"]
     },
     {
       "description": "Group container image updates.",
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "minimumReleaseAge": "3 days",
-      "prCreation": "not-pending",
       "internalChecksFilter": "strict",
       "groupName": "Container images",
       "groupSlug": "container-images",
-      "addLabels": ["docker"]
+      "addLabels": ["area:docker", "area:dependencies"]
     },
     {
       "description": "Automerge digest-only updates after checks pass.",
@@ -88,20 +86,27 @@
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": false,
-      "addLabels": ["automerge"]
+      "addLabels": ["risk:low"]
     },
     {
-      "description": "Monitoring runtime, alerting, and MCP SDK dependencies require manual review.",
-      "matchPackageNames": ["@modelcontextprotocol/sdk", "zod", "axios", "node-cron", "express"],
+      "description": "Monitoring runtime and MCP dependencies require manual review.",
+      "matchPackageNames": ["@modelcontextprotocol/sdk", "better-sqlite3", "zod"],
       "dependencyDashboardApproval": true,
       "automerge": false,
-      "addLabels": ["requires-review", "runtime"]
+      "addLabels": ["area:mcp-runtime", "risk:medium", "needs:decision"]
     },
     {
       "description": "Keep Node runtime jumps explicit.",
       "matchPackageNames": ["node", "@types/node"],
       "dependencyDashboardApproval": true,
-      "addLabels": ["runtime", "requires-review"]
+      "addLabels": ["area:node-runtime", "risk:medium", "needs:decision"]
+    },
+    {
+      "description": "Group repository security tool updates.",
+      "matchManagers": ["pre-commit", "pip_requirements"],
+      "groupName": "Repository security tooling",
+      "groupSlug": "repository-security-tooling",
+      "addLabels": ["area:security", "area:dependencies", "risk:medium"]
     }
   ]
 }

@@ -1,18 +1,59 @@
+minimum_pre_commit_version: '4.6.0'
+default_stages: [pre-commit]
+
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+
+  - repo: https://github.com/semgrep/pre-commit
+    rev: v1.170.0
+    hooks:
+      - id: semgrep
+        name: semgrep repository policy
+        args:
+          - --disable-version-check
+          - --quiet
+          - --skip-unknown-extensions
+          - --config=.semgrep.yml
+          - --error
+          - --strict
+        exclude: ^(docs/api/|dist/|coverage/|security-evidence/|node_modules/|\.worktrees/)
+
+  - repo: https://github.com/SonarSource/sonar-secrets-pre-commit
+    rev: v2.41.0.10709
+    hooks:
+      - id: sonar-secrets
+        stages: [pre-push]
+
   - repo: local
     hooks:
       - id: pnpm-format-check
         name: pnpm format check
-        entry: pnpm run format:check
+        entry: corepack pnpm run format:check
         language: system
         pass_filenames: false
       - id: pnpm-lint
-        name: pnpm lint
-        entry: pnpm run lint
+        name: pnpm source and test lint
+        entry: bash -c 'corepack pnpm run lint && corepack pnpm run lint:test'
         language: system
         pass_filenames: false
       - id: pnpm-typecheck
         name: pnpm typecheck
-        entry: pnpm run typecheck
+        entry: corepack pnpm run typecheck
         language: system
         pass_filenames: false
+      - id: snyk-open-source
+        name: Snyk Open Source high-severity gate
+        entry: corepack pnpm run security:snyk
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
