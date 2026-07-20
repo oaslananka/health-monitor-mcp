@@ -48,6 +48,7 @@ pnpm run docs:api:check
 pnpm test
 pnpm run test:integration
 pnpm run test:coverage
+pnpm run test:ci
 pnpm run build
 pnpm run check:metadata
 pnpm run check:package
@@ -55,6 +56,17 @@ pnpm run release:dry-run
 pnpm run security:semgrep
 pre-commit run --all-files --hook-stage pre-commit
 ```
+
+## Coverage and Test Reports
+
+`pnpm run test:ci` runs the complete Jest suite once and writes:
+
+- `coverage/lcov.info` for Codecov coverage ingestion;
+- `reports/junit/junit.xml` for Codecov Test Analytics and failed-test reporting.
+
+Both directories are generated and ignored by Git. `pnpm run test:coverage` remains available for a
+normal local coverage run without the JUnit reporter. The same Jest thresholds remain blocking in
+both commands.
 
 `better-sqlite3` and the exact pinned Snyk CLI are the only approved install-time build
 dependencies listed in `pnpm-workspace.yaml`. Snyk downloads its checksum-verified platform binary

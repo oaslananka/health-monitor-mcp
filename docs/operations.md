@@ -93,9 +93,36 @@ Use one executable in `command`; put flags and package names in `args`. Remote-s
 
 Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Back up the database before upgrading when historical retention outside the supported product is required.
 
+## Codecov Operations
+
+The repository stores `CODECOV_TOKEN` as an Actions secret. The validation job uploads explicit LCOV
+and JUnit paths with a pinned Codecov v7 action; upload failures are non-blocking because Jest test
+results and local coverage thresholds remain authoritative. Project and patch statuses are
+informational with `target: auto` and a 1% threshold.
+
+Validate the repository configuration with:
+
+```bash
+curl --fail --data-binary @codecov.yml https://codecov.io/validate
+```
+
+Bundle Analysis remains disabled until the project ships a supported application bundle.
+
+## Container Security
+
+The `Docker Build` required check builds `health-monitor-mcp:ci`, performs a CLI smoke test, and runs
+Trivy against the local image. Fixed high or critical vulnerabilities fail the job. SARIF is uploaded
+to GitHub Code Scanning when a report exists. The scanner does not duplicate GitHub/Gitleaks secret
+scanning.
+
 ## Repository Protection
 
-The active repository ruleset requires:
+The active solo-maintainer ruleset requires pull requests, linear history, resolved review threads,
+strict status checks, and protection from deletion or force-push. It intentionally requires zero
+external approvals because there is no second maintainer. Repository merge settings allow squash
+only, keep auto-merge enabled, and delete merged branches automatically.
+
+The required checks are:
 
 - `Validate`
 - `Workflow Security`
@@ -104,7 +131,7 @@ The active repository ruleset requires:
 - `Review Thread Gate`
 - `dependency-review`
 
-Workflows pin third-party actions by commit SHA. CI also runs Semgrep, Snyk, SonarQube Cloud, Socket, Renovate validation, package checks, SBOM generation, license policy, and REUSE compliance.
+Workflows pin third-party actions by commit SHA. CI also runs Codecov, Trivy, Semgrep, Snyk, SonarQube Cloud, Socket, Renovate validation, package checks, SBOM generation, license policy, and REUSE compliance. Native merge queue and Mergify are deferred because the repository has low concurrent PR volume; no `merge_group` trigger is required. Renovate owns version updates and vulnerability PRs, while Dependabot alerts remain enabled without duplicate version-update configuration.
 
 Verify live settings with:
 
@@ -112,4 +139,6 @@ Verify live settings with:
 gh api repos/oaslananka/health-monitor-mcp/rulesets
 gh api repos/oaslananka/health-monitor-mcp/actions/permissions
 gh api repos/oaslananka/health-monitor-mcp/actions/permissions/selected-actions
+gh api repos/oaslananka/health-monitor-mcp/actions/permissions/workflow
+gh api repos/oaslananka/health-monitor-mcp/vulnerability-alerts -i
 ```

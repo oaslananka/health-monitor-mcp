@@ -5,15 +5,19 @@ while authenticated platform scans still protect pull requests and the default b
 
 ## Tooling Matrix
 
-| Control | Local stage | Pull request / default branch |
-| --- | --- | --- |
-| Renovate | `renovate-config-validator renovate.json` | Renovate GitHub App and Dependency Dashboard |
-| Semgrep repository policy | pre-commit | Repository Policy CI job |
-| Semgrep AppSec Platform | not required locally | `Semgrep` workflow with `SEMGREP_APP_TOKEN` |
-| Snyk Open Source | optional pre-push | Existing Snyk GitHub App check |
-| Sonar Secrets | optional pre-push | Local prevention layer; GitHub secret scanning remains enabled |
-| SonarQube Cloud | IDE / automatic analysis | Existing SonarQube Cloud GitHub App quality gate |
-| CodeQL, Gitleaks, dependency review | CI only | Existing GitHub Actions jobs |
+| Control                        | Local stage                               | Pull request / default branch                                  |
+| ------------------------------ | ----------------------------------------- | -------------------------------------------------------------- |
+| Renovate                       | `renovate-config-validator renovate.json` | Renovate GitHub App and Dependency Dashboard                   |
+| Semgrep repository policy      | pre-commit                                | Repository Policy CI job                                       |
+| Semgrep AppSec Platform        | not required locally                      | `Semgrep` workflow with `SEMGREP_APP_TOKEN`                    |
+| Snyk Open Source               | optional pre-push                         | Existing Snyk GitHub App check                                 |
+| Sonar Secrets                  | optional pre-push                         | Local prevention layer; GitHub secret scanning remains enabled |
+| SonarQube Cloud                | IDE / automatic analysis                  | Existing SonarQube Cloud GitHub App quality gate               |
+| CodeQL                         | CI only                                   | Primary GitHub-native SAST and SARIF gate                      |
+| actionlint and zizmor          | pre-commit                                | Workflow Security and Repository Policy jobs                   |
+| Codecov                        | generated LCOV and JUnit files            | Informational project/patch coverage and Test Analytics        |
+| Trivy                          | not required locally                      | High/critical vulnerability scan of the built container image  |
+| Gitleaks and dependency review | CI only                                   | Existing GitHub Actions jobs                                   |
 
 ## Install Deterministic Pre-Commit Hooks
 
@@ -28,9 +32,9 @@ pre-commit install --hook-type pre-commit
 pre-commit run --all-files --hook-stage pre-commit
 ```
 
-The default hook requires no SaaS token. It checks whitespace, EOF markers, YAML, JSON, merge
-markers, private keys, large files, repository Semgrep rules, formatting, source/test lint, and
-TypeScript types.
+The default hook requires no SaaS token. It checks whitespace, EOF markers, YAML, JSON, TOML, mixed
+line endings, merge markers, private keys, large files, GitHub Actions syntax and security, repository
+Semgrep rules, formatting, source/test lint, and TypeScript types.
 
 `.venv-security/` is local-only and must not be committed. Use any equivalent isolated Python
 environment if preferred.
@@ -88,16 +92,46 @@ full scans on `main`, manual dispatches, and a weekly schedule. Fork and Dependa
 not receive repository secrets and are therefore skipped by the authenticated job; deterministic
 Semgrep policy still runs in the Repository Policy CI job.
 
+## Codecov
+
+The CI validation job generates `coverage/lcov.info` and `reports/junit/junit.xml`, then uploads both
+through `codecov/codecov-action` v7 pinned to an immutable commit. The second invocation uses
+`report_type: test_results`, avoiding the separate Node 20-based test-results action while retaining
+failed-test and flaky-test analytics.
+
+`codecov.yml` keeps project and patch checks informational during adoption. Both use `target: auto`
+with a 1% threshold; local Jest thresholds remain the deterministic blocking gate. Validate changes
+with:
+
+```bash
+curl --fail --data-binary @codecov.yml https://codecov.io/validate
+```
+
+The repository uses the existing `CODECOV_TOKEN` Actions secret and does not grant OIDC permissions to
+the validation job. Bundle Analysis is deferred because the project has no Rollup, Vite, or Webpack
+application bundle.
+
+## Trivy
+
+The required `Docker Build` job builds `health-monitor-mcp:ci` and scans that exact local image with
+Trivy. The scan is limited to fixed `HIGH` and `CRITICAL` vulnerabilities and uploads SARIF to GitHub
+Code Scanning even when the vulnerability gate fails. Secret scanning is deliberately excluded from
+Trivy because GitHub push protection and Gitleaks already own that responsibility.
+
+The Trivy action, its nested setup action, and Codecov are pinned to full commit SHAs and explicitly
+allowed by the repository selected-actions policy. Renovate manages future action and pre-commit pin
+updates.
+
 ## SonarQube Cloud
 
 SonarQube Cloud automatic analysis is currently enabled through the GitHub App. The repository file
 `.sonarcloud.properties` limits analysis to `src` and `test` and sets UTF-8 encoding.
 
-Automatic analysis cannot import Jest LCOV coverage or external issue reports. Do not add a
-SonarScanner GitHub Actions job while automatic analysis remains enabled, because SonarQube Cloud
+Automatic analysis cannot import Jest LCOV coverage or external issue reports. Codecov owns coverage
+trend and patch reporting, so SonarQube Cloud is not configured as a second coverage gate. Do not add
+a SonarScanner GitHub Actions job while automatic analysis remains enabled, because SonarQube Cloud
 allows only one analysis method. A future CI-based migration must first disable automatic analysis
-in the SonarQube Cloud project settings, then add an authenticated scanner and
-`coverage/lcov.info` reporting in one reviewed change.
+in the SonarQube Cloud project settings and explicitly retire the duplicate coverage responsibility.
 
 ## Renovate
 

@@ -6,14 +6,14 @@
 
 **Architecture:** The CI validation job generates one full Jest run with LCOV and JUnit outputs. Immutable Codecov actions upload those reports with the existing repository token, while `codecov.yml` defines informational project/patch policies. Existing Jest thresholds remain authoritative and Bundle Analysis stays disabled because the package has no application bundler.
 
-**Tech Stack:** Node.js 24.18.0, pnpm 11.0.9, Jest 29, ts-jest, jest-junit 17.0.0, GitHub Actions, Codecov Action v7.0.0, Codecov Test Results Action v1.2.1.
+**Tech Stack:** Node.js 24.18.0, pnpm 11.0.9, Jest 29, ts-jest, jest-junit 17.0.0, GitHub Actions, Codecov Action v7.0.0, Codecov Action v7.0.0 for test-result uploads.
 
 ## Global Constraints
 
 - Keep local Jest thresholds blocking: lines/functions/statements >= 80%, branches >= 70%.
 - Codecov project and patch statuses start with `informational: true`.
 - Use existing `CODECOV_TOKEN`; do not add `id-token: write`.
-- Pin Codecov actions to `fb8b3582c8e4def4969c97caa2f19720cb33a72f` and `0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3`.
+- Pin both Codecov invocations to `fb8b3582c8e4def4969c97caa2f19720cb33a72f`.
 - Generate `coverage/lcov.info` and `reports/junit/junit.xml` from one complete CI test run.
 - Use `fail_ci_if_error: false` and `if: ${{ !cancelled() }}` for both uploads.
 - Do not add Rollup, Vite, Webpack, or a Codecov bundle plugin.
@@ -24,10 +24,12 @@
 ### Task 1: Define the Codecov quality-gate contract
 
 **Files:**
+
 - Modify: `test/unit/quality-gates.test.ts`
 - Test: `test/unit/quality-gates.test.ts`
 
 **Interfaces:**
+
 - Consumes: `readProjectJson()` and `readProjectText()`.
 - Produces: regression assertions for report generation, immutable actions, workflow policy, and `codecov.yml`.
 
@@ -49,12 +51,8 @@ it('publishes coverage and test analytics without replacing local coverage gates
   expect(packageJson.scripts['ci:check']).toContain('pnpm run ci:static');
   expect(packageJson.scripts['ci:check']).toContain('pnpm run test:ci');
 
-  expect(ciWorkflow).toContain(
-    'codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f'
-  );
-  expect(ciWorkflow).toContain(
-    'codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3'
-  );
+  expect(ciWorkflow).toContain('codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f');
+  expect(ciWorkflow).toContain('codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f');
   expect(ciWorkflow.match(/if: \$\{\{ !cancelled\(\) \}\}/g)).toHaveLength(2);
   expect(ciWorkflow).toContain('files: ./coverage/lcov.info');
   expect(ciWorkflow).toContain('file: ./reports/junit/junit.xml');
@@ -64,7 +62,7 @@ it('publishes coverage and test analytics without replacing local coverage gates
   expect(ciWorkflow).not.toContain('id-token: write');
 
   expect(codecovConfig).toContain('target: auto');
-  expect(codecovConfig).toContain('target: 80%');
+  expect(codecovConfig.match(/target: auto/g)).toHaveLength(2);
   expect(codecovConfig.match(/informational: true/g)).toHaveLength(2);
   expect(codecovConfig).toContain('layout: "diff, flags, files"');
   expect(codecovConfig).toContain('unit-integration:');
@@ -94,6 +92,7 @@ git commit -m "test: define Codecov observability contract"
 ### Task 2: Generate deterministic LCOV and JUnit reports
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`
 - Modify: `jest.config.cjs`
@@ -102,6 +101,7 @@ git commit -m "test: define Codecov observability contract"
 - Test: `test/unit/quality-gates.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing Jest configuration and coverage thresholds.
 - Produces: `pnpm run test:ci`, `coverage/lcov.info`, and `reports/junit/junit.xml`.
 
@@ -158,7 +158,7 @@ reports/
 Add to `AGENTS.md` approved pins:
 
 ```markdown
-| `jest-junit`                       | `17.0.0`  | Generate JUnit XML for Codecov Test Analytics while retaining Jest 29 as the test runner.                                               |
+| `jest-junit` | `17.0.0` | Generate JUnit XML for Codecov Test Analytics while retaining Jest 29 as the test runner. |
 ```
 
 - [ ] **Step 6: Generate and inspect reports**
@@ -190,12 +190,14 @@ git commit -m "test: generate LCOV and JUnit CI reports"
 ### Task 3: Add Codecov workflow uploads and repository policy
 
 **Files:**
+
 - Create: `codecov.yml`
 - Modify: `.github/workflows/ci.yml`
 - External: repository selected-actions allowlist
 - Test: `test/unit/quality-gates.test.ts`
 
 **Interfaces:**
+
 - Consumes: LCOV, JUnit, and `CODECOV_TOKEN`.
 - Produces: coverage upload, Test Analytics upload, project/patch statuses, and PR comments.
 
@@ -212,7 +214,7 @@ codecov:
 coverage:
   precision: 2
   round: down
-  range: "80...100"
+  range: '80...100'
   status:
     project:
       default:
@@ -223,14 +225,14 @@ coverage:
         informational: true
     patch:
       default:
-        target: 80%
-        threshold: 5%
+        target: auto
+        threshold: 1%
         base: auto
         if_ci_failed: error
         informational: true
 
 comment:
-  layout: "diff, flags, files"
+  layout: 'diff, flags, files'
   behavior: default
   require_changes: false
   require_base: false
@@ -244,40 +246,42 @@ flags:
     carryforward: false
 
 ignore:
-  - "dist/**"
-  - "docs/**"
-  - "test/**"
+  - 'dist/**'
+  - 'docs/**'
+  - 'test/**'
 ```
 
 - [ ] **Step 2: Add immutable upload steps after `pnpm run ci:check`**
 
 ```yaml
-      - name: Upload coverage to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unit-integration
-          name: health-monitor-mcp
-          disable_search: true
-          fail_ci_if_error: false
+- name: Upload coverage to Codecov
+  if: ${{ !cancelled() }}
+  uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+  with:
+    token: ${{ secrets.CODECOV_TOKEN }}
+    files: ./coverage/lcov.info
+    flags: unit-integration
+    name: health-monitor-mcp
+    report_type: coverage
+    disable_search: true
+    fail_ci_if_error: false
 
-      - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./reports/junit/junit.xml
-          flags: unit-integration
-          name: health-monitor-mcp-tests
-          disable_search: true
-          fail_ci_if_error: false
+- name: Upload test results to Codecov
+  if: ${{ !cancelled() }}
+  uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+  with:
+    token: ${{ secrets.CODECOV_TOKEN }}
+    files: ./reports/junit/junit.xml
+    flags: unit-integration
+    name: health-monitor-mcp-tests
+    report_type: test_results
+    disable_search: true
+    fail_ci_if_error: false
 ```
 
 - [ ] **Step 3: Extend selected-actions permissions**
 
-Preserve existing entries and add the two exact Codecov patterns:
+Preserve existing entries and add the exact Codecov pattern:
 
 ```json
 {
@@ -286,13 +290,12 @@ Preserve existing entries and add the two exact Codecov patterns:
   "patterns_allowed": [
     "googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7",
     "ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a",
-    "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f",
-    "codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3"
+    "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f"
   ]
 }
 ```
 
-Read the setting back and verify all four patterns.
+Read the setting back and verify all three patterns.
 
 - [ ] **Step 4: Validate online**
 
@@ -327,11 +330,13 @@ git commit -m "ci: upload coverage and test results to Codecov"
 ### Task 4: Document observability and Bundle Analysis deferral
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/development.md`
 - Modify: `docs/operations.md`
 
 **Interfaces:**
+
 - Consumes: report paths and policy from Tasks 2–3.
 - Produces: maintainer setup and user-facing coverage visibility.
 
@@ -381,9 +386,11 @@ git commit -m "docs: explain Codecov coverage observability"
 ### Task 5: Full verification, PR, bot review, and merge
 
 **Files:**
+
 - Verify all branch changes.
 
 **Interfaces:**
+
 - Produces: one merged PR closing #89.
 
 - [ ] **Step 1: Run fresh complete verification**
@@ -420,9 +427,11 @@ Confirm the PR head SHA matches the verified branch, all required checks are suc
 ### Task 6: Publish and verify v1.1.0, then close #77
 
 **Files:**
+
 - No source changes expected.
 
 **Interfaces:**
+
 - Consumes: merged main commit with synchronized 1.1.0 metadata.
 - Produces: exact tag, GitHub Release, npm, GHCR, MCP Registry, and closed #77.
 

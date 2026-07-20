@@ -60,12 +60,11 @@ Make Jest coverage output explicit with `coverageDirectory: 'coverage'` and `cov
 
 Use the current official actions as of 2026-07-21, pinned to immutable commits:
 
-- `codecov/codecov-action` v7.0.0 at `fb8b3582c8e4def4969c97caa2f19720cb33a72f`;
-- `codecov/test-results-action` v1.2.1 at `0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3`.
+- `codecov/codecov-action` v7.0.0 at `fb8b3582c8e4def4969c97caa2f19720cb33a72f` for both coverage and test-result uploads.
 
-The repository already has `CODECOV_TOKEN`. Use it instead of adding `id-token: write`. Add both upload steps directly after `pnpm run ci:check`, with explicit report paths, `disable_search: true`, `fail_ci_if_error: false`, and `if: ${{ !cancelled() }}`.
+The repository already has `CODECOV_TOKEN`. Use it instead of adding `id-token: write`. Invoke the composite Codecov v7 action twice: once with `report_type: coverage` and once with `report_type: test_results`. This avoids introducing the separate test-results action, whose latest release still declares a Node 20 action runtime. Both steps use explicit report paths, `disable_search: true`, `fail_ci_if_error: false`, and `if: ${{ !cancelled() }}`.
 
-The repository restricts third-party Actions. Extend the selected-actions allowlist with the two exact Codecov action pins while preserving the existing Release Please and Scorecard entries.
+The repository restricts third-party Actions. Extend the selected-actions allowlist with the one exact Codecov action pin while preserving the existing Release Please and Scorecard entries.
 
 ## Codecov policy
 
@@ -73,7 +72,7 @@ Add root `codecov.yml` with:
 
 - `require_ci_to_pass: true` and `wait_for_ci: true`;
 - project status using `target: auto`, a 1% threshold, and `informational: true`;
-- patch status using an 80% target, a 5% threshold, and `informational: true`;
+- patch status using `target: auto`, a 1% threshold, and `informational: true`;
 - one `unit-integration` flag scoped to `src/`;
 - PR comment layout `diff, flags, files`;
 - ignored generated, documentation, and test paths.
