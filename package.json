@@ -64,7 +64,8 @@
     "security:snyk": "snyk test --all-projects --severity-threshold=high",
     "precommit:install": "pre-commit install --hook-type pre-commit",
     "precommit:install:push": "pre-commit install --hook-type pre-push",
-    "precommit:run": "pre-commit run --all-files --hook-stage pre-commit"
+    "precommit:run": "pre-commit run --all-files --hook-stage pre-commit",
+    "release:verify-ref": "node scripts/verify-release-ref.mjs"
   },
   "engines": {
     "node": ">=24",
