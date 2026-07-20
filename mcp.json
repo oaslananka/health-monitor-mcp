@@ -2,13 +2,10 @@
   "name": "health-monitor-mcp",
   "version": "1.0.0",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
-  "description": "Monitor your MCP servers: health checks, uptime, response times, and Azure DevOps pipeline status",
+  "description": "Monitor MCP servers with health checks, uptime history, response times, alerts, and operational reports",
   "transport": "stdio",
   "command": "npx",
-  "args": [
-    "-y",
-    "health-monitor-mcp"
-  ],
+  "args": ["-y", "health-monitor-mcp"],
   "env": {
     "HEALTH_MONITOR_DB": {
       "description": "Custom path for the SQLite database (optional)",
@@ -20,17 +17,13 @@
       "required": false,
       "default": "0"
     },
-    "HEALTH_MONITOR_ENCRYPTION_KEY": {
-      "description": "Key material used to encrypt Azure DevOps PAT tokens",
-      "required": false
-    },
     "HEALTH_MONITOR_RETENTION_DAYS": {
       "description": "Number of days to retain health check history",
       "required": false,
       "default": "30"
     },
     "HEALTH_MONITOR_MAX_CONCURRENCY": {
-      "description": "Maximum number of concurrent scheduled checks",
+      "description": "Maximum concurrent scheduled and interactive server checks",
       "required": false,
       "default": "5"
     }
@@ -45,10 +38,6 @@
     "list_servers",
     "unregister_server",
     "set_alert",
-    "get_monitor_stats",
-    "register_azure_pipelines",
-    "check_pipeline_status",
-    "get_pipeline_logs",
-    "check_all_projects"
+    "get_monitor_stats"
   ]
 }

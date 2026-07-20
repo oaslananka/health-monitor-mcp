@@ -1,15 +1,12 @@
 process.env.HEALTH_MONITOR_DB = ':memory:';
 
 import {
-  decodePatToken,
-  encodePatToken,
   getDashboardReport,
   getServer,
   getUptimeHistory,
   listServers,
   pruneHealthChecks,
   recordHealthCheck,
-  recordPipelineRun,
   registerServer,
   unregisterServer
 } from '../../src/registry.js';
@@ -18,16 +15,10 @@ import { getDb, resetDbForTests } from '../../src/db.js';
 describe('registry', () => {
   beforeEach(() => {
     resetDbForTests();
-    delete process.env.HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE;
-    delete process.env.HEALTH_MONITOR_ALLOW_LEGACY_PAT_DECODING;
-    delete process.env.HEALTH_MONITOR_ENCRYPTION_KEY;
     delete process.env.HEALTH_MONITOR_RETENTION_DAYS;
   });
 
   afterEach(() => {
-    delete process.env.HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE;
-    delete process.env.HEALTH_MONITOR_ALLOW_LEGACY_PAT_DECODING;
-    delete process.env.HEALTH_MONITOR_ENCRYPTION_KEY;
     delete process.env.HEALTH_MONITOR_RETENTION_DAYS;
   });
 
@@ -201,59 +192,6 @@ describe('registry', () => {
     expect(getServer('to-remove')).toBeNull();
   });
 
-  it('encrypts Azure PAT tokens and rejects wrong keys or tampered ciphertext', () => {
-    process.env.HEALTH_MONITOR_ENCRYPTION_KEY =
-      'test-key-material-that-is-at-least-32-characters-long';
-
-    const encrypted = encodePatToken('super-secret-pat');
-
-    expect(encrypted).toMatch(/^aes-256-gcm:v1:/);
-    expect(encrypted).not.toContain('super-secret-pat');
-    expect(encrypted).not.toBe(Buffer.from('super-secret-pat', 'utf8').toString('base64'));
-    expect(decodePatToken(encrypted)).toBe('super-secret-pat');
-
-    process.env.HEALTH_MONITOR_ENCRYPTION_KEY = 'different-test-key-material-that-is-at-least-32';
-    expect(() => decodePatToken(encrypted)).toThrow('Unable to decrypt Azure DevOps PAT');
-
-    process.env.HEALTH_MONITOR_ENCRYPTION_KEY =
-      'test-key-material-that-is-at-least-32-characters-long';
-
-    const encryptedParts = encrypted.split(':');
-    const ciphertextRaw = encryptedParts.at(-1);
-    const ciphertext = Buffer.from(ciphertextRaw ?? '', 'base64url');
-    const firstCiphertextByte = ciphertext.at(0);
-
-    if (firstCiphertextByte === undefined) {
-      throw new Error('Expected encrypted PAT ciphertext');
-    }
-
-    ciphertext[0] = firstCiphertextByte ^ 0x01;
-    encryptedParts[encryptedParts.length - 1] = ciphertext.toString('base64url');
-
-    expect(() => decodePatToken(encryptedParts.join(':'))).toThrow(
-      'Unable to decrypt Azure DevOps PAT'
-    );
-  });
-
-  it('requires an encryption key for PAT storage unless insecure local mode is explicit', () => {
-    expect(() => encodePatToken('secret')).toThrow('HEALTH_MONITOR_ENCRYPTION_KEY');
-
-    process.env.HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE = '1';
-    const legacy = encodePatToken('secret');
-
-    expect(legacy).toBe(Buffer.from('secret', 'utf8').toString('base64'));
-    expect(decodePatToken(legacy)).toBe('secret');
-  });
-
-  it('blocks legacy base64 PAT decoding unless migration mode is explicit', () => {
-    const legacy = Buffer.from('legacy-secret', 'utf8').toString('base64');
-
-    expect(() => decodePatToken(legacy)).toThrow('legacy PAT storage');
-
-    process.env.HEALTH_MONITOR_ALLOW_LEGACY_PAT_DECODING = '1';
-    expect(decodePatToken(legacy)).toBe('legacy-secret');
-  });
-
   it('prunes health checks older than the configured retention window', () => {
     registerServer({
       name: 'retention-server',
@@ -304,39 +242,5 @@ describe('registry', () => {
 
     expect(pruned).toBe(1);
     expect(remaining.count).toBe(1);
-  });
-
-  it('deduplicates Azure pipeline runs by group, pipeline, and build id', () => {
-    const first = recordPipelineRun('group-a', 'pipeline-a', {
-      id: 42,
-      name: 'pipeline-a',
-      status: 'inProgress',
-      result: null,
-      build_number: '20260510.1',
-      source_branch: 'main',
-      start_time: '2026-05-10T10:00:00.000Z',
-      finish_time: null,
-      requested_by: 'CI',
-      url: 'https://dev.azure.com/org/project/_build/results?buildId=42'
-    });
-    const second = recordPipelineRun('group-a', 'pipeline-a', {
-      id: 42,
-      name: 'pipeline-a',
-      status: 'succeeded',
-      result: 'succeeded',
-      build_number: '20260510.1',
-      source_branch: 'main',
-      start_time: '2026-05-10T10:00:00.000Z',
-      finish_time: '2026-05-10T10:05:00.000Z',
-      requested_by: 'CI',
-      url: 'https://dev.azure.com/org/project/_build/results?buildId=42'
-    });
-    const rows = getDb().prepare('SELECT * FROM pipeline_runs').all() as Array<{
-      status: string;
-    }>;
-
-    expect(second.id).toBe(first.id);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.status).toBe('succeeded');
   });
 });

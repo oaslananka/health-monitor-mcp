@@ -41,10 +41,6 @@ export function getHttpTimeoutMs(defaultValue = 10_000): number {
   return getBoundedIntegerEnv('HEALTH_MONITOR_HTTP_TIMEOUT_MS', defaultValue, 1_000, 60_000);
 }
 
-export function getAzureTimeoutMs(): number {
-  return getBoundedIntegerEnv('HEALTH_MONITOR_AZURE_TIMEOUT_MS', 10_000, 1_000, 60_000);
-}
-
 export function getWebhookTimeoutMs(): number {
   return getBoundedIntegerEnv('HEALTH_MONITOR_WEBHOOK_TIMEOUT_MS', 5_000, 1_000, 60_000);
 }

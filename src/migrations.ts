@@ -124,6 +124,19 @@ const MIGRATIONS: Migration[] = [
           ON pipeline_runs(group_name, pipeline_name, build_id);
       `);
     }
+  },
+  {
+    version: 4,
+    description: 'remove retired Azure DevOps monitoring data',
+    up: (db) => {
+      db.exec(`
+        DROP INDEX IF EXISTS idx_pipeline_runs_group_time;
+        DROP INDEX IF EXISTS idx_pipeline_runs_build;
+        DROP INDEX IF EXISTS idx_pipeline_runs_stable_key;
+        DROP TABLE IF EXISTS pipeline_runs;
+        DROP TABLE IF EXISTS azure_pipelines;
+      `);
+    }
   }
 ];
 
