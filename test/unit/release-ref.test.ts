@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,7 +13,9 @@ function runGit(cwd: string, args: string[]): string {
 }
 
 function writeJson(cwd: string, name: string, value: unknown): void {
-  writeFileSync(join(cwd, name), `${JSON.stringify(value, null, 2)}\n`);
+  const target = join(cwd, name);
+  mkdirSync(join(target, '..'), { recursive: true });
+  writeFileSync(target, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function createReleaseRepository(options: { tag?: boolean; version?: string } = {}): {
@@ -40,6 +42,7 @@ function createReleaseRepository(options: { tag?: boolean; version?: string } = 
     packages: [{ registryType: 'npm', identifier: 'health-monitor-mcp', version }]
   });
   writeJson(cwd, '.release-please-manifest.json', { '.': version });
+  writeJson(cwd, '.claude-plugin/plugin.json', { name: 'health-monitor-mcp', version });
 
   runGit(cwd, ['init', '--initial-branch=main']);
   runGit(cwd, ['config', 'user.name', 'Release Test']);
@@ -98,6 +101,19 @@ describe('release ref verification', () => {
     writeJson(fixture.cwd, 'mcp.json', {
       version: '1.0.0',
       mcpName: 'io.github.oaslananka/health-monitor-mcp'
+    });
+
+    const result = runVerifier(fixture.cwd, fixture.tagName);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('release metadata versions are not synchronized');
+  });
+
+  it('rejects an unsynchronized plugin version', () => {
+    const fixture = createReleaseRepository();
+    writeJson(fixture.cwd, '.claude-plugin/plugin.json', {
+      name: 'health-monitor-mcp',
+      version: '1.0.0'
     });
 
     const result = runVerifier(fixture.cwd, fixture.tagName);

@@ -21,12 +21,14 @@ function fail(message) {
 }
 
 const tagArgumentIndex = process.argv.indexOf('--tag');
-const suppliedTag = tagArgumentIndex >= 0 ? process.argv[tagArgumentIndex + 1] : process.env.GITHUB_REF_NAME;
+const suppliedTag =
+  tagArgumentIndex >= 0 ? process.argv[tagArgumentIndex + 1] : process.env.GITHUB_REF_NAME;
 
 const packageJson = readJson('package.json');
 const mcpJson = readJson('mcp.json');
 const serverJson = readJson('server.json');
 const releaseManifest = readJson('.release-please-manifest.json');
+const pluginJson = readJson('.claude-plugin/plugin.json');
 const npmPackage = Array.isArray(serverJson.packages)
   ? serverJson.packages.find((entry) => entry.registryType === 'npm')
   : undefined;
@@ -35,7 +37,8 @@ const versions = [
   mcpJson.version,
   serverJson.version,
   npmPackage?.version,
-  releaseManifest['.']
+  releaseManifest['.'],
+  pluginJson.version
 ];
 
 if (versions.some((version) => version !== packageJson.version)) {
@@ -43,7 +46,8 @@ if (versions.some((version) => version !== packageJson.version)) {
 } else if (
   packageJson.mcpName !== mcpJson.mcpName ||
   packageJson.mcpName !== serverJson.name ||
-  npmPackage?.identifier !== packageJson.name
+  npmPackage?.identifier !== packageJson.name ||
+  pluginJson.name !== packageJson.name
 ) {
   fail('release package and MCP identities are not synchronized');
 } else {

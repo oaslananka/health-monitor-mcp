@@ -63,7 +63,7 @@ Newer registry releases may exist, but the v1.1 maintenance line intentionally k
 | Package                            | Version   | Reason                                                                                                                                  |
 | ---------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `@modelcontextprotocol/sdk`        | `1.27.1`  | Keep MCP client/server behavior aligned with the current v1.0 codebase.                                                                 |
-| `better-sqlite3`                   | `12.8.0`  | Stable native SQLite binding validated for Node 24 environments while retaining the package's Node >=20 support range.                  |
+| `better-sqlite3`                   | `12.8.0`  | Stable native SQLite binding validated for the repository's Node 24 runtime floor.                  |
 | `qs`                               | `6.15.2`  | Security override for the transitive Express dependency path until upstream lock resolution no longer selects vulnerable `qs` releases. |
 | `zod`                              | `3.25.76` | Preserve the existing schema-first API without v4 breaking changes while avoiding the incomplete `3.25.0` package payload.              |
 | `typescript`                       | `5.8.3`   | Modern strict TypeScript without adopting the v6 toolchain yet.                                                                         |

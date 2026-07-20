@@ -36,6 +36,8 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Read package version
@@ -46,6 +48,12 @@ jobs:
           name=$(node -p "require('./package.json').name")
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "name=${name}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact release ref
+        if: ${{ github.event_name == 'release' || inputs.push_image == true }}
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.ref }}
+        run: node scripts/verify-release-ref.mjs --tag "$RELEASE_TAG"
 
       - name: Login to GHCR
         if: ${{ github.event_name == 'release' || inputs.push_image == true }}
@@ -80,7 +88,11 @@ jobs:
           sbom: true
 
       - name: Summarize image
+        env:
+          IMAGE_NAME: ghcr.io/${{ github.repository }}
+          PACKAGE_NAME: ${{ steps.pkg.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.pkg.outputs.version }}
         run: |
           set -euo pipefail
-          echo "Image: ghcr.io/${GITHUB_REPOSITORY}"
-          echo "Package: ${{ steps.pkg.outputs.name }}@${{ steps.pkg.outputs.version }}"
+          echo "Image: ${IMAGE_NAME}"
+          echo "Package: ${PACKAGE_NAME}@${PACKAGE_VERSION}"

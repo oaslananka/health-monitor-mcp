@@ -169,28 +169,31 @@ describe('quality gate regression checks', () => {
     const npmWorkflow = readProjectText('.github/workflows/publish-npm.yml');
     const ghcrWorkflow = readProjectText('.github/workflows/publish-ghcr.yml');
     const registryWorkflow = readProjectText('.github/workflows/publish-mcp-registry.yml');
+    const releasePleaseConfig = readProjectText('release-please-config.json');
 
     expect(releaseWorkflow).toContain('token: ${{ secrets.RELEASE_PLEASE_TOKEN }}');
-    expect(releaseWorkflow).toContain('pnpm run release:verify-ref');
+    expect(releaseWorkflow).toContain('release:verify-ref');
 
     expect(npmWorkflow).toContain('release:');
     expect(npmWorkflow).toContain('types: [published]');
     expect(npmWorkflow).toContain("github.event_name == 'release'");
     expect(npmWorkflow).toContain('github.event.release.tag_name');
     expect(npmWorkflow).toContain('environment: npm-production');
-    expect(npmWorkflow).toContain('pnpm run release:verify-ref');
+    expect(npmWorkflow).toContain('release:verify-ref');
 
-    expect(ghcrWorkflow).toContain('pnpm run release:verify-ref');
+    expect(ghcrWorkflow).toContain('verify-release-ref');
 
-    expect(registryWorkflow).toContain('workflow_run:');
-    expect(registryWorkflow).toContain('workflows: [Publish npm]');
-    expect(registryWorkflow).toContain("github.event.workflow_run.conclusion == 'success'");
-    expect(registryWorkflow).toContain("github.event.workflow_run.event == 'release'");
-    expect(registryWorkflow).toContain('github.event.workflow_run.head_sha');
-    expect(registryWorkflow).toContain('pnpm run release:verify-ref');
+    expect(npmWorkflow).toContain('uses: ./.github/workflows/publish-mcp-registry.yml');
+    expect(npmWorkflow).toContain('needs: publish');
+    expect(registryWorkflow).toContain('workflow_call:');
+    expect(registryWorkflow).toContain('inputs:');
+    expect(registryWorkflow).toContain('tag_name:');
+    expect(registryWorkflow).toContain('verify-release-ref');
+    expect(registryWorkflow).not.toContain('workflow_run:');
     expect(registryWorkflow).not.toContain(`release:
     types: [published]`);
 
+    expect(releasePleaseConfig).toContain('.claude-plugin/plugin.json');
     expect(packageJson.scripts['release:verify-ref']).toContain('verify-release-ref.mjs');
   });
 

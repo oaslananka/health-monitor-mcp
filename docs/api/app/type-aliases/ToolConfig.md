@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 

@@ -25,6 +25,7 @@
 ### Task 1: Define the Azure-removal contract
 
 **Files:**
+
 - Modify: `test/unit/app.test.ts`
 - Modify: `test/unit/types.test.ts`
 - Modify: `test/unit/migrations.test.ts`
@@ -32,6 +33,7 @@
 - Delete later: `test/unit/azure-devops.test.ts`
 
 **Interfaces:**
+
 - Consumes: `registerMonitoringTools()`, `runMigrations()`, package metadata.
 - Produces: failing tests that require ten supported tools and no Azure tables/tools/config.
 
@@ -96,6 +98,7 @@ git commit -m "test: define Azure removal contract"
 ### Task 2: Remove Azure implementation and obsolete storage
 
 **Files:**
+
 - Delete: `src/azure-devops.ts`
 - Modify: `src/app.ts`
 - Modify: `src/types.ts`
@@ -108,6 +111,7 @@ git commit -m "test: define Azure removal contract"
 - Modify: `test/unit/migrations.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing server/health/alert registry functions.
 - Produces: migration version 4 and MCP-only monitoring API.
 
@@ -186,6 +190,7 @@ git commit -m "refactor: remove Azure DevOps monitoring"
 ### Task 3: Share bounded concurrency across scheduler and `check_all`
 
 **Files:**
+
 - Create: `src/concurrency.ts`
 - Create: `test/unit/concurrency.test.ts`
 - Modify: `src/scheduler.ts`
@@ -194,6 +199,7 @@ git commit -m "refactor: remove Azure DevOps monitoring"
 - Modify: `test/unit/app.test.ts`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
@@ -267,6 +273,7 @@ git commit -m "feat: bound interactive monitoring concurrency"
 ### Task 4: Add stable agent-facing errors and transport guidance
 
 **Files:**
+
 - Create: `src/tool-errors.ts`
 - Create: `test/unit/tool-errors.test.ts`
 - Modify: `src/app.ts`
@@ -276,6 +283,7 @@ git commit -m "feat: bound interactive monitoring concurrency"
 - Modify: `docs/usage.md`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
@@ -290,7 +298,10 @@ export function toolError(
   message: string,
   remediation: string,
   retryable?: boolean
-): { ok: false; error: { code: ToolErrorCode; message: string; remediation: string; retryable: boolean } };
+): {
+  ok: false;
+  error: { code: ToolErrorCode; message: string; remediation: string; retryable: boolean };
+};
 ```
 
 - [ ] **Step 1: Write failing error-envelope tests**
@@ -341,6 +352,7 @@ git commit -m "feat: standardize agent remediation errors"
 ### Task 5: Align docs, metadata, runtime, skills, and Docker guidance
 
 **Files:**
+
 - Create: `.mise.toml`
 - Modify: `README.md`
 - Modify: `ROADMAP.md`
@@ -361,6 +373,7 @@ git commit -m "feat: standardize agent remediation errors"
 - Delete: Azure-specific Superpowers design/plan documents.
 
 **Interfaces:**
+
 - Consumes: ten-tool product surface and runtime environment variables.
 - Produces: current public documentation and metadata.
 
@@ -432,6 +445,7 @@ git commit -m "docs: align MCP-only monitoring release"
 ### Task 6: Harden release orchestration and synchronize 1.1.0
 
 **Files:**
+
 - Create: `scripts/verify-release-ref.mjs`
 - Create: `test/unit/release-ref.test.ts`
 - Modify: `test/unit/quality-gates.test.ts`
@@ -448,6 +462,7 @@ git commit -m "docs: align MCP-only monitoring release"
 - Modify: `docs/release-state-machine.md`
 
 **Interfaces:**
+
 - Produces: `pnpm run release:verify-ref -- --tag <tag>`.
 
 - [ ] **Step 1: Port release-ref tests and verifier**
@@ -459,7 +474,7 @@ Bring the tested verifier from `fix/77-release-orchestration`. It must compare p
 - Release Please uses `token: ${{ secrets.RELEASE_PLEASE_TOKEN }}`.
 - Release assets checkout fetches tags and runs `pnpm run release:verify-ref`.
 - npm supports `release.published` and manual recovery, checks out the release tag, and retains `npm-production` environment approval.
-- MCP Registry uses successful `workflow_run` from `Publish npm`, checks out `workflow_run.head_sha`, resolves the tag, and verifies it.
+- MCP Registry is a reusable workflow called by `Publish npm` after successful package verification; it receives and verifies the exact component tag.
 - GHCR fetches tags and verifies the release tag before build/push.
 
 - [ ] **Step 3: Set version 1.1.0**
@@ -502,6 +517,7 @@ git commit -m "chore(release): prepare MCP-only v1.1.0"
 ### Task 7: Full verification, one PR, bot review, merge, and publication
 
 **Files:**
+
 - No new product files unless verification identifies a defect.
 
 - [ ] **Step 1: Run local security and CI gates**

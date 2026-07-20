@@ -6,4 +6,3 @@ command = "npx"
 args = ["-y", "health-monitor-mcp"]
 
 [mcp_servers.env]
-HEALTH_MONITOR_TRANSPORT = "stdio"
