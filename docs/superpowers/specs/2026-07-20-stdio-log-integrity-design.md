@@ -1,7 +1,7 @@
 # MCP Stdio Log Integrity Design
 
-**Issue:** #74 — Preserve MCP stdio protocol integrity by routing runtime logs to stderr  
-**Date:** 2026-07-20  
+**Issue:** #74 — Preserve MCP stdio protocol integrity by routing runtime logs to stderr
+**Date:** 2026-07-20
 **Status:** Approved for implementation planning
 
 ## Problem
