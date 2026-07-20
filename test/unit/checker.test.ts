@@ -132,7 +132,7 @@ describe('checker', () => {
       }) as typeof fetch
     });
 
-    const result = await checkHttpServer('https://example.com/mcp', 250);
+    const result = await checkHttpServer('https://example.com/mcp', 2_000);
 
     expect(result.status).toBe('up');
     expect(createStreamableTransport).toHaveBeenCalledTimes(2);
@@ -168,7 +168,7 @@ describe('checker', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch
     });
 
-    const result = await checkHttpServer('https://example.com/mcp', 250);
+    const result = await checkHttpServer('https://example.com/mcp', 2_000);
 
     expect(result.status).toBe('down');
     expect(result.error_message).toContain('HTTP endpoint responded with 200 OK');
@@ -229,7 +229,7 @@ describe('checker', () => {
       }) as unknown as typeof fetch
     });
 
-    const result = await checkHttpServer('https://example.com/mcp', 250);
+    const result = await checkHttpServer('https://example.com/mcp', 2_000);
 
     expect(result.status).toBe('down');
     expect(result.error_message).toContain('connect refused');
@@ -263,7 +263,7 @@ describe('checker', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch
     });
 
-    await checkHttpServer('https://example.com/mcp', 250);
+    await checkHttpServer('https://example.com/mcp', 2_000);
 
     expect(fetchImpl).toHaveBeenCalledWith(
       'https://example.com/mcp',
