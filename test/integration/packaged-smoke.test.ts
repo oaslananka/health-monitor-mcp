@@ -58,6 +58,18 @@ async function waitForHealth(port: number): Promise<Response> {
   throw lastError instanceof Error ? lastError : new Error('Timed out waiting for HTTP server');
 }
 
+async function waitForOutput(readOutput: () => string, expected: string): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (readOutput().includes(expected)) {
+      return;
+    }
+
+    await delay(20);
+  }
+
+  throw new Error(`Timed out waiting for process output: ${expected}`);
+}
+
 function stopProcess(child: ChildProcess): Promise<void> {
   return new Promise((resolve) => {
     if (child.exitCode !== null || child.killed) {
@@ -121,6 +133,42 @@ describe('packaged MCP smoke tests', () => {
 
     expect(output).toBe(MONITOR_VERSION);
   });
+
+  it('keeps scheduler runtime logs off stdout in packaged stdio mode', async () => {
+    const child = spawn(process.execPath, ['dist/mcp.js'], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        HEALTH_MONITOR_AUTO_CHECK: '1',
+        HEALTH_MONITOR_DB: ':memory:'
+      },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.setEncoding('utf8');
+    child.stderr?.setEncoding('utf8');
+    child.stdout?.on('data', (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr?.on('data', (chunk: string) => {
+      stderr += chunk;
+    });
+
+    try {
+      await waitForOutput(
+        () => `${stdout}
+${stderr}`,
+        '"message":"Scheduler started"'
+      );
+
+      expect(stderr).toContain('"message":"Scheduler started"');
+      expect(stdout).toBe('');
+    } finally {
+      await stopProcess(child);
+    }
+  }, 10_000);
 
   it('starts the packaged HTTP entrypoint and serves health checks', async () => {
     const port = await getFreePort();
