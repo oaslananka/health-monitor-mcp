@@ -8,4 +8,4 @@
 
 > **UnregisterInput** = `z.infer`\<*typeof* [`UnregisterSchema`](../variables/UnregisterSchema.md)\>
 
-Defined in: [types.ts:205](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L205)
+Defined in: [types.ts:162](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L162)

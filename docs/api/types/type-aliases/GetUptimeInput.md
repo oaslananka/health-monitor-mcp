@@ -8,4 +8,4 @@
 
 > **GetUptimeInput** = `z.infer`\<*typeof* [`GetUptimeSchema`](../variables/GetUptimeSchema.md)\>
 
-Defined in: [types.ts:201](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L201)
+Defined in: [types.ts:158](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L158)

@@ -8,7 +8,7 @@
 
 > **getWebhookTimeoutMs**(): `number`
 
-Defined in: [config.ts:48](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L48)
+Defined in: [config.ts:44](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L44)
 
 ## Returns
 

@@ -8,4 +8,4 @@
 
 > `const` **EmptySchema**: `ZodObject`\<\{ \}, `"strip"`, `ZodTypeAny`, \{ \}, \{ \}\>
 
-Defined in: [types.ts:143](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L143)
+Defined in: [types.ts:151](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L151)

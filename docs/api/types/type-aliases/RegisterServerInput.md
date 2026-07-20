@@ -8,4 +8,4 @@
 
 > **RegisterServerInput** = `z.infer`\<*typeof* [`RegisterServerSchema`](../variables/RegisterServerSchema.md)\>
 
-Defined in: [types.ts:198](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L198)
+Defined in: [types.ts:155](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L155)

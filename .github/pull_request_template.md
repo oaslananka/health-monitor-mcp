@@ -33,4 +33,4 @@ pnpm run ci
 - [ ] CI is green or expected to become green after merge-only checks
 - [ ] Docs, changelog, or migration notes are updated when behavior changes
 - [ ] Public package, release artifact, or docs evidence is added when applicable
-- [ ] No secrets, tokens, PATs, cookies, or private keys are included
+- [ ] No secrets, tokens, cookies, or private keys are included

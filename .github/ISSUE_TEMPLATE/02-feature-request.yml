@@ -33,7 +33,6 @@ body:
       label: Primary area
       options:
         - Runtime monitoring
-        - Azure DevOps integration
         - Alerts and reports
         - Storage and migrations
         - CI, release, or packaging

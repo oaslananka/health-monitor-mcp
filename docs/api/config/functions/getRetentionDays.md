@@ -8,7 +8,7 @@
 
 > **getRetentionDays**(): `number`
 
-Defined in: [config.ts:52](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L52)
+Defined in: [config.ts:48](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L48)
 
 ## Returns
 

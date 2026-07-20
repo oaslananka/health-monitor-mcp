@@ -1,7 +1,6 @@
 # health-monitor-mcp
 
-> MCP server health monitoring, uptime tracking, Azure DevOps pipeline status,
-> and alert evaluation through natural-language tools.
+> MCP server health monitoring, uptime history, latency tracking, alert evaluation, and operational reports through natural-language tools.
 
 [![CI](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml)
 [![Release](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml)
@@ -11,211 +10,206 @@
 
 ## What This Does
 
-`health-monitor-mcp` keeps a registry of the MCP servers you care about, performs real MCP
-handshakes against them, records health history in SQLite, and reports uptime, latency, and
-alert thresholds back through MCP tools. It also tracks Azure DevOps pipelines so app health
-and delivery health can be checked from the same place.
+`health-monitor-mcp` keeps a local registry of MCP servers, performs real MCP handshakes, records health history in SQLite, evaluates alert thresholds, and returns JSON or Markdown evidence suitable for agents and operators.
+
+Supported target transports:
+
+- **Streamable HTTP** for current remote MCP servers.
+- **SSE** for legacy MCP servers.
+- **stdio** for trusted local executables after explicit opt-in.
+
+Azure DevOps monitoring was retired in v1.1.0. CI-provider integrations are tracked as independent future work.
 
 ## Quick Start
 
-The first public npm release target is `health-monitor-mcp@1.0.0`. If npm still returns `E404`,
-the publish gate has not completed yet.
+Run the published package noninteractively with Node.js 24:
 
 ```bash
-npm install -g health-monitor-mcp
-health-monitor-mcp --version
+npx -y health-monitor-mcp --version
 ```
 
-Example desktop MCP client entry after installing the package:
+Example MCP client configuration:
 
 ```json
 {
-  "name": "health-monitor-mcp",
-  "version": "1.0.0",
-  "mcpName": "io.github.oaslananka/health-monitor-mcp",
-  "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipelines",
-  "transport": "stdio",
-  "command": "health-monitor-mcp",
-  "args": []
+  "mcpServers": {
+    "health-monitor": {
+      "command": "npx",
+      "args": ["-y", "health-monitor-mcp"]
+    }
+  }
 }
 ```
 
-## Tools Reference
+## Tools
 
 | Tool | Purpose | Typical prompt |
 | ---- | ------- | -------------- |
-| `register_server` | Save an MCP server to monitor | `Register https://example.com/mcp as prod-gateway` |
-| `check_server` | Run a live health check for one server | `Check prod-gateway now` |
-| `check_all` | Check all registered servers | `Check all my MCP servers` |
-| `get_uptime` | Return uptime plus latency stats | `Show 24h uptime for prod-gateway` |
-| `get_dashboard` | Return JSON dashboard data | `Give me a 24h dashboard` |
-| `get_report` | Return a Markdown report | `Generate a Markdown health report for 24h` |
-| `list_servers` | Show registered servers | `List all monitored servers` |
-| `unregister_server` | Remove a server | `Stop monitoring local-debugger` |
-| `set_alert` | Configure thresholds | `Alert if prod-gateway exceeds 500ms or drops below 99% uptime` |
-| `get_monitor_stats` | Show monitor-level stats | `How many checks has the monitor recorded?` |
-| `register_azure_pipelines` | Register Azure pipeline groups | `Track CI and Publish pipelines for my repo` |
-| `check_pipeline_status` | Read latest Azure pipeline runs | `Check pipeline status for my release group` |
-| `get_pipeline_logs` | Fetch Azure build logs | `Show the failed logs for the latest Publish build` |
-| `check_all_projects` | Combine MCP and Azure health | `Check all projects` |
+| `register_server` | Register an MCP target | `Register https://inventory.example.com/mcp as inventory-prod` |
+| `check_server` | Run one live health check | `Check inventory-prod now` |
+| `check_all` | Check all matching targets with bounded concurrency | `Check all production MCP servers` |
+| `get_uptime` | Return uptime and latency history | `Show 24h uptime for inventory-prod` |
+| `get_dashboard` | Return a JSON dashboard | `Give me a 24h dashboard` |
+| `get_report` | Return a Markdown report | `Generate a 24h health report` |
+| `list_servers` | List registered targets | `List monitored servers` |
+| `unregister_server` | Remove a target | `Stop monitoring local-debugger` |
+| `set_alert` | Configure thresholds | `Alert if inventory-prod exceeds 500ms` |
+| `get_monitor_stats` | Inspect monitor-level activity | `How many checks are stored?` |
 
-## Azure DevOps Integration
+Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
-Register a pipeline group with an org, project, pipeline names, and a PAT:
+## Register Targets
+
+Streamable HTTP:
 
 ```text
-register_azure_pipelines name="health-monitor-mcp" organization="oaslananka" project="open-source" pipeline_names=["Health Monitor CI","Publish npm"] pat_token="..."
+register_server name="inventory-prod" type="http" url="https://inventory.example.com/mcp" tags=["production","inventory"]
 ```
 
-PAT tokens are encrypted in the local SQLite database with AES-256-GCM when
-`HEALTH_MONITOR_ENCRYPTION_KEY` is set. Local insecure storage is available only when
-`HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE=1` is explicitly set. See
-[credential storage notes](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/security.md).
+Legacy SSE:
 
-## Alert Configuration
+```text
+register_server name="legacy-search" type="sse" url="https://search.example.com/sse" tags=["legacy"]
+```
 
-Use `set_alert` to configure one server:
+Trusted local stdio:
 
-| Field | Meaning |
-| ----- | ------- |
-| `max_response_time_ms` | Alert when a check exceeds this latency |
-| `min_uptime_percent` | Alert when the selected uptime window drops below this value |
-| `consecutive_failures_before_alert` | Alert after this many non-up results in a row |
+```bash
+export HEALTH_MONITOR_ALLOW_STDIO=1
+export HEALTH_MONITOR_STDIO_ALLOWLIST=npx,node
+```
 
-Alerts are evaluated inline by `check_server`, `check_all`, and `get_dashboard`. Webhook delivery
-is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
+```text
+register_server name="local-debugger" type="stdio" command="npx" args=["-y","mcp-debug-recorder"] tags=["local"]
+```
 
-## Data Storage
+The `command` field must contain one executable only. Put package names and flags in `args`. Remote-safe runtime profiles always disable stdio.
 
-- Default database path: `~/.mcp-health-monitor/health.db`
-- Override path: `HEALTH_MONITOR_DB=/custom/path/health.db`
-- Optional background scheduler: `HEALTH_MONITOR_AUTO_CHECK=1`
-- HTTP MCP endpoint token: `HEALTH_MONITOR_HTTP_TOKEN=...`
-- HTTP bind host: `HOST=127.0.0.1` by default
-- Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
-- Remote HTTP Origin allowlist: `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example`
-- HTTP request body limit: `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES=1048576` by default
-- HTTP request body timeout: `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS=15000` by default
-- Optional stateful HTTP sessions: `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS=1`
-- Stateful HTTP session TTL: `HEALTH_MONITOR_HTTP_SESSION_TTL_MS=1800000` by default
-- Stateful HTTP session cap: `HEALTH_MONITOR_HTTP_MAX_SESSIONS=100` by default
-- Local stdio checks opt-in: `HEALTH_MONITOR_ALLOW_STDIO=1`
-- Optional stdio command allowlist: `HEALTH_MONITOR_STDIO_ALLOWLIST=node,npx`
-- HTTP server health endpoint: `GET /health`
+## Health Checks and Reports
 
-Configuration is environment-variable driven; use the variables above directly in your shell,
-service manager, or MCP client environment block. Stdio monitoring launches local child
-processes and is disabled unless `HEALTH_MONITOR_ALLOW_STDIO=1` is set or an embedding
-application explicitly enables it through runtime policy. Keep the executable in `command` and
-put arguments in `args`; for example, use `command="npx" args=["mcp-debug-recorder"]`.
+```text
+check_server name="inventory-prod" timeout_ms=5000
+check_all timeout_ms=5000 tags=["production"]
+get_uptime name="inventory-prod" hours=24
+get_dashboard hours=24 include_tool_stats=true
+get_report hours=24
+```
 
-The DB uses WAL mode on file-backed databases and applies schema migrations automatically on
-startup.
+`HEALTH_MONITOR_MAX_CONCURRENCY` limits both scheduled and interactive batch checks. Results preserve registration order even when checks complete out of order.
+
+## Alerts
+
+```text
+set_alert name="inventory-prod" max_response_time_ms=500 min_uptime_percent=99 consecutive_failures_before_alert=2
+```
+
+Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`. Outbound webhook delivery is not yet exposed as a public MCP tool.
+
+## Configuration
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `HEALTH_MONITOR_DB` | `~/.mcp-health-monitor/health.db` | SQLite database path |
+| `HEALTH_MONITOR_AUTO_CHECK` | `0` | Enable scheduled checks with `1` |
+| `HEALTH_MONITOR_RETENTION_DAYS` | `30` | Health-history retention |
+| `HEALTH_MONITOR_MAX_CONCURRENCY` | `5` | Scheduled and interactive check concurrency |
+| `HEALTH_MONITOR_ALLOW_STDIO` | `0` | Allow trusted local stdio checks |
+| `HEALTH_MONITOR_STDIO_ALLOWLIST` | unset | Optional comma-separated executable allowlist |
+| `HEALTH_MONITOR_HTTP_TOKEN` | unset | Bearer token for `POST /mcp` |
+| `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST` | unset | Allowed remote client origins |
+| `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES` | `1048576` | Maximum inbound MCP body |
+| `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS` | `15000` | Inbound body read timeout |
+| `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS` | `0` | Enable stateful Streamable HTTP sessions |
+| `HEALTH_MONITOR_HTTP_SESSION_TTL_MS` | `1800000` | Stateful session TTL |
+| `HEALTH_MONITOR_HTTP_MAX_SESSIONS` | `100` | Stateful session cap |
+
+## HTTP Deployment
+
+The server binds to `127.0.0.1` by default. A non-loopback bind requires a remote-safe profile, bearer token, and Origin allowlist.
+
+```bash
+HOST=0.0.0.0 \
+HEALTH_MONITOR_PROFILE=remote-safe \
+HEALTH_MONITOR_HTTP_TOKEN=change-me \
+HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example \
+npx -y health-monitor-mcp-http
+```
+
+`GET /health` is unauthenticated and exposes only status and version. `POST /mcp` requires `Authorization: Bearer <token>`.
 
 ## Docker
 
-Build and run:
+Persist `/data`; otherwise the SQLite database disappears with the container.
 
 ```bash
-docker build -t health-monitor-mcp .
-docker run --rm health-monitor-mcp node dist/mcp.js --version
-```
+docker volume create health-monitor-data
 
-HTTP mode binds to loopback by default. For a remote HTTP deployment, require a bearer token,
-the remote-safe profile, and an Origin allowlist:
-
-```bash
 docker run --rm \
+  -v health-monitor-data:/data \
   -p 127.0.0.1:3000:3000 \
   -e HOST=0.0.0.0 \
   -e HEALTH_MONITOR_PROFILE=remote-safe \
   -e HEALTH_MONITOR_HTTP_TOKEN=change-me \
   -e HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example \
-  health-monitor-mcp
-curl -X POST \
-  --oauth2-bearer "$HEALTH_MONITOR_HTTP_TOKEN" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
-  http://127.0.0.1:3000/mcp
+  ghcr.io/oaslananka/health-monitor-mcp:1.1.0
 ```
 
 ## Development
 
+The repository pins Node.js 24.18.0 and pnpm 11.0.9 through `.mise.toml`.
+
 ```bash
-corepack enable
-corepack prepare pnpm@11.0.9 --activate
+mise trust
+mise install
 pnpm install --frozen-lockfile
-pnpm run build
-pnpm test
-pnpm run test:integration
-pnpm run lint
-pnpm run lint:test
-pnpm run format:check
-pnpm run test:coverage
-pnpm run docs:api:check
 pnpm run ci
 ```
 
-Runtime support targets Node 24 LTS or newer. CI, Docker, package metadata, and local development
-commands are aligned to Node `>=24`.
+Useful gates:
 
-## Architecture
+```bash
+pnpm run build
+pnpm run typecheck
+pnpm run lint
+pnpm run lint:test
+pnpm run test:coverage
+pnpm run test:integration
+pnpm run docs:api:check
+pnpm run security:supply-chain
+pnpm run check:metadata
+pnpm run check:package
+```
 
-High-level module map:
+## Architecture and Roadmap
 
-- `src/app.ts`: MCP tool registration and response formatting
-- `src/checker.ts`: Live MCP connectivity probes with retry/backoff
-- `src/registry.ts`: SQLite read/write paths for servers, checks, and pipeline records
-- `src/db.ts` + `src/migrations.ts`: Connection setup and schema upgrades
-- `src/server-http.ts` + `src/mcp.ts`: HTTP and stdio entrypoints for local MCP clients and packaged CLI usage
-- `src/scheduler.ts`: Optional background auto-check loop
+- [Architecture](docs/architecture.md)
+- [Operations](docs/operations.md)
+- [Security](docs/security.md)
+- [Usage](docs/usage.md)
+- [Roadmap](ROADMAP.md)
+- [Release process](docs/release.md)
+- [Generated API reference](docs/api/README.md)
 
-More detail lives in [architecture.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/architecture.md).
-Decision rationale lives in [docs/adr](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/adr/README.md),
-and generated API docs live in [docs/api](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/api/README.md).
+## Agent Runtime Configuration
 
-## Roadmap
+This repository owns its product-specific MCP configuration, plugin manifest, and skills:
 
-Detailed milestone planning lives in [ROADMAP.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/ROADMAP.md).
+| File | Purpose |
+| ---- | ------- |
+| `.claude-plugin/plugin.json` | Claude Code plugin manifest |
+| `.mcp.json` | Project-local MCP configuration |
+| `.codex/config.example.toml` | Codex CLI example |
+| `.vscode/mcp.example.json` | VS Code / Copilot example |
+| `opencode.example.jsonc` | OpenCode example |
+| `skills/` | Product-specific monitoring workflows |
+| `docs/agent-runtime-config.md` | Runtime setup and validation |
 
-- [x] v1.0: Core monitoring, uptime, alerts, Azure pipelines, Markdown reports
-- [ ] v1.1: Webhook notifications for Slack, Discord, and custom endpoints
-- [ ] v1.2: Multi-provider pipeline and generic HTTP monitoring
-- [ ] v2.0: Multi-user support and optional external secret-provider integrations
+## Security and Contributing
 
-## Security
+Report vulnerabilities through GitHub Private Vulnerability Reporting. See [SECURITY.md](SECURITY.md) and [docs/security.md](docs/security.md).
 
-Read [SECURITY.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/SECURITY.md) for vulnerability reporting and [docs/security.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/security.md) for implementation-specific storage details.
-
-## Contributing
-
-See [contributing.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/contributing.md) for setup, standards, and PR expectations.
-Governance, triage labels, and maintainer response targets are documented in
-[governance.md](https://github.com/oaslananka/health-monitor-mcp/blob/main/docs/governance.md).
-Usage questions belong in [GitHub Discussions](https://github.com/oaslananka/health-monitor-mcp/discussions);
-tracked work should use the repository issue forms.
+Contribution setup and standards are documented in [docs/contributing.md](docs/contributing.md). Usage questions belong in GitHub Discussions; actionable work belongs in issues.
 
 ## License
 
 MIT
-
-## Agent plugin and runtime configuration
-
-This repository owns the product-level agent plugin, MCP runtime configuration, and product-specific skills for `health-monitor-mcp`. The central [`agent-tools`](https://github.com/oaslananka/agent-tools) repository should catalog this plugin, but the manifest and workflow instructions live here so they stay synchronized with the actual MCP server package.
-
-| File | Purpose |
-| --- | --- |
-| [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json) | Claude Code-valid product plugin manifest. |
-| [`.mcp.json`](.mcp.json) | Claude Code project-local MCP server configuration. |
-| [`.codex/config.example.toml`](.codex/config.example.toml) | Codex CLI MCP configuration example. |
-| [`.vscode/mcp.example.json`](.vscode/mcp.example.json) | VS Code / GitHub Copilot workspace MCP configuration example. |
-| [`opencode.example.jsonc`](opencode.example.jsonc) | OpenCode project MCP configuration example. |
-| `.opencode/skills/` | OpenCode-native mirrored skill definitions. |
-| [`docs/agent-runtime-config.md`](docs/agent-runtime-config.md) | Agent runtime setup and validation notes. |
-
-Validate plugin packaging locally:
-
-```bash
-claude plugin validate .
-```

@@ -11,17 +11,19 @@
 Use GitHub Private Vulnerability Reporting for this repository.
 
 - Do not open a public GitHub issue for suspected security vulnerabilities.
-- Include a clear impact summary, affected version, reproduction steps, and any proposed mitigation.
+- Include impact, affected version, reproduction steps, and proposed mitigation when available.
+- Do not include production credentials or private customer data in the report.
 
-## Current Sensitive Data Handling
+## Current Security Boundaries
 
-- Azure DevOps PAT tokens are encrypted with AES-256-GCM when
-  `HEALTH_MONITOR_ENCRYPTION_KEY` is configured.
-- Legacy base64 PAT rows are refused unless `HEALTH_MONITOR_ALLOW_LEGACY_PAT_DECODING=1`
-  is explicitly set for migration.
-- MCP server URLs, commands, and tags are stored locally in SQLite.
-- HTTP MCP mode requires `Authorization: Bearer <token>` backed by
-  `HEALTH_MONITOR_HTTP_TOKEN`.
-- Webhook delivery is not shipped in v1.0.x.
+- MCP target metadata and health history are stored locally in SQLite.
+- Remote `POST /mcp` requires a bearer token from `HEALTH_MONITOR_HTTP_TOKEN`.
+- Non-loopback HTTP binds require a remote-safe profile and explicit Origin allowlist.
+- Inbound MCP bodies have byte and body-read timeout limits.
+- Local stdio process execution is disabled by default and supports an executable allowlist.
+- Runtime logs use stderr so stdio stdout remains reserved for MCP protocol frames.
+- Expected agent errors use stable remediation envelopes without exposing secrets or stack traces.
+- Azure DevOps support and its stored credentials were removed in v1.1.0; migration v4 deletes retired pipeline data.
+- Outbound webhook delivery is not yet exposed as a public MCP tool.
 
-For implementation details and storage notes, see `docs/security.md`.
+For implementation details, see `docs/security.md`.

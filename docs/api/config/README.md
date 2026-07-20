@@ -17,7 +17,6 @@
 - [isRemoteSafeProfile](functions/isRemoteSafeProfile.md)
 - [getBoundedIntegerEnv](functions/getBoundedIntegerEnv.md)
 - [getHttpTimeoutMs](functions/getHttpTimeoutMs.md)
-- [getAzureTimeoutMs](functions/getAzureTimeoutMs.md)
 - [getWebhookTimeoutMs](functions/getWebhookTimeoutMs.md)
 - [getRetentionDays](functions/getRetentionDays.md)
 - [getMaxConcurrency](functions/getMaxConcurrency.md)
