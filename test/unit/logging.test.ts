@@ -7,8 +7,9 @@ describe('logging', () => {
     jest.restoreAllMocks();
   });
 
-  it('redacts secrets and serializes errors for info logs', () => {
-    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+  it('redacts secrets and writes info logs to stderr without using stdout', () => {
+    const stdoutSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const stderrSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     log('info', 'Testing info log', {
       token: 'secret-value',
@@ -20,7 +21,10 @@ describe('logging', () => {
       error: new Error('boom')
     });
 
-    const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+    expect(stdoutSpy).not.toHaveBeenCalled();
+    expect(stderrSpy).toHaveBeenCalledTimes(1);
+
+    const payload = JSON.parse(String(stderrSpy.mock.calls[0]?.[0])) as {
       level: string;
       message: string;
       context: Record<string, unknown>;
@@ -40,6 +44,17 @@ describe('logging', () => {
         message: 'boom'
       }
     });
+  });
+
+  it('writes debug logs to stderr without using stdout', () => {
+    const stdoutSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const stderrSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    log('debug', 'Debug log', { component: 'scheduler' });
+
+    expect(stdoutSpy).not.toHaveBeenCalled();
+    expect(stderrSpy).toHaveBeenCalledTimes(1);
+    expect(String(stderrSpy.mock.calls[0]?.[0])).toContain('"level":"debug"');
   });
 
   it('uses console.warn for warn logs', () => {
