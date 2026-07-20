@@ -284,8 +284,14 @@ describe('azure-devops', () => {
       'https://dev.azure.com.evil.test/org/project/_apis/build/builds/42/logs/7',
       'untrusted-origin'
     ],
-    ['https://dev.azure.com/org/project/_apis/build/builds/999/logs/7', 'unexpected-log-path']
+    ['https://dev.azure.com/org/project/_apis/build/builds/999/logs/7', 'unexpected-log-path'],
+    [
+      'https://dev.azure.com/org/project/_apis/build/builds/42/logs/not-a-number',
+      'unexpected-log-path'
+    ],
+    ['https://dev.azure.com/org/project/%ZZ/build/builds/42/logs/7', 'malformed-url']
   ])('rejects unsafe timeline log URL %s with code %s', async (logUrl, expectedCode) => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const fetchMock = jest.fn(async () => {
       return {
         ok: true,
@@ -378,6 +384,7 @@ describe('azure-devops', () => {
   });
 
   it('rejects cross-origin redirects before forwarding authorization', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const trustedLogUrl = 'https://dev.azure.com/org/project/_apis/build/builds/42/logs/7';
     const hostileUrl = 'https://evil.example/steal';
     const fetchMock = jest.fn(async (url: string | URL | Request) => {
@@ -469,6 +476,7 @@ describe('azure-devops', () => {
   });
 
   it('stops after the bounded same-origin redirect limit', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const fetchMock = jest.fn(async (url: string | URL | Request) => {
       const value = String(url);
 
