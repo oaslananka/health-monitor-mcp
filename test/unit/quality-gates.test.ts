@@ -246,4 +246,32 @@ describe('quality gate regression checks', () => {
     expect(codecovConfig).not.toContain('bundle_analysis:');
     expect(gitignore).toContain('reports/');
   });
+
+  it('keeps container and workflow security checks focused and enforceable', () => {
+    const ciWorkflow = readProjectText('.github/workflows/ci.yml');
+    const preCommitConfig = readProjectText('.pre-commit-config.yaml');
+
+    expect(ciWorkflow).toContain(
+      'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25'
+    );
+    expect(ciWorkflow).toContain('image-ref: health-monitor-mcp:ci');
+    expect(ciWorkflow).toContain('scanners: vuln');
+    expect(ciWorkflow).toContain('severity: HIGH,CRITICAL');
+    expect(ciWorkflow).toContain('ignore-unfixed: true');
+    expect(ciWorkflow).toContain('exit-code: 1');
+    expect(ciWorkflow).toContain('format: sarif');
+    expect(ciWorkflow).toContain('output: trivy-results.sarif');
+    expect(ciWorkflow).toContain('if: always()');
+    expect(ciWorkflow).toContain('sarif_file: trivy-results.sarif');
+    expect(ciWorkflow).not.toContain('scanners: vuln,secret');
+    expect(ciWorkflow).not.toContain('merge_group:');
+
+    expect(preCommitConfig).toContain('- id: check-toml');
+    expect(preCommitConfig).toContain('- id: mixed-line-ending');
+    expect(preCommitConfig).toContain('args: [--fix=no]');
+    expect(preCommitConfig).toContain('repo: https://github.com/rhysd/actionlint');
+    expect(preCommitConfig).toContain('rev: v1.7.12');
+    expect(preCommitConfig).toContain('repo: https://github.com/zizmorcore/zizmor-pre-commit');
+    expect(preCommitConfig).toContain('rev: v1.24.1');
+  });
 });
