@@ -16,6 +16,11 @@ type RenovateConfig = {
   dependencyDashboardLabels?: string[];
   vulnerabilityAlerts?: { labels?: string[] };
   packageRules?: Array<{ addLabels?: string[] }>;
+  customManagers?: Array<{
+    customType?: string;
+    managerFilePatterns?: string[];
+    matchStrings?: string[];
+  }>;
   'pre-commit'?: { enabled?: boolean };
 };
 
@@ -132,7 +137,17 @@ describe('quality gate regression checks', () => {
     expect(preCommitConfig).toContain('stages: [pre-push]');
 
     expect(ciWorkflow).toContain('docker run --rm --volume "$PWD:/workspace:ro"');
+    expect(ciWorkflow).toContain('# renovate: datasource=docker depName=renovate/renovate');
     expect(ciWorkflow).toContain('renovate/renovate:43.272.4@sha256:');
+    expect(renovateConfig.customManagers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          customType: 'regex',
+          managerFilePatterns: expect.arrayContaining([expect.stringContaining('workflows')]),
+          matchStrings: expect.arrayContaining([expect.stringContaining('renovate/renovate')])
+        })
+      ])
+    );
     expect(semgrepWorkflow).toContain('semgrep ci');
     expect(semgrepWorkflow).toContain('SEMGREP_APP_TOKEN');
     expect(semgrepWorkflow).toContain('semgrep/semgrep:1.170.0@sha256:');

@@ -37,6 +37,15 @@
     "vulnerabilityFixStrategy": "highest"
   },
   "osvVulnerabilityAlerts": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the Renovate validator image embedded in the CI shell command.",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/ci\\.yml$/"],
+      "matchStrings": ["# renovate: datasource=(?<datasource>docker) depName=(?<depName>renovate/renovate)[\\s\\S]*?'renovate/renovate:(?<currentValue>[^@'\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)'"],
+      "versioningTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "description": "Require explicit approval for major version changes.",
