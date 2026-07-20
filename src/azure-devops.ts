@@ -6,6 +6,18 @@ import type { PipelineStatus } from './types.js';
 
 const BASE = 'https://dev.azure.com';
 const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
+const MAX_LOG_REDIRECTS = 3;
+
+type AzureLogSecurityCode =
+  | 'malformed-url'
+  | 'https-required'
+  | 'userinfo-not-allowed'
+  | 'untrusted-origin'
+  | 'unexpected-log-path'
+  | 'missing-redirect-location'
+  | 'cross-origin-redirect'
+  | 'redirect-limit-exceeded';
 
 type FetchLike = typeof globalThis.fetch;
 
@@ -21,6 +33,13 @@ class AzureDevopsRequestError extends Error {
   }
 }
 
+class AzureLogSecurityError extends Error {
+  public constructor(public readonly code: AzureLogSecurityCode) {
+    super(`Azure DevOps log URL rejected: ${code}`);
+    this.name = 'AzureLogSecurityError';
+  }
+}
+
 function getFetchImpl(): FetchLike {
   if (fetchImpl) {
     return fetchImpl;
@@ -33,8 +52,108 @@ function getFetchImpl(): FetchLike {
   return globalThis.fetch.bind(globalThis);
 }
 
+function encodePathSegment(value: string | number): string {
+  return encodeURIComponent(String(value));
+}
+
+function buildAzureProjectUrl(
+  org: string,
+  project: string,
+  pathSegments: ReadonlyArray<string | number>,
+  query: ReadonlyArray<readonly [string, string | number]> = []
+): string {
+  const path = [org, project, ...pathSegments].map(encodePathSegment).join('/');
+  const url = new URL(`${BASE}/${path}`);
+
+  for (const [key, value] of query) {
+    url.searchParams.set(key, String(value));
+  }
+
+  return url.toString();
+}
+
+function decodePathSegments(url: URL): string[] {
+  try {
+    return url.pathname
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => decodeURIComponent(segment));
+  } catch {
+    throw new AzureLogSecurityError('malformed-url');
+  }
+}
+
+function identifiersMatch(left: string, right: string): boolean {
+  return left.toLowerCase() === right.toLowerCase();
+}
+
+function getLegacyAzureOrigin(org: string): string | null {
+  const normalizedOrg = org.toLowerCase();
+
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalizedOrg)) {
+    return null;
+  }
+
+  return `https://${normalizedOrg}.visualstudio.com`;
+}
+
+function matchesBuildLogPath(segments: string[], prefix: string[], buildId: number): boolean {
+  const expected = [...prefix, '_apis', 'build', 'builds', String(buildId), 'logs'];
+
+  const logId = segments.at(-1);
+
+  if (segments.length !== expected.length + 1 || !logId || !/^\d+$/.test(logId)) {
+    return false;
+  }
+
+  return expected.every((segment, index) => {
+    const actual = segments[index];
+    return actual !== undefined && identifiersMatch(actual, segment);
+  });
+}
+
+function validateAzureBuildLogUrl(
+  logUrl: string,
+  org: string,
+  project: string,
+  buildId: number
+): URL {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(logUrl);
+  } catch {
+    throw new AzureLogSecurityError('malformed-url');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new AzureLogSecurityError('https-required');
+  }
+
+  if (parsed.username || parsed.password) {
+    throw new AzureLogSecurityError('userinfo-not-allowed');
+  }
+
+  const segments = decodePathSegments(parsed);
+  const modernOrigin = parsed.origin === BASE;
+  const legacyOrigin = getLegacyAzureOrigin(org);
+  const legacyMatch = legacyOrigin !== null && parsed.origin === legacyOrigin;
+
+  if (!modernOrigin && !legacyMatch) {
+    throw new AzureLogSecurityError('untrusted-origin');
+  }
+
+  const prefix = modernOrigin ? [org, project] : [project];
+
+  if (!matchesBuildLogPath(segments, prefix, buildId)) {
+    throw new AzureLogSecurityError('unexpected-log-path');
+  }
+
+  return parsed;
+}
+
 function isRetryableAzureError(error: unknown): boolean {
-  if (error instanceof RequestTimeoutError) {
+  if (error instanceof RequestTimeoutError || error instanceof AzureLogSecurityError) {
     return false;
   }
 
@@ -78,29 +197,69 @@ async function azureGet(url: string, pat: string): Promise<unknown> {
   );
 }
 
-async function fetchAzureLogText(logUrl: string, authHeader: string): Promise<string> {
+async function fetchAzureLogText(
+  logUrl: string,
+  authHeader: string,
+  org: string,
+  project: string,
+  buildId: number
+): Promise<string> {
   return withRetry(
     async () => {
-      const response = await fetchWithTimeout(
-        getFetchImpl(),
-        logUrl,
-        {
-          headers: {
-            Authorization: authHeader
-          }
-        },
-        getAzureTimeoutMs(),
-        'Azure DevOps request timed out'
-      );
+      let currentUrl = validateAzureBuildLogUrl(logUrl, org, project, buildId);
+      let redirectsFollowed = 0;
 
-      if (!response.ok) {
-        throw new AzureDevopsRequestError(
-          `Azure DevOps log error: ${response.status} ${response.statusText} - ${logUrl}`,
-          response.status
+      while (true) {
+        const response = await fetchWithTimeout(
+          getFetchImpl(),
+          currentUrl,
+          {
+            headers: {
+              Authorization: authHeader
+            },
+            redirect: 'manual'
+          },
+          getAzureTimeoutMs(),
+          'Azure DevOps request timed out'
         );
-      }
 
-      return response.text();
+        if (REDIRECT_STATUS_CODES.has(response.status)) {
+          if (redirectsFollowed >= MAX_LOG_REDIRECTS) {
+            throw new AzureLogSecurityError('redirect-limit-exceeded');
+          }
+
+          const location = response.headers.get('location');
+
+          if (!location) {
+            throw new AzureLogSecurityError('missing-redirect-location');
+          }
+
+          let nextUrl: URL;
+
+          try {
+            nextUrl = new URL(location, currentUrl);
+          } catch {
+            throw new AzureLogSecurityError('malformed-url');
+          }
+
+          if (nextUrl.origin !== currentUrl.origin) {
+            throw new AzureLogSecurityError('cross-origin-redirect');
+          }
+
+          currentUrl = validateAzureBuildLogUrl(nextUrl.toString(), org, project, buildId);
+          redirectsFollowed += 1;
+          continue;
+        }
+
+        if (!response.ok) {
+          throw new AzureDevopsRequestError(
+            `Azure DevOps log error: ${response.status} ${response.statusText}`,
+            response.status
+          );
+        }
+
+        return response.text();
+      }
     },
     {
       attempts: 3,
@@ -135,7 +294,7 @@ export async function listPipelines(
   project: string,
   pat: string
 ): Promise<Array<{ id: number | null; name: string }>> {
-  const url = `${BASE}/${org}/${project}/_apis/pipelines?api-version=7.1`;
+  const url = buildAzureProjectUrl(org, project, ['_apis', 'pipelines'], [['api-version', '7.1']]);
   const data = asObject(await azureGet(url, pat));
   const value = Array.isArray(data.value) ? data.value : [];
 
@@ -163,7 +322,16 @@ export async function getLatestRun(
   pat: string
 ): Promise<PipelineStatus | null> {
   try {
-    const url = `${BASE}/${org}/${project}/_apis/build/builds?definitions=${pipelineId}&$top=1&api-version=7.1`;
+    const url = buildAzureProjectUrl(
+      org,
+      project,
+      ['_apis', 'build', 'builds'],
+      [
+        ['definitions', pipelineId],
+        ['$top', 1],
+        ['api-version', '7.1']
+      ]
+    );
     const data = asObject(await azureGet(url, pat));
     const build = Array.isArray(data.value) ? asObject(data.value[0]) : {};
 
@@ -189,7 +357,7 @@ export async function getLatestRun(
       start_time: asString(build.startTime),
       finish_time: asString(build.finishTime),
       requested_by: getNestedString(build, 'requestedFor', 'displayName') ?? 'unknown',
-      url: `https://dev.azure.com/${org}/${project}/_build/results?buildId=${id}`
+      url: buildAzureProjectUrl(org, project, ['_build', 'results'], [['buildId', id]])
     };
   } catch (error) {
     log('error', 'Failed to get latest run', { pipelineId, error: String(error) });
@@ -204,7 +372,12 @@ export async function getPipelineLogs(
   pat: string,
   failedOnly: boolean
 ): Promise<string> {
-  const timelineUrl = `${BASE}/${org}/${project}/_apis/build/builds/${buildId}/timeline?api-version=7.1`;
+  const timelineUrl = buildAzureProjectUrl(
+    org,
+    project,
+    ['_apis', 'build', 'builds', buildId, 'timeline'],
+    [['api-version', '7.1']]
+  );
   const timeline = asObject(await azureGet(timelineUrl, pat));
   const records = Array.isArray(timeline.records) ? timeline.records.map(asObject) : [];
   const selected = records.filter((record) =>
@@ -230,11 +403,19 @@ export async function getPipelineLogs(
     }
 
     try {
-      const text = await fetchAzureLogText(logUrl, authHeader);
+      const text = await fetchAzureLogText(logUrl, authHeader, org, project, buildId);
       const relevant = text.split('\n').slice(-50).join('\n');
       parts.push(`\n=== ${stepName} (${result}) ===\n${relevant}`);
-    } catch {
-      parts.push(`\n=== ${stepName} - log fetch failed ===`);
+    } catch (error) {
+      if (error instanceof AzureLogSecurityError) {
+        log('warn', 'Rejected Azure DevOps log URL', {
+          stepName,
+          securityCode: error.code
+        });
+        parts.push(`\n=== ${stepName} - log fetch rejected (${error.code}) ===`);
+      } else {
+        parts.push(`\n=== ${stepName} - log fetch failed ===`);
+      }
     }
   }
 

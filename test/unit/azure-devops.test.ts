@@ -17,6 +17,7 @@ describe('azure-devops', () => {
   afterEach(() => {
     resetAzureDevopsFetchForTests();
     jest.useRealTimers();
+    jest.restoreAllMocks();
     delete process.env.HEALTH_MONITOR_AZURE_TIMEOUT_MS;
   });
 
@@ -125,7 +126,7 @@ describe('azure-devops', () => {
                 name: 'unit-tests',
                 result: 'failed',
                 log: {
-                  url: 'https://logs.example/build.log'
+                  url: 'https://dev.azure.com/org/project/_apis/build/builds/42/logs/7?api-version=7.1'
                 }
               }
             ]
@@ -169,7 +170,7 @@ describe('azure-devops', () => {
                 name: 'publish',
                 result: 'failed',
                 log: {
-                  url: 'https://logs.example/retry.log'
+                  url: 'https://dev.azure.com/org/project/_apis/build/builds/84/logs/9?api-version=7.1'
                 }
               }
             ]
@@ -206,6 +207,318 @@ describe('azure-devops', () => {
 
     await expect(logsPromise).resolves.toContain('final-line');
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('encodes organization and project path values in Azure API URLs', async () => {
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({ value: [] }),
+      text: async () => ''
+    } as Response);
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    await listPipelines('org name', 'project/name & team', 'token');
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      'https://dev.azure.com/org%20name/project%2Fname%20%26%20team/_apis/pipelines?api-version=7.1'
+    );
+  });
+
+  it('accepts organization-scoped legacy Azure DevOps log URLs', async () => {
+    const fetchMock = jest.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const value = String(url);
+
+      if (value.includes('/timeline')) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            records: [
+              {
+                name: 'legacy-log',
+                result: 'failed',
+                log: {
+                  url: 'https://org.visualstudio.com/project/_apis/build/builds/42/logs/7'
+                }
+              }
+            ]
+          }),
+          text: async () => ''
+        } as Response;
+      }
+
+      expect(init?.headers).toEqual(
+        expect.objectContaining({ Authorization: expect.stringMatching(/^Basic /) })
+      );
+      expect(init?.redirect).toBe('manual');
+
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({}),
+        text: async () => 'legacy-log-line'
+      } as Response;
+    });
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    await expect(getPipelineLogs('org', 'project', 42, 'token', true)).resolves.toContain(
+      'legacy-log-line'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['not a url', 'malformed-url'],
+    ['http://dev.azure.com/org/project/_apis/build/builds/42/logs/7', 'https-required'],
+    [
+      'https://user:password@dev.azure.com/org/project/_apis/build/builds/42/logs/7',
+      'userinfo-not-allowed'
+    ],
+    [
+      'https://dev.azure.com.evil.test/org/project/_apis/build/builds/42/logs/7',
+      'untrusted-origin'
+    ],
+    ['https://dev.azure.com/org/project/_apis/build/builds/999/logs/7', 'unexpected-log-path'],
+    [
+      'https://dev.azure.com/org/project/_apis/build/builds/42/logs/not-a-number',
+      'unexpected-log-path'
+    ],
+    ['https://dev.azure.com/org/project/%ZZ/build/builds/42/logs/7', 'malformed-url']
+  ])('rejects unsafe timeline log URL %s with code %s', async (logUrl, expectedCode) => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = jest.fn(async () => {
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({
+          records: [
+            {
+              name: 'unsafe-log',
+              result: 'failed',
+              log: { url: logUrl }
+            }
+          ]
+        }),
+        text: async () => 'must-not-be-fetched'
+      } as Response;
+    });
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    const logs = await getPipelineLogs('org', 'project', 42, 'sensitive-token', true);
+
+    expect(logs).toContain(`log fetch rejected (${expectedCode})`);
+    expect(logs).not.toContain(logUrl);
+    expect(logs).not.toContain('sensitive-token');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('follows a validated same-origin redirect with authorization', async () => {
+    const authHeaders: string[] = [];
+    const fetchMock = jest.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const value = String(url);
+
+      if (value.includes('/timeline')) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            records: [
+              {
+                name: 'redirected-log',
+                result: 'failed',
+                log: {
+                  url: 'https://dev.azure.com/org/project/_apis/build/builds/42/logs/7'
+                }
+              }
+            ]
+          }),
+          text: async () => ''
+        } as Response;
+      }
+
+      authHeaders.push(
+        String((init?.headers as Record<string, string> | undefined)?.Authorization)
+      );
+      expect(init?.redirect).toBe('manual');
+
+      if (value.endsWith('/logs/7')) {
+        return {
+          ok: false,
+          status: 302,
+          statusText: 'Found',
+          headers: new Headers({
+            Location: '/org/project/_apis/build/builds/42/logs/8?api-version=7.1'
+          }),
+          json: async () => ({}),
+          text: async () => ''
+        } as Response;
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: new Headers(),
+        json: async () => ({}),
+        text: async () => 'redirected-log-line'
+      } as Response;
+    });
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    await expect(getPipelineLogs('org', 'project', 42, 'token', true)).resolves.toContain(
+      'redirected-log-line'
+    );
+    expect(authHeaders).toHaveLength(2);
+    expect(authHeaders.every((header) => header.startsWith('Basic '))).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects cross-origin redirects before forwarding authorization', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const trustedLogUrl = 'https://dev.azure.com/org/project/_apis/build/builds/42/logs/7';
+    const hostileUrl = 'https://evil.example/steal';
+    const fetchMock = jest.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+
+      if (value.includes('/timeline')) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            records: [
+              {
+                name: 'cross-origin-log',
+                result: 'failed',
+                log: { url: trustedLogUrl }
+              }
+            ]
+          }),
+          text: async () => ''
+        } as Response;
+      }
+
+      if (value === hostileUrl) {
+        throw new Error('Hostile redirect must not be requested');
+      }
+
+      return {
+        ok: false,
+        status: 302,
+        statusText: 'Found',
+        headers: new Headers({ Location: hostileUrl }),
+        json: async () => ({}),
+        text: async () => ''
+      } as Response;
+    });
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    const logs = await getPipelineLogs('org', 'project', 42, 'sensitive-token', true);
+
+    expect(logs).toContain('log fetch rejected (cross-origin-redirect)');
+    expect(logs).not.toContain(hostileUrl);
+    expect(logs).not.toContain('sensitive-token');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns redacted security diagnostics for redirect policy violations', async () => {
+    const logUrl = 'https://dev.azure.com/org/project/_apis/build/builds/42/logs/7';
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = jest.fn(async (url: string | URL | Request) => {
+      if (String(url).includes('/timeline')) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            records: [
+              {
+                name: 'missing-location',
+                result: 'failed',
+                log: { url: logUrl }
+              }
+            ]
+          }),
+          text: async () => ''
+        } as Response;
+      }
+
+      return {
+        ok: false,
+        status: 302,
+        statusText: 'Found',
+        headers: new Headers(),
+        json: async () => ({}),
+        text: async () => ''
+      } as Response;
+    });
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    const logs = await getPipelineLogs('org', 'project', 42, 'sensitive-token', true);
+    const warning = String(warnSpy.mock.calls[0]?.[0]);
+
+    expect(logs).toContain('log fetch rejected (missing-redirect-location)');
+    expect(warning).toContain('missing-redirect-location');
+    expect(warning).not.toContain(logUrl);
+    expect(warning).not.toContain('sensitive-token');
+  });
+
+  it('stops after the bounded same-origin redirect limit', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = jest.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+
+      if (value.includes('/timeline')) {
+        return {
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => ({
+            records: [
+              {
+                name: 'redirect-loop',
+                result: 'failed',
+                log: {
+                  url: 'https://dev.azure.com/org/project/_apis/build/builds/42/logs/1'
+                }
+              }
+            ]
+          }),
+          text: async () => ''
+        } as Response;
+      }
+
+      const logId = Number(value.match(/\/logs\/(\d+)/)?.[1] ?? 1);
+      return {
+        ok: false,
+        status: 302,
+        statusText: 'Found',
+        headers: new Headers({
+          Location: `/org/project/_apis/build/builds/42/logs/${logId + 1}`
+        }),
+        json: async () => ({}),
+        text: async () => ''
+      } as Response;
+    });
+
+    setAzureDevopsFetchForTests(fetchMock as typeof fetch);
+
+    await expect(getPipelineLogs('org', 'project', 42, 'token', true)).resolves.toContain(
+      'log fetch rejected (redirect-limit-exceeded)'
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it('passes an AbortSignal to Azure API requests', async () => {
