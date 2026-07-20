@@ -79,19 +79,23 @@ const RegisterServerBaseSchema = z.object({
 
 export const RegisterServerSchema = z.discriminatedUnion('type', [
   RegisterServerBaseSchema.extend({
-    type: z.literal('http').describe('Streamable HTTP transport'),
-    url: HttpUrlSchema.describe('URL for http servers (e.g. https://example.com/mcp)'),
+    type: z.literal('http').describe('Streamable HTTP MCP transport'),
+    url: HttpUrlSchema.describe('Streamable HTTP MCP endpoint URL (e.g. https://example.com/mcp)'),
     command: CommandSchema.optional()
   }),
   RegisterServerBaseSchema.extend({
-    type: z.literal('sse').describe('Legacy SSE transport'),
-    url: HttpUrlSchema.describe('URL for sse servers (e.g. https://example.com/sse)'),
+    type: z.literal('sse').describe('Legacy Server-Sent Events transport for older MCP servers'),
+    url: HttpUrlSchema.describe('Legacy SSE endpoint URL (e.g. https://example.com/sse)'),
     command: CommandSchema.optional()
   }),
   RegisterServerBaseSchema.extend({
-    type: z.literal('stdio').describe('Local stdio transport'),
+    type: z
+      .literal('stdio')
+      .describe('Trusted local stdio process transport; explicit opt-in required'),
     url: HttpUrlSchema.optional(),
-    command: CommandSchema.describe('Command for stdio servers (e.g. npx mcp-debug-recorder)')
+    command: CommandSchema.describe(
+      'Single local executable for stdio servers; put flags and package names in args'
+    )
   })
 ]);
 
@@ -102,7 +106,11 @@ export const CheckServerSchema = z.object({
 
 export const CheckAllSchema = z.object({
   timeout_ms: z.number().int().min(1000).max(30000).default(5000),
-  tags: z.array(SafeTagSchema).max(20).optional().describe('Filter by tags')
+  tags: z
+    .array(SafeTagSchema)
+    .max(20)
+    .optional()
+    .describe('Filter targets by registered server tags')
 });
 
 export const GetUptimeSchema = z.object({
@@ -142,57 +150,6 @@ export const ListServersSchema = z.object({
 
 export const EmptySchema = z.object({});
 
-export const RegisterAzurePipelineSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(100)
-    .refine((value) => !hasControlCharacter(value), 'Control characters are not allowed')
-    .describe('Friendly name for this pipeline group (e.g. "mcp-ssh-tool")'),
-  organization: z.string().trim().min(1).max(100),
-  project: z.string().trim().min(1).max(200),
-  pipeline_names: z
-    .array(z.string().trim().min(1).max(200))
-    .min(1)
-    .max(50)
-    .describe('Azure pipeline names to monitor (e.g. ["mcp-ssh-tool CI", "mcp-ssh-tool Publish"])'),
-  pat_token: z
-    .string()
-    .min(1)
-    .describe('Azure DevOps PAT - encrypted in the local DB when storage is enabled')
-});
-
-export const CheckPipelineStatusSchema = z.object({
-  group_name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(100)
-    .optional()
-    .describe('Filter by group name (e.g. "mcp-ssh-tool"). Omit for all groups.')
-});
-
-export const RegisteredPipelineLogsSchema = z.object({
-  group_name: z.string().trim().min(1).max(100).describe('Pipeline group name'),
-  pipeline_name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(200)
-    .describe('Specific pipeline name (e.g. "mcp-ssh-tool CI")'),
-  build_id: z
-    .number()
-    .int()
-    .optional()
-    .describe('Specific build ID. If omitted, fetches the latest build.'),
-  failed_only: z.boolean().default(true).describe('Only return logs from failed steps')
-});
-
-export const CheckAllProjectsSchema = z.object({
-  timeout_ms: z.number().int().min(1000).max(30000).default(5000)
-});
-
 export type McpServerType = z.infer<typeof McpServerTypeSchema>;
 export type HealthStatus = z.infer<typeof HealthStatusSchema>;
 export type RegisterServerInput = z.infer<typeof RegisterServerSchema>;
@@ -205,10 +162,6 @@ export type GetReportInput = z.infer<typeof GetReportSchema>;
 export type UnregisterInput = z.infer<typeof UnregisterSchema>;
 export type ListServersInput = z.infer<typeof ListServersSchema>;
 export type AlertFindingType = z.infer<typeof AlertFindingTypeSchema>;
-export type RegisterAzurePipelineInput = z.infer<typeof RegisterAzurePipelineSchema>;
-export type CheckPipelineStatusInput = z.infer<typeof CheckPipelineStatusSchema>;
-export type RegisteredPipelineLogsInput = z.infer<typeof RegisteredPipelineLogsSchema>;
-export type CheckAllProjectsInput = z.infer<typeof CheckAllProjectsSchema>;
 
 export interface HealthRecord {
   id: number;
@@ -288,41 +241,4 @@ export interface CheckResult {
   tool_count: number | null;
   error_message: string | null;
   tools: string[] | null;
-}
-
-export interface PipelineStatus {
-  name: string;
-  id: number;
-  status: 'succeeded' | 'failed' | 'inProgress' | 'notStarted' | 'canceled' | 'unknown';
-  result: string | null;
-  build_number: string;
-  source_branch: string;
-  start_time: string | null;
-  finish_time: string | null;
-  requested_by: string;
-  url: string;
-}
-
-export interface RegisteredAzurePipeline {
-  id: number;
-  group_name: string;
-  organization: string;
-  project: string;
-  pipeline_name: string;
-  pipeline_id: number | null;
-  pat_token_encrypted: string;
-  created_at: number;
-}
-
-export interface RecordedPipelineRun {
-  id: number;
-  group_name: string;
-  pipeline_name: string;
-  build_id: number;
-  status: PipelineStatus['status'];
-  result: string | null;
-  build_number: string | null;
-  start_time: string | null;
-  finish_time: string | null;
-  recorded_at: number;
 }

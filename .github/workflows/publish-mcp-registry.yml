@@ -6,10 +6,19 @@ on:
       - server.json
       - package.json
       - .github/workflows/publish-mcp-registry.yml
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        description: Existing component release tag to publish
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
+      tag_name:
+        description: Existing component release tag for manual recovery
+        required: false
+        type: string
+        default: ''
       dry_run:
         description: Validate metadata without publishing.
         type: boolean
@@ -19,7 +28,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-mcp-registry-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: publish-mcp-registry-${{ github.workflow }}-${{ github.event.pull_request.number || inputs.tag_name || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
@@ -42,6 +51,9 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.18.0'
       - name: Validate MCP registry metadata
         run: |
           set -euo pipefail
@@ -55,6 +67,7 @@ jobs:
           const npmPackage = server.packages.find((entry) => entry.registryType === 'npm');
           if (!npmPackage) throw new Error('server.json must include an npm package entry');
           if (npmPackage.identifier !== pkg.name) throw new Error(`npm package identifier ${npmPackage.identifier} must match ${pkg.name}`);
+          if (npmPackage.version !== pkg.version) throw new Error(`npm package version ${npmPackage.version} must match ${pkg.version}`);
           console.log(`MCP metadata ready for ${server.name}@${server.version}`);
           NODE
 
@@ -62,8 +75,10 @@ jobs:
     if: >-
       ${{
         github.repository_owner == 'oaslananka' &&
-        (github.event_name == 'release' ||
-         (github.event_name == 'workflow_dispatch' && inputs.dry_run != true))
+        (github.event_name == 'workflow_call' ||
+         (github.event_name == 'workflow_dispatch' &&
+          inputs.dry_run != true &&
+          inputs.tag_name != ''))
       }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -75,6 +90,16 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ inputs.tag_name }}
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24.18.0'
+      - name: Verify exact release ref
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name }}
+        run: node scripts/verify-release-ref.mjs --tag "$RELEASE_TAG"
       - name: Verify npm package exists
         run: |
           set -euo pipefail

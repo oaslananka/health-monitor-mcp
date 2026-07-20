@@ -1,19 +1,13 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-
 import type Database from 'better-sqlite3';
 
-import { getRetentionDays, isTruthyEnv } from './config.js';
+import { getRetentionDays } from './config.js';
 import { getDb } from './db.js';
 import type {
   CheckResult,
   DashboardReportEntry,
   HealthRecord,
   ListServersInput,
-  PipelineStatus,
-  RecordedPipelineRun,
-  RegisterAzurePipelineInput,
   RegisterServerInput,
-  RegisteredAzurePipeline,
   RegisteredServer,
   ServerStatus
 } from './types.js';
@@ -36,10 +30,6 @@ type DashboardCheckRow = Pick<
   HealthRecord,
   'server_name' | 'status' | 'response_time_ms' | 'tool_count'
 >;
-
-type AzurePipelineRow = RegisteredAzurePipeline;
-
-const ENCRYPTED_PAT_PREFIX = 'aes-256-gcm:v1';
 
 function parseJsonArray(raw: string | null | undefined): string[] {
   if (!raw) {
@@ -106,91 +96,6 @@ function calculatePercentile(values: number[], percentile: number): number | nul
   const index = Math.min(sorted.length - 1, Math.max(0, Math.floor(sorted.length * percentile)));
 
   return sorted[index] ?? null;
-}
-
-function getPatEncryptionKey(): Buffer {
-  const raw = process.env.HEALTH_MONITOR_ENCRYPTION_KEY?.trim();
-
-  if (!raw) {
-    throw new Error('HEALTH_MONITOR_ENCRYPTION_KEY is required to store Azure DevOps PAT tokens');
-  }
-
-  if (raw.length < 32) {
-    throw new Error('HEALTH_MONITOR_ENCRYPTION_KEY must contain at least 32 characters');
-  }
-
-  if (/^[a-f0-9]{64}$/i.test(raw)) {
-    return Buffer.from(raw, 'hex');
-  }
-
-  return createHash('sha256').update(raw, 'utf8').digest();
-}
-
-function decodeBase64Pat(encoded: string): string {
-  return Buffer.from(encoded, 'base64').toString('utf8');
-}
-
-export function encodePatToken(pat: string): string {
-  if (isTruthyEnv(process.env.HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE)) {
-    return Buffer.from(pat, 'utf8').toString('base64');
-  }
-
-  const key = getPatEncryptionKey();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([cipher.update(pat, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-
-  return [
-    ENCRYPTED_PAT_PREFIX,
-    iv.toString('base64url'),
-    tag.toString('base64url'),
-    ciphertext.toString('base64url')
-  ].join(':');
-}
-
-export function decodePatToken(encoded: string): string {
-  if (!encoded.startsWith(`${ENCRYPTED_PAT_PREFIX}:`)) {
-    if (
-      isTruthyEnv(process.env.HEALTH_MONITOR_ALLOW_LEGACY_PAT_DECODING) ||
-      isTruthyEnv(process.env.HEALTH_MONITOR_ALLOW_INSECURE_PAT_STORAGE)
-    ) {
-      return decodeBase64Pat(encoded);
-    }
-
-    throw new Error(
-      'Refusing to decode legacy PAT storage without HEALTH_MONITOR_ALLOW_LEGACY_PAT_DECODING=1'
-    );
-  }
-
-  const [, , ivRaw, tagRaw, ciphertextRaw] = encoded.split(':');
-
-  if (!ivRaw || !tagRaw || !ciphertextRaw) {
-    throw new Error('Unable to decrypt Azure DevOps PAT');
-  }
-
-  try {
-    const decipher = createDecipheriv(
-      'aes-256-gcm',
-      getPatEncryptionKey(),
-      Buffer.from(ivRaw, 'base64url')
-    );
-    decipher.setAuthTag(Buffer.from(tagRaw, 'base64url'));
-    return Buffer.concat([
-      decipher.update(Buffer.from(ciphertextRaw, 'base64url')),
-      decipher.final()
-    ]).toString('utf8');
-  } catch {
-    throw new Error('Unable to decrypt Azure DevOps PAT');
-  }
-}
-
-/**
- * Legacy helper kept for existing imports. New rows are encrypted unless
- * explicit local insecure storage is enabled.
- */
-export function encodeLegacyPatTokenForMigration(pat: string): string {
-  return Buffer.from(pat, 'utf8').toString('base64');
 }
 
 export function registerServer(input: RegisterServerInput): { registered: true; name: string } {
@@ -493,146 +398,4 @@ export function getUptimePercent(
 
   const upCount = rows.filter((row) => row.status === 'up').length;
   return Math.round((upCount / rows.length) * 100);
-}
-
-export function registerAzurePipelines(
-  input: RegisterAzurePipelineInput,
-  resolvedPipelines: Array<{ name: string; id: number | null }>
-): { registered: true; group: string; pipelines: string[] } {
-  const db = getDb();
-  const now = Date.now();
-  const encodedPatToken = encodePatToken(input.pat_token);
-  const insert = db.prepare(
-    `
-      INSERT INTO azure_pipelines (
-        group_name,
-        organization,
-        project,
-        pipeline_name,
-        pipeline_id,
-        pat_token_encrypted,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(group_name, pipeline_name) DO UPDATE SET
-        organization = excluded.organization,
-        project = excluded.project,
-        pipeline_id = excluded.pipeline_id,
-        pat_token_encrypted = excluded.pat_token_encrypted
-    `
-  );
-
-  const transaction = db.transaction(() => {
-    for (const pipeline of resolvedPipelines) {
-      insert.run(
-        input.name,
-        input.organization,
-        input.project,
-        pipeline.name,
-        pipeline.id,
-        encodedPatToken,
-        now
-      );
-    }
-  });
-
-  transaction();
-
-  return {
-    registered: true,
-    group: input.name,
-    pipelines: resolvedPipelines.map((pipeline) => pipeline.name)
-  };
-}
-
-export function listAzurePipelines(groupName?: string): RegisteredAzurePipeline[] {
-  const query = groupName
-    ? 'SELECT * FROM azure_pipelines WHERE group_name = ? ORDER BY group_name ASC, pipeline_name ASC'
-    : 'SELECT * FROM azure_pipelines ORDER BY group_name ASC, pipeline_name ASC';
-
-  return getDb()
-    .prepare(query)
-    .all(...(groupName ? [groupName] : [])) as AzurePipelineRow[];
-}
-
-export function listAzurePipelineGroups(): string[] {
-  return (
-    getDb()
-      .prepare('SELECT DISTINCT group_name FROM azure_pipelines ORDER BY group_name ASC')
-      .all() as Array<{ group_name: string }>
-  ).map((row) => row.group_name);
-}
-
-export function getAzurePipeline(
-  groupName: string,
-  pipelineName: string
-): RegisteredAzurePipeline | null {
-  const row = getDb()
-    .prepare(
-      `
-        SELECT *
-        FROM azure_pipelines
-        WHERE group_name = ? AND pipeline_name = ?
-      `
-    )
-    .get(groupName, pipelineName) as AzurePipelineRow | undefined;
-
-  return row ?? null;
-}
-
-export function recordPipelineRun(
-  groupName: string,
-  pipelineName: string,
-  run: PipelineStatus
-): RecordedPipelineRun {
-  const db = getDb();
-  const recordedAt = Date.now();
-  db.prepare(
-    `
-      INSERT INTO pipeline_runs (
-        group_name,
-        pipeline_name,
-        build_id,
-        status,
-        result,
-        build_number,
-        start_time,
-        finish_time,
-        recorded_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(group_name, pipeline_name, build_id) DO UPDATE SET
-        status = excluded.status,
-        result = excluded.result,
-        build_number = excluded.build_number,
-        start_time = excluded.start_time,
-        finish_time = excluded.finish_time,
-        recorded_at = excluded.recorded_at
-    `
-  ).run(
-    groupName,
-    pipelineName,
-    run.id,
-    run.status,
-    run.result,
-    run.build_number,
-    run.start_time,
-    run.finish_time,
-    recordedAt
-  );
-  const row = db
-    .prepare(
-      `
-        SELECT *
-        FROM pipeline_runs
-        WHERE group_name = ? AND pipeline_name = ? AND build_id = ?
-      `
-    )
-    .get(groupName, pipelineName, run.id) as RecordedPipelineRun | undefined;
-
-  if (!row) {
-    throw new Error('Failed to record Azure pipeline run');
-  }
-
-  return row;
 }

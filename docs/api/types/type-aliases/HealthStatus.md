@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,4 +8,4 @@
 
 > **HealthStatus** = `z.infer`\<*typeof* [`HealthStatusSchema`](../variables/HealthStatusSchema.md)\>
 
-Defined in: [types.ts:197](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L197)
+Defined in: [types.ts:154](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L154)

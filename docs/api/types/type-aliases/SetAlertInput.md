@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,4 +8,4 @@
 
 > **SetAlertInput** = `z.infer`\<*typeof* [`SetAlertSchema`](../variables/SetAlertSchema.md)\>
 
-Defined in: [types.ts:202](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L202)
+Defined in: [types.ts:159](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L159)

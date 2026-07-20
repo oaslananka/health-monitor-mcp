@@ -15,6 +15,7 @@ const packageJson = readJson('package.json');
 const mcpJson = readJson('mcp.json');
 const serverJson = readJson('server.json');
 const releaseManifest = readJson('.release-please-manifest.json');
+const pluginJson = readJson('.claude-plugin/plugin.json');
 const errors = [];
 
 if (packageJson.name !== 'health-monitor-mcp') {
@@ -26,7 +27,9 @@ if (packageJson.version !== mcpJson.version) {
 }
 
 if (packageJson.version !== serverJson.version) {
-  errors.push(`server.json version ${serverJson.version} does not match package ${packageJson.version}`);
+  errors.push(
+    `server.json version ${serverJson.version} does not match package ${packageJson.version}`
+  );
 }
 
 if (releaseManifest['.'] !== packageJson.version) {
@@ -35,12 +38,22 @@ if (releaseManifest['.'] !== packageJson.version) {
   );
 }
 
+if (pluginJson.version !== packageJson.version) {
+  errors.push(`plugin version ${pluginJson.version} does not match package ${packageJson.version}`);
+}
+
+if (pluginJson.name !== packageJson.name) {
+  errors.push(`plugin name ${pluginJson.name} does not match package ${packageJson.name}`);
+}
+
 if (packageJson.mcpName !== mcpJson.mcpName) {
   errors.push(`mcpName mismatch between package.json and mcp.json`);
 }
 
 if (packageJson.mcpName !== serverJson.name) {
-  errors.push(`server.json name ${serverJson.name} does not match package mcpName ${packageJson.mcpName}`);
+  errors.push(
+    `server.json name ${serverJson.name} does not match package mcpName ${packageJson.mcpName}`
+  );
 }
 
 if (serverJson.packages?.[0]?.identifier !== packageJson.name) {

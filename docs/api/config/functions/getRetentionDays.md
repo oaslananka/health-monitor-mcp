@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 > **getRetentionDays**(): `number`
 
-Defined in: [config.ts:52](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L52)
+Defined in: [config.ts:48](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L48)
 
 ## Returns
 

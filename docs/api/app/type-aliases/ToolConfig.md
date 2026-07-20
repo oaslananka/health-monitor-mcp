@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 > **ToolConfig** = `object`
 
-Defined in: [app.ts:76](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L76)
+Defined in: [app.ts:64](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L64)
 
 Metadata and schema passed when registering an MCP tool with the server SDK.
 
@@ -18,7 +18,7 @@ Metadata and schema passed when registering an MCP tool with the server SDK.
 
 > `optional` **title?**: `string`
 
-Defined in: [app.ts:77](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L77)
+Defined in: [app.ts:65](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L65)
 
 ***
 
@@ -26,7 +26,7 @@ Defined in: [app.ts:77](https://github.com/oaslananka/health-monitor-mcp/blob/ma
 
 > `optional` **description?**: `string`
 
-Defined in: [app.ts:78](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L78)
+Defined in: [app.ts:66](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L66)
 
 ***
 
@@ -34,7 +34,7 @@ Defined in: [app.ts:78](https://github.com/oaslananka/health-monitor-mcp/blob/ma
 
 > `optional` **inputSchema?**: `object`
 
-Defined in: [app.ts:79](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L79)
+Defined in: [app.ts:67](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L67)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [app.ts:79](https://github.com/oaslananka/health-monitor-mcp/blob/ma
 
 > `optional` **annotations?**: `object`
 
-Defined in: [app.ts:80](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L80)
+Defined in: [app.ts:68](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L68)
 
 #### readOnlyHint?
 

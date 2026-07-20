@@ -3,10 +3,8 @@
     "health-monitor-mcp": {
       "type": "stdio",
       "command": "npx",
-      "args": ["health-monitor-mcp"],
-      "env": {
-        "HEALTH_MONITOR_TRANSPORT": "stdio"
-      }
+      "args": ["-y", "health-monitor-mcp"],
+      "env": {}
     }
   }
 }

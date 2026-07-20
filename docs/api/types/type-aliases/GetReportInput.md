@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,4 +8,4 @@
 
 > **GetReportInput** = `z.infer`\<*typeof* [`GetReportSchema`](../variables/GetReportSchema.md)\>
 
-Defined in: [types.ts:204](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L204)
+Defined in: [types.ts:161](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L161)

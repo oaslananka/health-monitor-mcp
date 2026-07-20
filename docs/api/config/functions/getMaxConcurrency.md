@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,7 +8,7 @@
 
 > **getMaxConcurrency**(): `number`
 
-Defined in: [config.ts:56](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L56)
+Defined in: [config.ts:52](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/config.ts#L52)
 
 ## Returns
 

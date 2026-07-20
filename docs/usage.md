@@ -2,23 +2,21 @@
 
 ## Install and Run
 
-The first public npm release target is `health-monitor-mcp@1.0.0`. If npm still returns `E404`,
-the publish gate has not completed yet.
+Run the published package noninteractively with Node.js 24:
 
 ```bash
-npm install -g health-monitor-mcp
-health-monitor-mcp --version
+npx -y health-monitor-mcp --version
 ```
 
-After installing the package, configure desktop MCP clients to run the `health-monitor-mcp`
-binary directly.
+A global installation remains optional. MCP clients should invoke `npx -y health-monitor-mcp` or
+the installed `health-monitor-mcp` binary directly.
 
 ## Register a Server
 
 Register an HTTP MCP server:
 
 ```text
-register_server name="mcp-ssh-tool" type="http" url="https://mcp-ssh-tool.onrender.com/mcp" tags=["devops","ssh"]
+register_server name="inventory-mcp" type="http" url="https://inventory.example.com/mcp" tags=["production","inventory"]
 ```
 
 Register a stdio server only after trusted local opt-in:
@@ -29,7 +27,7 @@ export HEALTH_MONITOR_STDIO_ALLOWLIST=npx
 ```
 
 ```text
-register_server name="local-debugger" type="stdio" command="npx" args=["mcp-debug-recorder"] tags=["local","debug"]
+register_server name="local-debugger" type="stdio" command="npx" args=["-y","mcp-debug-recorder"] tags=["local","debug"]
 ```
 
 `stdio` registration and execution are intended for trusted local use only. The `command` field
@@ -43,10 +41,11 @@ command exactly, and remote-safe profiles always block stdio.
 Check one server:
 
 ```text
-check_server name="mcp-ssh-tool" timeout_ms=5000
+check_server name="inventory-mcp" timeout_ms=5000
 ```
 
-Check all servers:
+Check all servers with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
+interactive batches and the background scheduler, and result order remains deterministic:
 
 ```text
 check_all timeout_ms=5000
@@ -55,13 +54,35 @@ check_all timeout_ms=5000
 Filter by tag:
 
 ```text
-check_all timeout_ms=5000 tags=["devops"]
+check_all timeout_ms=5000 tags=["production"]
 ```
+
+
+## Agent Error Envelopes
+
+Expected configuration mistakes return stable JSON instead of an unstructured exception. Agents
+should inspect `error.code`, apply `error.remediation`, and retry only when `error.retryable` is
+`true`.
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "SERVER_NOT_FOUND",
+    "message": "Server is not registered: inventory-mcp",
+    "remediation": "Run register_server first, then retry the operation.",
+    "retryable": false
+  }
+}
+```
+
+Current expected codes are `SERVER_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and
+`STDIO_COMMAND_REJECTED`.
 
 ## Inspect Uptime
 
 ```text
-get_uptime name="mcp-ssh-tool" hours=24
+get_uptime name="inventory-mcp" hours=24
 ```
 
 ## View the Dashboard
@@ -81,7 +102,7 @@ The dashboard includes:
 ## Configure Alerts
 
 ```text
-set_alert name="mcp-ssh-tool" max_response_time_ms=500 min_uptime_percent=99 consecutive_failures_before_alert=2
+set_alert name="inventory-mcp" max_response_time_ms=500 min_uptime_percent=99 consecutive_failures_before_alert=2
 ```
 
 Alert findings are surfaced by:

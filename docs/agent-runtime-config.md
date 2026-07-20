@@ -24,7 +24,7 @@ Copy `opencode.example.jsonc` to `opencode.json`, or merge the `mcp` block into 
 ## Generic MCP clients
 
 ```bash
-npx health-monitor-mcp
+npx -y health-monitor-mcp
 ```
 
 ## Safety

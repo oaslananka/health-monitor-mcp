@@ -56,14 +56,14 @@ Verified against the npm registry on 2026-04-07. TypeDoc entries were refreshed 
 | `@eslint/js`                       | `10.0.1`      |
 | `globals`                          | `17.4.0`      |
 
-Newer registry releases exist, but v1.0 compatibility for this repo intentionally keeps the approved pins below.
+Newer registry releases may exist, but the v1.1 maintenance line intentionally keeps the approved pins below until a dedicated dependency change is reviewed.
 
 ## Approved Dependency Pins
 
 | Package                            | Version   | Reason                                                                                                                                  |
 | ---------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `@modelcontextprotocol/sdk`        | `1.27.1`  | Keep MCP client/server behavior aligned with the current v1.0 codebase.                                                                 |
-| `better-sqlite3`                   | `12.8.0`  | Stable native SQLite binding validated for Node 24 environments while retaining the package's Node >=20 support range.                  |
+| `better-sqlite3`                   | `12.8.0`  | Stable native SQLite binding validated for the repository's Node 24 runtime floor.                  |
 | `qs`                               | `6.15.2`  | Security override for the transitive Express dependency path until upstream lock resolution no longer selects vulnerable `qs` releases. |
 | `zod`                              | `3.25.76` | Preserve the existing schema-first API without v4 breaking changes while avoiding the incomplete `3.25.0` package payload.              |
 | `typescript`                       | `5.8.3`   | Modern strict TypeScript without adopting the v6 toolchain yet.                                                                         |
@@ -73,7 +73,7 @@ Newer registry releases exist, but v1.0 compatibility for this repo intentionall
 | `eslint`                           | `9.39.4`  | Patched ESLint 9 line that resolves the current plugin-kit advisory without changing majors.                                            |
 | `@typescript-eslint/parser`        | `8.30.0`  | Compatible with ESLint 9 and current TS 5.x usage.                                                                                      |
 | `@typescript-eslint/eslint-plugin` | `8.30.0`  | Match the parser and flat config transition.                                                                                            |
-| `@types/node`                      | `20.19.0` | Keep typings aligned with the supported Node 20 runtime line.                                                                           |
+| `@types/node`                      | `20.19.0` | Keep the established typings surface while runtime execution is validated on Node 24.                                                                           |
 | `@types/jest`                      | `29.5.14` | Match the Jest 29 test surface.                                                                                                         |
 | `@types/better-sqlite3`            | `7.6.13`  | Latest compatible typings for the pinned runtime dependency.                                                                            |
 | `prettier`                         | `3.5.3`   | Stable formatter version for v1.0.                                                                                                      |

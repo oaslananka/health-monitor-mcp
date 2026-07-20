@@ -119,11 +119,11 @@ const result = {
   blockers,
   next_safe_command: blockers.length
     ? 'Resolve blockers before publishing.'
-    : 'Open or merge the release-please release pull request; do not publish from a local machine.',
+    : 'Create the protected component tag and publish through GitHub workflows; do not publish from a local machine.',
   surfaces: {
     npm: true,
     mcp_registry: true,
-    docker_ghcr: false,
+    docker_ghcr: true,
     github_release: true
   }
 };

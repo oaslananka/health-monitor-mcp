@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,4 +8,4 @@
 
 > **AlertFindingType** = `z.infer`\<*typeof* [`AlertFindingTypeSchema`](../variables/AlertFindingTypeSchema.md)\>
 
-Defined in: [types.ts:207](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L207)
+Defined in: [types.ts:164](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L164)

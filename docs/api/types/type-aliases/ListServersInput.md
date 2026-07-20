@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../../README.md)
+[**health-monitor-mcp v1.1.0**](../../README.md)
 
 ***
 
@@ -8,4 +8,4 @@
 
 > **ListServersInput** = `z.infer`\<*typeof* [`ListServersSchema`](../variables/ListServersSchema.md)\>
 
-Defined in: [types.ts:206](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L206)
+Defined in: [types.ts:163](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L163)

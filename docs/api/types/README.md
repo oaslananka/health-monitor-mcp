@@ -1,4 +1,4 @@
-[**health-monitor-mcp v1.0.0**](../README.md)
+[**health-monitor-mcp v1.1.0**](../README.md)
 
 ***
 
@@ -16,9 +16,6 @@
 - [AlertFinding](interfaces/AlertFinding.md)
 - [AlertEvaluation](interfaces/AlertEvaluation.md)
 - [CheckResult](interfaces/CheckResult.md)
-- [PipelineStatus](interfaces/PipelineStatus.md)
-- [RegisteredAzurePipeline](interfaces/RegisteredAzurePipeline.md)
-- [RecordedPipelineRun](interfaces/RecordedPipelineRun.md)
 
 ## Type Aliases
 
@@ -34,10 +31,6 @@
 - [UnregisterInput](type-aliases/UnregisterInput.md)
 - [ListServersInput](type-aliases/ListServersInput.md)
 - [AlertFindingType](type-aliases/AlertFindingType.md)
-- [RegisterAzurePipelineInput](type-aliases/RegisterAzurePipelineInput.md)
-- [CheckPipelineStatusInput](type-aliases/CheckPipelineStatusInput.md)
-- [RegisteredPipelineLogsInput](type-aliases/RegisteredPipelineLogsInput.md)
-- [CheckAllProjectsInput](type-aliases/CheckAllProjectsInput.md)
 
 ## Variables
 
@@ -55,7 +48,3 @@
 - [UnregisterSchema](variables/UnregisterSchema.md)
 - [ListServersSchema](variables/ListServersSchema.md)
 - [EmptySchema](variables/EmptySchema.md)
-- [RegisterAzurePipelineSchema](variables/RegisterAzurePipelineSchema.md)
-- [CheckPipelineStatusSchema](variables/CheckPipelineStatusSchema.md)
-- [RegisteredPipelineLogsSchema](variables/RegisteredPipelineLogsSchema.md)
-- [CheckAllProjectsSchema](variables/CheckAllProjectsSchema.md)

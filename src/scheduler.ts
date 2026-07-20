@@ -1,4 +1,5 @@
 import { getMaxConcurrency } from './config.js';
+import { mapWithConcurrency } from './concurrency.js';
 import { checkServer } from './checker.js';
 import { log } from './logging.js';
 import { listRegisteredServers, recordHealthCheck } from './registry.js';
@@ -57,7 +58,7 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
       return;
     }
 
-    await runWithConcurrency(dueServers, getMaxConcurrency(), async (server) => {
+    await mapWithConcurrency(dueServers, getMaxConcurrency(), async (server) => {
       try {
         const result = await schedulerRuntime.checkServer(server, timeoutMs, {
           allowStdio: schedulerAllowStdio
@@ -77,28 +78,6 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
   } finally {
     schedulerRunning = false;
   }
-}
-
-async function runWithConcurrency<T>(
-  items: T[],
-  maxConcurrency: number,
-  worker: (item: T) => Promise<void>
-): Promise<void> {
-  let nextIndex = 0;
-  const workerCount = Math.min(maxConcurrency, items.length);
-
-  await Promise.allSettled(
-    Array.from({ length: workerCount }, async () => {
-      while (nextIndex < items.length) {
-        const item = items[nextIndex];
-        nextIndex += 1;
-
-        if (item !== undefined) {
-          await worker(item);
-        }
-      }
-    })
-  );
 }
 
 export function startScheduler(

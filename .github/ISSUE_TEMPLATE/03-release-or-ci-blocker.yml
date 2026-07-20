@@ -62,7 +62,7 @@ body:
     attributes:
       label: Confirmation
       options:
-        - label: I removed secrets, tokens, PATs, cookies, and private keys from this report.
+        - label: I removed secrets, tokens, cookies, and private keys from this report.
           required: true
         - label: I agree to follow the repository Code of Conduct.
           required: true

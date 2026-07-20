@@ -124,6 +124,27 @@ describe('packaged MCP smoke tests', () => {
     expect(entries).toContain('package/mcp.json');
     expect(entries).toContain('package/server.json');
 
+    const mcpMetadata = JSON.parse(fs.readFileSync(path.join(repoRoot, 'mcp.json'), 'utf8')) as {
+      tools: string[];
+      env: Record<string, unknown>;
+      description: string;
+    };
+    const serverMetadata = fs.readFileSync(path.join(repoRoot, 'server.json'), 'utf8');
+    expect(mcpMetadata.tools).toEqual([
+      'register_server',
+      'check_server',
+      'check_all',
+      'get_uptime',
+      'get_dashboard',
+      'get_report',
+      'list_servers',
+      'unregister_server',
+      'set_alert',
+      'get_monitor_stats'
+    ]);
+    expect(JSON.stringify(mcpMetadata)).not.toMatch(/azure|pat_token|pipeline/i);
+    expect(serverMetadata).not.toMatch(/azure|pat_token|pipeline/i);
+
     const shebang = fs.readFileSync(path.join(repoRoot, 'dist', 'mcp.js'), 'utf8').split('\n')[0];
     expect(shebang).toBe('#!/usr/bin/env node');
   }, 60_000);

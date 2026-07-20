@@ -1,8 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { evaluateAlertState, setAlertConfig } from './alerts.js';
-import { getLatestRun, getPipelineLogs, listPipelines } from './azure-devops.js';
 import { checkServer } from './checker.js';
+import { getMaxConcurrency } from './config.js';
+import { mapWithConcurrency } from './concurrency.js';
 import { getDb, getResolvedDbPath } from './db.js';
 import {
   createRuntimePolicy,
@@ -12,52 +13,39 @@ import {
   type RuntimePolicyOptions
 } from './policy.js';
 import {
-  decodePatToken,
-  getAzurePipeline,
   getDashboardReport,
   getLatestHealthCheck,
   getServer,
   getUptimeHistory,
-  listAzurePipelineGroups,
-  listAzurePipelines,
   listServers,
   recordHealthCheck,
-  recordPipelineRun,
-  registerAzurePipelines,
   registerServer,
   unregisterServer
 } from './registry.js';
 import {
-  CheckAllProjectsSchema,
   CheckAllSchema,
-  CheckPipelineStatusSchema,
   CheckServerSchema,
   EmptySchema,
   GetDashboardSchema,
   GetReportSchema,
   GetUptimeSchema,
   ListServersSchema,
-  RegisterAzurePipelineSchema,
   RegisterServerSchema,
-  RegisteredPipelineLogsSchema,
   SetAlertSchema,
   UnregisterSchema
 } from './types.js';
+import { toolError } from './tool-errors.js';
 import { MONITOR_NAME, MONITOR_VERSION } from './version.js';
 import type {
   AlertEvaluation,
   CheckAllInput,
-  CheckAllProjectsInput,
-  CheckPipelineStatusInput,
   CheckResult,
   CheckServerInput,
   GetDashboardInput,
   GetReportInput,
   GetUptimeInput,
   ListServersInput,
-  RegisterAzurePipelineInput,
   RegisterServerInput,
-  RegisteredPipelineLogsInput,
   RegisteredServer,
   SetAlertInput,
   UnregisterInput
@@ -236,42 +224,11 @@ export function registerMonitoringTools(
   const policy = createRuntimePolicy(options);
 
   server.registerTool(
-    'register_azure_pipelines',
-    {
-      title: 'Register Azure DevOps Pipelines',
-      description: 'Register Azure DevOps pipelines to monitor for CI, publish, and mirror status.',
-      inputSchema: RegisterAzurePipelineSchema,
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        openWorldHint: true
-      }
-    },
-    async (input: RegisterAzurePipelineInput) => {
-      const available = await listPipelines(input.organization, input.project, input.pat_token);
-      const resolved: Array<{ name: string; id: number | null }> = input.pipeline_names.map(
-        (name: string) => ({
-          name,
-          id: available.find((pipeline) => pipeline.name === name)?.id ?? null
-        })
-      );
-
-      registerAzurePipelines(input, resolved);
-
-      return formatResponse({
-        registered: true,
-        group: input.name,
-        pipelines: resolved.map((pipeline) => pipeline.name),
-        resolved_ids: resolved
-      });
-    }
-  );
-
-  server.registerTool(
     'register_server',
     {
       title: 'Register MCP Server',
-      description: 'Register an MCP server to monitor. Supports http, sse, and stdio transports.',
+      description:
+        'Register an MCP server. Use http for a Streamable HTTP MCP endpoint, sse only for legacy Server-Sent Events servers, and stdio only for a local executable explicitly allowed by runtime policy.',
       inputSchema: RegisterServerSchema,
       annotations: {
         readOnlyHint: false,
@@ -282,97 +239,34 @@ export function registerMonitoringTools(
     async (input: RegisterServerInput) => {
       if (input.type === 'stdio') {
         if (!policy.allowStdio) {
-          throw new Error(STDIO_DISABLED_MESSAGE);
+          return formatResponse(
+            toolError(
+              'STDIO_DISABLED',
+              STDIO_DISABLED_MESSAGE,
+              'Set HEALTH_MONITOR_ALLOW_STDIO=1 only for trusted local execution, then retry registration.'
+            )
+          );
         }
 
-        validateStdioCommandPolicy(input.command);
+        try {
+          validateStdioCommandPolicy(input.command);
+        } catch (error) {
+          return formatResponse(
+            toolError(
+              'STDIO_COMMAND_REJECTED',
+              error instanceof Error
+                ? error.message
+                : 'stdio command was rejected by runtime policy',
+              'Use one executable without shell syntax and, when configured, add it to HEALTH_MONITOR_STDIO_ALLOWLIST.'
+            )
+          );
+        }
       }
 
       const result = registerServer(input);
       return formatResponse({
         ...result,
         message: `${input.name} registered. Run check_server to verify connectivity.`
-      });
-    }
-  );
-
-  server.registerTool(
-    'check_pipeline_status',
-    {
-      title: 'Check Azure Pipeline Status',
-      description:
-        'Get the latest run status of registered Azure DevOps pipelines for one group or all groups.',
-      inputSchema: CheckPipelineStatusSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true
-      }
-    },
-    async (input: CheckPipelineStatusInput) => {
-      const rows = listAzurePipelines(input.group_name);
-
-      if (!rows.length) {
-        return formatResponse({
-          message: 'No Azure pipelines registered. Use register_azure_pipelines first.'
-        });
-      }
-
-      const results = await Promise.allSettled(
-        rows.map(async (row) => {
-          if (!row.pipeline_id) {
-            return {
-              group: row.group_name,
-              pipeline: row.pipeline_name,
-              status: 'unknown',
-              error: 'Pipeline ID not resolved'
-            };
-          }
-
-          const run = await getLatestRun(
-            row.organization,
-            row.project,
-            row.pipeline_id,
-            decodePatToken(row.pat_token_encrypted)
-          );
-
-          if (!run) {
-            return {
-              group: row.group_name,
-              pipeline: row.pipeline_name,
-              status: 'unknown',
-              error: 'No recent builds found'
-            };
-          }
-
-          recordPipelineRun(row.group_name, row.pipeline_name, run);
-
-          return {
-            group: row.group_name,
-            pipeline: row.pipeline_name,
-            ...run
-          };
-        })
-      );
-
-      const statuses = results.map((result) =>
-        result.status === 'fulfilled'
-          ? result.value
-          : { status: 'unknown', error: String(result.reason) }
-      );
-      const statusValues = statuses.map((status) =>
-        typeof status === 'object' && status !== null && 'status' in status
-          ? status.status
-          : 'unknown'
-      );
-      const failed = statuses.filter((_, index) => statusValues[index] === 'failed');
-      const inProgress = statuses.filter((_, index) => statusValues[index] === 'inProgress');
-      const succeeded = statusValues.filter((status) => status === 'succeeded').length;
-
-      return formatResponse({
-        summary: `${succeeded} succeeded, ${failed.length} failed, ${inProgress.length} in progress`,
-        failed_pipelines: failed,
-        all: statuses
       });
     }
   );
@@ -393,7 +287,13 @@ export function registerMonitoringTools(
     async (input: CheckServerInput) => {
       const registered = getServer(input.name);
       if (!registered) {
-        throw new Error(`Server not registered: ${input.name}`);
+        return formatResponse(
+          toolError(
+            'SERVER_NOT_FOUND',
+            `Server is not registered: ${input.name}`,
+            'Run register_server first, then retry the operation.'
+          )
+        );
       }
 
       const result = await checkServerWithPolicy(registered, input.timeout_ms, policy);
@@ -416,7 +316,8 @@ export function registerMonitoringTools(
     'check_all',
     {
       title: 'Check All Servers',
-      description: 'Check health of all registered MCP servers in parallel.',
+      description:
+        'Check all registered MCP servers with bounded concurrency from HEALTH_MONITOR_MAX_CONCURRENCY. Results preserve registration order; optional tags filter the targets.',
       inputSchema: CheckAllSchema,
       annotations: {
         readOnlyHint: true,
@@ -426,39 +327,50 @@ export function registerMonitoringTools(
     },
     async (input: CheckAllInput) => {
       const servers = listServers({ tags: input.tags });
-      const results = await Promise.allSettled(
-        servers.map(async (listedServer) => {
-          const serverConfig = getServer(listedServer.name);
-          if (!serverConfig) {
-            return {
-              name: listedServer.name,
-              ...buildErrorResult(new Error(`Server not found: ${listedServer.name}`)),
-              alerts: {
-                has_alerts: false,
-                findings: []
-              }
-            };
-          }
+      if (servers.length === 0) {
+        return formatResponse(
+          toolError(
+            'NO_SERVERS_REGISTERED',
+            input.tags?.length
+              ? 'No registered servers match the requested tags.'
+              : 'No MCP servers are registered.',
+            'Run register_server first or adjust the tag filter, then retry check_all.'
+          )
+        );
+      }
 
-          try {
-            const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
-            recordHealthCheck(listedServer.name, result);
-            return {
-              name: listedServer.name,
-              ...result,
-              alerts: enrichWithAlerts(listedServer.name, result)
-            };
-          } catch (error) {
-            const result = buildErrorResult(error);
-            recordHealthCheck(listedServer.name, result);
-            return {
-              name: listedServer.name,
-              ...result,
-              alerts: enrichWithAlerts(listedServer.name, result)
-            };
-          }
-        })
-      );
+      const maxConcurrency = getMaxConcurrency();
+      const results = await mapWithConcurrency(servers, maxConcurrency, async (listedServer) => {
+        const serverConfig = getServer(listedServer.name);
+        if (!serverConfig) {
+          return {
+            name: listedServer.name,
+            ...buildErrorResult(new Error(`Server not found: ${listedServer.name}`)),
+            alerts: {
+              has_alerts: false,
+              findings: []
+            }
+          };
+        }
+
+        try {
+          const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
+          recordHealthCheck(listedServer.name, result);
+          return {
+            name: listedServer.name,
+            ...result,
+            alerts: enrichWithAlerts(listedServer.name, result)
+          };
+        } catch (error) {
+          const result = buildErrorResult(error);
+          recordHealthCheck(listedServer.name, result);
+          return {
+            name: listedServer.name,
+            ...result,
+            alerts: enrichWithAlerts(listedServer.name, result)
+          };
+        }
+      });
       const checks = results.map((result, index) =>
         result.status === 'fulfilled'
           ? result.value
@@ -476,64 +388,9 @@ export function registerMonitoringTools(
       return formatResponse({
         summary: `${upCount}/${checks.length} servers UP, ${checks.length - upCount} DOWN`,
         checked_at: new Date().toISOString(),
+        max_concurrency: maxConcurrency,
+        queued: Math.max(0, servers.length - maxConcurrency),
         results: checks
-      });
-    }
-  );
-
-  server.registerTool(
-    'get_pipeline_logs',
-    {
-      title: 'Get Pipeline Logs',
-      description:
-        'Fetch logs from a specific Azure DevOps build to investigate pipeline failures.',
-      inputSchema: RegisteredPipelineLogsSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true
-      }
-    },
-    async (input: RegisteredPipelineLogsInput) => {
-      const row = getAzurePipeline(input.group_name, input.pipeline_name);
-
-      if (!row) {
-        throw new Error(`Pipeline not registered: ${input.group_name}/${input.pipeline_name}`);
-      }
-
-      if (!row.pipeline_id) {
-        throw new Error(`Pipeline ID not resolved for ${input.group_name}/${input.pipeline_name}`);
-      }
-
-      const pat = decodePatToken(row.pat_token_encrypted);
-      let buildId = input.build_id;
-
-      if (!buildId) {
-        const latest = await getLatestRun(row.organization, row.project, row.pipeline_id, pat);
-        buildId = latest?.id;
-
-        if (latest) {
-          recordPipelineRun(row.group_name, row.pipeline_name, latest);
-        }
-      }
-
-      if (!buildId) {
-        throw new Error('No recent builds found');
-      }
-
-      const logs = await getPipelineLogs(
-        row.organization,
-        row.project,
-        buildId,
-        pat,
-        input.failed_only
-      );
-
-      return formatResponse({
-        group: input.group_name,
-        pipeline: input.pipeline_name,
-        build_id: buildId,
-        logs
       });
     }
   );
@@ -578,116 +435,6 @@ export function registerMonitoringTools(
         p50_response_time_ms: p50,
         p95_response_time_ms: p95,
         history: history.slice(-50)
-      });
-    }
-  );
-
-  server.registerTool(
-    'check_all_projects',
-    {
-      title: 'Check All Projects Health',
-      description:
-        'Check both MCP server health and Azure DevOps pipeline status across all registered projects.',
-      inputSchema: CheckAllProjectsSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true
-      }
-    },
-    async (input: CheckAllProjectsInput) => {
-      const servers = listServers({});
-      const pipelineGroups = listAzurePipelineGroups();
-
-      const [mcpResults, pipelineResults] = await Promise.all([
-        Promise.allSettled(
-          servers.map(async (listedServer) => {
-            const serverConfig = getServer(listedServer.name);
-            if (!serverConfig) {
-              return {
-                name: listedServer.name,
-                type: 'mcp_server',
-                ...buildErrorResult(new Error(`Server not found: ${listedServer.name}`))
-              };
-            }
-
-            const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
-            recordHealthCheck(listedServer.name, result);
-            return {
-              name: listedServer.name,
-              type: 'mcp_server',
-              ...result
-            };
-          })
-        ),
-        Promise.allSettled(
-          pipelineGroups.map(async (groupName) => {
-            const groupRows = listAzurePipelines(groupName);
-            const pipelines = await Promise.all(
-              groupRows.map(async (row) => {
-                if (!row.pipeline_id) {
-                  return {
-                    pipeline: row.pipeline_name,
-                    status: 'unknown'
-                  };
-                }
-
-                const run = await getLatestRun(
-                  row.organization,
-                  row.project,
-                  row.pipeline_id,
-                  decodePatToken(row.pat_token_encrypted)
-                );
-
-                if (!run) {
-                  return {
-                    pipeline: row.pipeline_name,
-                    status: 'unknown'
-                  };
-                }
-
-                recordPipelineRun(row.group_name, row.pipeline_name, run);
-                return {
-                  pipeline: row.pipeline_name,
-                  ...run
-                };
-              })
-            );
-
-            return {
-              group: groupName,
-              type: 'azure_pipeline',
-              pipelines
-            };
-          })
-        )
-      ]);
-
-      const mcp = mcpResults.map((result) =>
-        result.status === 'fulfilled' ? result.value : { error: String(result.reason) }
-      );
-      const pipelines = pipelineResults.map((result) =>
-        result.status === 'fulfilled' ? result.value : { error: String(result.reason) }
-      );
-      const mcpDown = mcp.filter(
-        (result) =>
-          typeof result === 'object' &&
-          result !== null &&
-          'status' in result &&
-          result.status !== 'up'
-      ).length;
-      const pipelineFailed = pipelines
-        .flatMap((group) =>
-          typeof group === 'object' && group !== null && 'pipelines' in group
-            ? ((group.pipelines as Array<Record<string, unknown>>) ?? [])
-            : []
-        )
-        .filter((pipeline) => pipeline.status === 'failed').length;
-
-      return formatResponse({
-        summary: `MCP: ${mcp.length - mcpDown}/${mcp.length} up | Pipelines: ${pipelineFailed} failed`,
-        mcp_servers: mcp,
-        azure_pipelines: pipelines
       });
     }
   );
@@ -850,7 +597,13 @@ export function registerMonitoringTools(
     },
     async (input: SetAlertInput) => {
       if (!getServer(input.name)) {
-        throw new Error(`Server not registered: ${input.name}`);
+        return formatResponse(
+          toolError(
+            'SERVER_NOT_FOUND',
+            `Server is not registered: ${input.name}`,
+            'Run register_server first, then retry set_alert.'
+          )
+        );
       }
 
       return formatResponse(setAlertConfig(input));

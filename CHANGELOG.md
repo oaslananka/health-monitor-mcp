@@ -6,6 +6,42 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-21
+
+### Removed
+
+- Removed Azure DevOps pipeline registration, status, log retrieval, and combined-project tools.
+- Removed Azure-specific CI templates, runtime configuration, package metadata, tests, PAT encryption code, and active documentation.
+- Added migration v4 to delete retired Azure pipeline registrations, credentials, indexes, and run history during upgrade.
+
+### Added
+
+- Added ordered bounded concurrency shared by scheduled checks and interactive `check_all` operations.
+- Added stable agent error envelopes with remediation for missing servers, empty registries, disabled stdio, and rejected stdio commands.
+- Added repository-local Node.js 24.18.0 and pnpm 11.0.9 runtime pins.
+- Added exact release-tag and commit verification for release assets, npm, GHCR, and MCP Registry publication.
+
+### Changed
+
+- Reduced the public MCP surface to ten focused server-health tools.
+- Updated package, plugin, agent runtime, skill, Docker, security, operations, architecture, and roadmap documentation for MCP-only monitoring.
+- `HEALTH_MONITOR_MAX_CONCURRENCY` now applies to both scheduled and interactive batch checks while preserving deterministic result order.
+- Raised the declared runtime floor to Node.js 24 and aligned CI/release jobs to Node.js 24.18.0.
+
+### Fixed
+
+- Prevented application logs from corrupting MCP stdio protocol output.
+- Bounded inbound HTTP request-body memory and read time, including early `413` and slow-body `408` responses.
+- Made PAT tampering regression coverage deterministic before removing the retired credential feature.
+- Hardened Renovate, pre-commit, Semgrep, Snyk, SonarQube Cloud, CodeQL, Socket, dependency review, and repository policy integration.
+- Made release publication verify one exact component tag and commit across every public artifact.
+
+### Security
+
+- Removed the retired provider credential surface instead of retaining unused PAT storage and fetch logic.
+- Kept local stdio disabled by default and returned actionable policy errors without exposing internal details.
+- Preserved bearer authentication, Origin policy, bounded HTTP bodies, SBOMs, provenance, and checksum verification.
+
 ## [1.0.0] - 2026-05-26
 
 ### Added

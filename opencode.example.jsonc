@@ -6,8 +6,7 @@
       "command": ["npx", "health-monitor-mcp"],
       "enabled": true,
       "environment": {
-        "HEALTH_MONITOR_TRANSPORT": "stdio"
-      },
+              },
       "timeout": 15000
     }
   },

@@ -19,14 +19,13 @@ You are a senior software engineer working on this repository.
 
 ## Repository Standards
 
-- Target runtime: Node `>=20`, pnpm `>=11`; CI and release use Node 24 LTS.
+- Target runtime: Node `>=24`, pnpm `>=11`; `.mise.toml`, CI, and release use Node 24.18.0.
 - Keep the approved dependency pins from `AGENTS.md` and `package.json` unless
   the user explicitly asks for a dependency strategy change.
 - Preserve the repo's strict TypeScript, ESM-first, and schema-first patterns.
 - Keep release metadata aligned across `package.json`, `mcp.json`,
   `server.json`, and `CHANGELOG.md`.
-- Azure DevOps PAT storage must remain encrypted unless explicit local insecure
-  mode is documented and enabled.
+- Keep HTTP bearer tokens and local database contents out of logs, fixtures, and reports.
 - Do not claim webhook tooling is shipped unless the public MCP surface
   actually exposes it.
 

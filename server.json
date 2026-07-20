@@ -2,17 +2,17 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.oaslananka/health-monitor-mcp",
   "title": "MCP Health Monitor",
-  "description": "Monitor MCP server health, uptime, response times, and Azure DevOps pipeline status",
+  "description": "Monitor MCP server health, uptime, response times, alerts, and operational reports",
   "repository": {
     "url": "https://github.com/oaslananka/health-monitor-mcp",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "health-monitor-mcp",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "transport": {
         "type": "stdio"
       },
@@ -32,13 +32,6 @@
           "isSecret": false
         },
         {
-          "name": "HEALTH_MONITOR_ENCRYPTION_KEY",
-          "description": "Key material used to encrypt Azure DevOps PAT tokens",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": true
-        },
-        {
           "name": "HEALTH_MONITOR_RETENTION_DAYS",
           "description": "Number of days to retain health check history",
           "isRequired": false,
@@ -47,7 +40,7 @@
         },
         {
           "name": "HEALTH_MONITOR_MAX_CONCURRENCY",
-          "description": "Maximum number of concurrent scheduled checks",
+          "description": "Maximum concurrent scheduled and interactive server checks",
           "isRequired": false,
           "format": "string",
           "isSecret": false

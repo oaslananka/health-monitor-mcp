@@ -1,69 +1,97 @@
 # Release
 
-Release automation uses release-please manifest mode. Versions are derived from Conventional
-Commits and synchronized through:
+The repository publishes one protected component tag and commit across GitHub Release assets, npm, GHCR, and the official MCP Registry.
+
+## Version Sources
+
+Release metadata must remain identical in:
 
 - `package.json`
+- `.release-please-manifest.json`
 - `mcp.json`
 - `server.json`
-- `.release-please-manifest.json`
+- `server.json` npm package entry
+- `.claude-plugin/plugin.json`
 - `CHANGELOG.md`
 
-Manual version inputs, manual tags, and local package publishing are not part of the release path.
-The first public npm package target is `health-monitor-mcp@1.0.0`; do not publish
-`mcp-health-monitor` or any `1.0.5` artifact as the first public registry release. Keep
-`mcp-health-monitor` only as a backwards-compatible CLI alias.
+Release Please uses manifest mode and creates tags such as `health-monitor-mcp-v1.1.0`. The action authenticates with `RELEASE_PLEASE_TOKEN`, not the default `GITHUB_TOKEN`, so a published GitHub Release can trigger downstream publication workflows.
 
-Release Please creates component-prefixed tags such as `health-monitor-mcp-v1.0.0`. The first
-generated release PR was pinned to `1.0.0`; do not keep a persistent `release-as` override after
-that tag exists. The release workflow also accepts `workflow_dispatch` inputs for `tag_name` and
-`version` so maintainers can rerun asset generation for an existing GitHub Release if a previous
-asset upload failed after the tag and release were already created.
+## Exact Ref Verification
 
-## Publish Gate
+Every publication checkout fetches tags and runs:
 
-Production npm publishing is guarded by `.github/workflows/publish-npm.yml`:
+```bash
+pnpm run release:verify-ref -- --tag health-monitor-mcp-v1.1.0
+```
 
-- canonical repository guard
-- `npm-production` environment approval
-- exact `APPROVE_RELEASE` workflow input
-- `pnpm run ci`
-- `scripts/release-state.mjs --require-tag` with `safe_to_publish=true`, which requires a clean
-  tracked worktree, an existing release tag for the package version, and an unpublished npm version
-- npm trusted publishing/provenance through GitHub OIDC
-- registry verification with `scripts/verify-npm-package.mjs`, which compares the published
-  `dist.integrity` value with a local `npm pack --dry-run` result and makes publish retries
-  idempotent once the exact version is visible on npm
+`scripts/verify-release-ref.mjs` rejects publication unless:
 
-Release artifacts include:
+1. package, MCP, server, npm package, and manifest versions match;
+2. package and MCP identities match;
+3. the supplied tag is exactly `health-monitor-mcp-v${version}`;
+4. the tag exists;
+5. the tag commit is exactly `HEAD`.
 
-- npm tarball
-- `SHA256SUMS`
-- `pack.json`
-- CycloneDX and SPDX SBOMs
+## Publication Sequence
 
-The first public GitHub Release must include `health-monitor-mcp-1.0.0.tgz`, `SHA256SUMS`,
-`pack.json`, and SBOM assets.
+1. Merge the reviewed release PR to protected `main`.
+2. Release Please creates the component tag and GitHub Release. A maintainer may create the same exact tag/release manually only as a recovery action.
+3. `Release` checks out the tag, verifies it, runs release checks, builds the tarball, generates SBOMs and checksums, attests provenance, uploads assets, downloads them again, and verifies the checksum.
+4. `Publish GHCR Image` checks out and verifies the release tag, then publishes SBOM and provenance-enabled image tags.
+5. `Publish npm` starts from `release.published`, waits for `npm-production` environment approval, checks out and verifies the release tag, runs the full CI gate, publishes with GitHub OIDC provenance, and verifies registry integrity.
+6. `Publish npm` calls the reusable `Publish MCP Registry` workflow only after npm publication succeeds. The called workflow checks out and verifies the exact component tag, confirms the npm version is visible, signs in through GitHub OIDC, and publishes `server.json`.
 
-The release workflow downloads the uploaded assets back from GitHub and verifies the tarball
-checksum before uploading the same evidence directory as a workflow artifact.
+Manual `workflow_dispatch` inputs remain available for idempotent recovery. They must reference an existing component tag and pass the same exact-ref verification.
 
-Configure the npm trusted publisher for package `health-monitor-mcp` with:
+## npm Production Gate
+
+The npm workflow requires:
+
+- canonical repository guard;
+- `npm-production` environment approval;
+- release event or exact `APPROVE_RELEASE` recovery input;
+- clean tagged checkout;
+- `pnpm run ci`;
+- `scripts/release-state.mjs --require-tag`;
+- npm trusted publishing and provenance;
+- `scripts/verify-npm-package.mjs` integrity comparison.
+
+If the exact version already exists, publication is skipped only when registry verification succeeds.
+
+Configure npm trusted publishing with:
 
 - Repository: `oaslananka/health-monitor-mcp`
 - Workflow: `.github/workflows/publish-npm.yml`
 - Environment: `npm-production`
 - Allowed action: `npm publish`
 
-No Docker/GHCR, MCP Registry, marketplace, Cloudflare, or external connector publish is
-configured in this repository.
+## Release Evidence
 
-## Verified npm And Release Settings
+The GitHub Release must contain:
 
-Last verified: 2026-06-25.
+- `health-monitor-mcp-<version>.tgz`
+- `SHA256SUMS`
+- `pack.json`
+- `sbom.cyclonedx.json`
+- `sbom.spdx.json`
 
-- `publish-npm.yml` grants `id-token: write` and publishes only from the guarded `npm-production` environment.
-- npm publish uses `npm publish --access public --provenance` and falls back to package verification if the package already exists.
-- `release.yml` grants `id-token: write` and `attestations: write` for release asset provenance.
-- Published npm package `health-monitor-mcp@1.0.0` exists with registry integrity metadata.
-- `scripts/release-state.mjs --dry-run` reports npm, MCP registry, and GitHub release surfaces present; GHCR remains intentionally tracked separately.
+GitHub artifact attestations cover the tarball. GHCR builds request native SBOM and provenance generation. npm publishes with `--provenance`.
+
+## v1.1.0 Verification
+
+```bash
+gh release view health-monitor-mcp-v1.1.0
+npm view health-monitor-mcp@1.1.0 version dist.integrity --json
+node scripts/verify-npm-package.mjs
+gh api repos/oaslananka/health-monitor-mcp/git/ref/tags/health-monitor-mcp-v1.1.0
+```
+
+Also verify:
+
+- the GitHub Release target commit equals the tag commit;
+- the GHCR `1.1.0` digest was built from that commit;
+- the MCP Registry reports `io.github.oaslananka/health-monitor-mcp@1.1.0`;
+- release checksums and SBOM files download and validate;
+- no stale `release-please--*` branch remains after completion.
+
+Local publication is not supported. Use GitHub workflows for all public artifacts.

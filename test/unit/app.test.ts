@@ -1,10 +1,6 @@
 process.env.HEALTH_MONITOR_DB = ':memory:';
 
 import { createMonitorServer, registerMonitoringTools } from '../../src/app.js';
-import {
-  resetAzureDevopsFetchForTests,
-  setAzureDevopsFetchForTests
-} from '../../src/azure-devops.js';
 import { resetCheckerRuntimeForTests, setCheckerRuntimeForTests } from '../../src/checker.js';
 import { getDb, resetDbForTests } from '../../src/db.js';
 import { registerServer as registerServerRecord } from '../../src/registry.js';
@@ -56,59 +52,41 @@ function parseJson(response: ToolResponse): Record<string, unknown> {
   return JSON.parse(response.content[0]?.text ?? '{}') as Record<string, unknown>;
 }
 
-function createAzureResponse(payload: unknown): Response {
-  return {
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    json: async () => payload,
-    text: async () => (typeof payload === 'string' ? payload : JSON.stringify(payload))
-  } as Response;
-}
-
 describe('app tool registration', () => {
   beforeEach(() => {
-    process.env.HEALTH_MONITOR_ENCRYPTION_KEY =
-      'test-key-material-that-is-at-least-32-characters-long';
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
+    delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
     resetDbForTests();
-    resetAzureDevopsFetchForTests();
     resetCheckerRuntimeForTests();
   });
 
   afterAll(() => {
     resetDbForTests();
-    resetAzureDevopsFetchForTests();
     resetCheckerRuntimeForTests();
     delete process.env.HEALTH_MONITOR_DB;
-    delete process.env.HEALTH_MONITOR_ENCRYPTION_KEY;
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
+    delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
   });
 
-  it('registers all monitoring tools including Azure pipeline tooling', async () => {
+  it('registers only the supported MCP health monitoring tools', async () => {
     const tools = createToolMap();
-    const names = [...tools.keys()];
+    const names = [...tools.keys()].sort();
 
-    expect(names).toEqual(
-      expect.arrayContaining([
-        'register_azure_pipelines',
-        'register_server',
-        'check_pipeline_status',
-        'check_server',
-        'check_all',
-        'get_pipeline_logs',
-        'check_all_projects',
-        'get_uptime',
-        'get_dashboard',
-        'get_report',
-        'list_servers',
-        'unregister_server',
-        'get_monitor_stats',
-        'set_alert'
-      ])
-    );
+    expect(names).toEqual([
+      'check_all',
+      'check_server',
+      'get_dashboard',
+      'get_monitor_stats',
+      'get_report',
+      'get_uptime',
+      'list_servers',
+      'register_server',
+      'set_alert',
+      'unregister_server'
+    ]);
+    expect(names.some((name) => name.includes('azure') || name.includes('pipeline'))).toBe(false);
 
     const setAlert = getTool(tools, 'set_alert');
 
@@ -152,14 +130,13 @@ describe('app tool registration', () => {
     const unregisterServer = getTool(tools, 'unregister_server');
     const getMonitorStats = getTool(tools, 'get_monitor_stats');
     const setAlert = getTool(tools, 'set_alert');
-    const checkPipelineStatus = getTool(tools, 'check_pipeline_status');
 
     const emptyReport = await getReport.handler({ hours: 24 });
     const emptyDashboard = parseJson(
       await getDashboard.handler({ hours: 24, include_tool_stats: true })
     );
     const emptyMonitorStats = parseJson(await getMonitorStats.handler({}));
-    const emptyPipelineStatus = parseJson(await checkPipelineStatus.handler({}));
+    const emptyCheckAll = parseJson(await checkAll.handler({ timeout_ms: 5_000 }));
 
     expect(emptyReport.content[0]?.text).toContain('| -- | -- | -- | -- | -- | -- | -- |');
     expect(emptyDashboard).toEqual(
@@ -180,9 +157,13 @@ describe('app tool registration', () => {
         monitoring_since: null
       })
     );
-    expect(emptyPipelineStatus).toEqual(
+    expect(emptyCheckAll).toEqual(
       expect.objectContaining({
-        message: 'No Azure pipelines registered. Use register_azure_pipelines first.'
+        ok: false,
+        error: expect.objectContaining({
+          code: 'NO_SERVERS_REGISTERED',
+          remediation: expect.stringContaining('register_server')
+        })
       })
     );
 
@@ -357,11 +338,30 @@ describe('app tool registration', () => {
     );
     expect(removal).toEqual(expect.objectContaining({ unregistered: true, name: 'alpha' }));
 
-    await expect(setAlert.handler({ name: 'alpha', max_response_time_ms: 100 })).rejects.toThrow(
-      'Server not registered: alpha'
+    const missingAlert = parseJson(
+      await setAlert.handler({ name: 'alpha', max_response_time_ms: 100 })
     );
-    await expect(checkServer.handler({ name: 'missing', timeout_ms: 1000 })).rejects.toThrow(
-      'Server not registered: missing'
+    const missingCheck = parseJson(
+      await checkServer.handler({ name: 'missing', timeout_ms: 1000 })
+    );
+
+    expect(missingAlert).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'SERVER_NOT_FOUND',
+          remediation: expect.stringContaining('register_server')
+        })
+      })
+    );
+    expect(missingCheck).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'SERVER_NOT_FOUND',
+          remediation: expect.stringContaining('register_server')
+        })
+      })
     );
   });
 
@@ -370,8 +370,8 @@ describe('app tool registration', () => {
     const registerServer = getTool(tools, 'register_server');
     const checkServer = getTool(tools, 'check_server');
 
-    await expect(
-      registerServer.handler({
+    const disabledRegistration = parseJson(
+      await registerServer.handler({
         name: 'local-process',
         type: 'stdio',
         command: 'node',
@@ -380,7 +380,17 @@ describe('app tool registration', () => {
         alert_on_down: true,
         check_interval_minutes: 5
       })
-    ).rejects.toThrow('stdio transport is disabled');
+    );
+
+    expect(disabledRegistration).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'STDIO_DISABLED',
+          remediation: expect.stringContaining('HEALTH_MONITOR_ALLOW_STDIO=1')
+        })
+      })
+    );
 
     registerServerRecord({
       name: 'existing-local-process',
@@ -409,8 +419,8 @@ describe('app tool registration', () => {
     const tools = createToolMap();
     const registerServer = getTool(tools, 'register_server');
 
-    await expect(
-      registerServer.handler({
+    const result = parseJson(
+      await registerServer.handler({
         name: 'default-local-process',
         type: 'stdio',
         command: 'node',
@@ -419,7 +429,14 @@ describe('app tool registration', () => {
         alert_on_down: true,
         check_interval_minutes: 5
       })
-    ).rejects.toThrow('stdio transport is disabled');
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ code: 'STDIO_DISABLED' })
+      })
+    );
   });
 
   it('enforces stdio command allowlists during registration', async () => {
@@ -427,8 +444,8 @@ describe('app tool registration', () => {
     const tools = createToolMap({ allowStdio: true });
     const registerServer = getTool(tools, 'register_server');
 
-    await expect(
-      registerServer.handler({
+    const rejected = parseJson(
+      await registerServer.handler({
         name: 'blocked-local-process',
         type: 'stdio',
         command: 'python',
@@ -437,7 +454,17 @@ describe('app tool registration', () => {
         alert_on_down: true,
         check_interval_minutes: 5
       })
-    ).rejects.toThrow('stdio command is not allowed');
+    );
+
+    expect(rejected).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'STDIO_COMMAND_REJECTED',
+          remediation: expect.stringContaining('HEALTH_MONITOR_STDIO_ALLOWLIST')
+        })
+      })
+    );
 
     const response = parseJson(
       await registerServer.handler({
@@ -456,181 +483,50 @@ describe('app tool registration', () => {
     );
   });
 
-  it('registers Azure pipelines, returns statuses, fetches logs, and checks all projects', async () => {
+  it('bounds interactive check_all concurrency and preserves server order', async () => {
+    process.env.HEALTH_MONITOR_MAX_CONCURRENCY = '1';
     const tools = createToolMap();
-    const registerAzure = getTool(tools, 'register_azure_pipelines');
-    const checkPipelineStatus = getTool(tools, 'check_pipeline_status');
-    const getPipelineLogs = getTool(tools, 'get_pipeline_logs');
-    const checkAllProjects = getTool(tools, 'check_all_projects');
     const registerServer = getTool(tools, 'register_server');
+    const checkAll = getTool(tools, 'check_all');
+    let active = 0;
+    let maxActive = 0;
 
     setCheckerRuntimeForTests({
       createClient: () => ({
-        connect: async () => undefined,
+        connect: async () => {
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          active -= 1;
+        },
         listTools: async () => ({ tools: [{ name: 'health' }] }),
         close: async () => undefined
       }),
       createStreamableTransport: (url: URL) => ({ kind: 'streamable', url }) as never,
       createSseTransport: (url: URL) => ({ kind: 'sse', url }) as never,
       fetchImpl: (async () =>
-        ({
-          ok: true,
-          status: 200,
-          statusText: 'OK'
-        }) as Response) as unknown as typeof fetch
+        ({ ok: true, status: 200, statusText: 'OK' }) as Response) as typeof fetch
     });
 
-    setAzureDevopsFetchForTests((async (url: string | URL) => {
-      const value = String(url);
+    for (const name of ['first', 'second', 'third']) {
+      await registerServer.handler({
+        name,
+        type: 'http',
+        url: `https://${name}.example/mcp`,
+        tags: [],
+        alert_on_down: true,
+        check_interval_minutes: 5,
+        args: []
+      });
+    }
 
-      if (value.includes('/_apis/pipelines')) {
-        return createAzureResponse({
-          value: [
-            { id: 7, name: 'known' },
-            { id: 8, name: 'empty-build' }
-          ]
-        });
-      }
+    const result = parseJson(await checkAll.handler({ timeout_ms: 5_000 }));
+    const checks = result.results as Array<{ name: string }>;
 
-      if (value.includes('/_apis/build/builds?definitions=7')) {
-        return createAzureResponse({
-          value: [
-            {
-              id: 91,
-              status: 'completed',
-              result: 'failed',
-              buildNumber: '20260407.1',
-              sourceBranch: 'refs/heads/main',
-              startTime: '2026-04-07T10:00:00.000Z',
-              finishTime: '2026-04-07T10:01:00.000Z',
-              requestedFor: { displayName: 'CI Bot' },
-              definition: { name: 'known' }
-            }
-          ]
-        });
-      }
-
-      if (value.includes('/_apis/build/builds?definitions=8')) {
-        return createAzureResponse({ value: [] });
-      }
-
-      if (value.includes('/timeline?')) {
-        return createAzureResponse({
-          records: [
-            {
-              name: 'Build',
-              result: 'failed',
-              log: {
-                url: 'https://dev.azure.com/oaslananka/open-source/_apis/build/builds/91/logs/7'
-              }
-            }
-          ]
-        });
-      }
-
-      if (value === 'https://dev.azure.com/oaslananka/open-source/_apis/build/builds/91/logs/7') {
-        return createAzureResponse('line-1\nline-2\nline-3');
-      }
-
-      throw new Error(`Unexpected URL: ${value}`);
-    }) as typeof fetch);
-
-    await registerServer.handler({
-      name: 'portfolio-server',
-      type: 'http',
-      url: 'https://portfolio.example/mcp',
-      tags: ['portfolio'],
-      alert_on_down: true,
-      check_interval_minutes: 5,
-      args: []
-    });
-
-    await registerAzure.handler({
-      name: 'health-monitor-mcp',
-      organization: 'oaslananka',
-      project: 'open-source',
-      pipeline_names: ['known', 'empty-build', 'missing'],
-      pat_token: 'secret'
-    });
-
-    const pipelineStatus = parseJson(await checkPipelineStatus.handler({}));
-    const logs = parseJson(
-      await getPipelineLogs.handler({
-        group_name: 'health-monitor-mcp',
-        pipeline_name: 'known',
-        failed_only: true
-      })
-    );
-    const allProjects = parseJson(await checkAllProjects.handler({ timeout_ms: 5_000 }));
-
-    expect(pipelineStatus).toEqual(
-      expect.objectContaining({
-        summary: '0 succeeded, 1 failed, 0 in progress',
-        all: expect.arrayContaining([
-          expect.objectContaining({
-            pipeline: 'known',
-            status: 'failed',
-            id: 91
-          }),
-          expect.objectContaining({
-            pipeline: 'empty-build',
-            status: 'unknown',
-            error: 'No recent builds found'
-          }),
-          expect.objectContaining({
-            pipeline: 'missing',
-            status: 'unknown',
-            error: 'Pipeline ID not resolved'
-          })
-        ])
-      })
-    );
-    expect(logs).toEqual(
-      expect.objectContaining({
-        group: 'health-monitor-mcp',
-        pipeline: 'known',
-        build_id: 91,
-        logs: expect.stringContaining('=== Build (failed) ===')
-      })
-    );
-    expect(allProjects).toEqual(
-      expect.objectContaining({
-        summary: 'MCP: 1/1 up | Pipelines: 1 failed',
-        mcp_servers: [expect.objectContaining({ name: 'portfolio-server', status: 'up' })],
-        azure_pipelines: [
-          expect.objectContaining({
-            group: 'health-monitor-mcp',
-            pipelines: expect.arrayContaining([
-              expect.objectContaining({ pipeline: 'known', status: 'failed' }),
-              expect.objectContaining({ pipeline: 'empty-build', status: 'unknown' }),
-              expect.objectContaining({ pipeline: 'missing', status: 'unknown' })
-            ])
-          })
-        ]
-      })
-    );
-
-    await expect(
-      getPipelineLogs.handler({
-        group_name: 'unknown-group',
-        pipeline_name: 'known',
-        failed_only: true
-      })
-    ).rejects.toThrow('Pipeline not registered: unknown-group/known');
-    await expect(
-      getPipelineLogs.handler({
-        group_name: 'health-monitor-mcp',
-        pipeline_name: 'empty-build',
-        failed_only: true
-      })
-    ).rejects.toThrow('No recent builds found');
-    await expect(
-      getPipelineLogs.handler({
-        group_name: 'health-monitor-mcp',
-        pipeline_name: 'missing',
-        failed_only: true
-      })
-    ).rejects.toThrow('Pipeline ID not resolved for health-monitor-mcp/missing');
+    expect(maxActive).toBe(1);
+    expect(result.max_concurrency).toBe(1);
+    expect(result.queued).toBe(2);
+    expect(checks.map((check) => check.name)).toEqual(['first', 'second', 'third']);
   });
 
   it('creates an MCP server instance with versioned metadata', async () => {
