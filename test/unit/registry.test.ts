@@ -217,7 +217,20 @@ describe('registry', () => {
 
     process.env.HEALTH_MONITOR_ENCRYPTION_KEY =
       'test-key-material-that-is-at-least-32-characters-long';
-    expect(() => decodePatToken(`${encrypted.slice(0, -2)}aa`)).toThrow(
+
+    const encryptedParts = encrypted.split(':');
+    const ciphertextRaw = encryptedParts.at(-1);
+    const ciphertext = Buffer.from(ciphertextRaw ?? '', 'base64url');
+    const firstCiphertextByte = ciphertext.at(0);
+
+    if (firstCiphertextByte === undefined) {
+      throw new Error('Expected encrypted PAT ciphertext');
+    }
+
+    ciphertext[0] = firstCiphertextByte ^ 0x01;
+    encryptedParts[encryptedParts.length - 1] = ciphertext.toString('base64url');
+
+    expect(() => decodePatToken(encryptedParts.join(':'))).toThrow(
       'Unable to decrypt Azure DevOps PAT'
     );
   });
