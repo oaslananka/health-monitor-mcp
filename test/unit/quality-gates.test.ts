@@ -163,6 +163,37 @@ describe('quality gate regression checks', () => {
     expect(packageJson.scripts['precommit:run']).toContain('pre-commit run');
   });
 
+  it('orchestrates public release surfaces from one exact component tag', () => {
+    const packageJson = readProjectJson<PackageJson>('package.json');
+    const releaseWorkflow = readProjectText('.github/workflows/release.yml');
+    const npmWorkflow = readProjectText('.github/workflows/publish-npm.yml');
+    const ghcrWorkflow = readProjectText('.github/workflows/publish-ghcr.yml');
+    const registryWorkflow = readProjectText('.github/workflows/publish-mcp-registry.yml');
+
+    expect(releaseWorkflow).toContain('token: ${{ secrets.RELEASE_PLEASE_TOKEN }}');
+    expect(releaseWorkflow).toContain('pnpm run release:verify-ref');
+
+    expect(npmWorkflow).toContain('release:');
+    expect(npmWorkflow).toContain('types: [published]');
+    expect(npmWorkflow).toContain("github.event_name == 'release'");
+    expect(npmWorkflow).toContain('github.event.release.tag_name');
+    expect(npmWorkflow).toContain('environment: npm-production');
+    expect(npmWorkflow).toContain('pnpm run release:verify-ref');
+
+    expect(ghcrWorkflow).toContain('pnpm run release:verify-ref');
+
+    expect(registryWorkflow).toContain('workflow_run:');
+    expect(registryWorkflow).toContain('workflows: [Publish npm]');
+    expect(registryWorkflow).toContain("github.event.workflow_run.conclusion == 'success'");
+    expect(registryWorkflow).toContain("github.event.workflow_run.event == 'release'");
+    expect(registryWorkflow).toContain('github.event.workflow_run.head_sha');
+    expect(registryWorkflow).toContain('pnpm run release:verify-ref');
+    expect(registryWorkflow).not.toContain(`release:
+    types: [published]`);
+
+    expect(packageJson.scripts['release:verify-ref']).toContain('verify-release-ref.mjs');
+  });
+
   it('keeps npm publish retries idempotent and registry-verified', () => {
     const publishWorkflow = readProjectText('.github/workflows/publish-npm.yml');
     const verifyScript = readProjectText('scripts/verify-npm-package.mjs');
