@@ -210,4 +210,38 @@ describe('quality gate regression checks', () => {
     expect(verifyScript).toContain("npm', ['pack', '--json', '--dry-run']");
     expect(verifyScript).toContain("'dist.integrity'");
   });
+
+  it('publishes coverage and test analytics without replacing local coverage gates', () => {
+    const packageJson = readProjectJson<PackageJson>('package.json');
+    const ciWorkflow = readProjectText('.github/workflows/ci.yml');
+    const codecovConfig = readProjectText('codecov.yml');
+    const gitignore = readProjectText('.gitignore');
+
+    expect(packageJson.scripts['ci:static']).toContain('pnpm run docs:api:check');
+    expect(packageJson.scripts['test:ci']).toContain('--coverage');
+    expect(packageJson.scripts['test:ci']).toContain('--reporters=default');
+    expect(packageJson.scripts['test:ci']).toContain('--reporters=jest-junit');
+    expect(packageJson.scripts['ci:check']).toContain('pnpm run ci:static');
+    expect(packageJson.scripts['ci:check']).toContain('pnpm run test:ci');
+
+    expect(ciWorkflow).toContain('codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f');
+    expect(ciWorkflow).toContain(
+      'codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3'
+    );
+    expect(ciWorkflow.match(/if: \$\{\{ !cancelled\(\) \}\}/g)).toHaveLength(2);
+    expect(ciWorkflow).toContain('files: ./coverage/lcov.info');
+    expect(ciWorkflow).toContain('file: ./reports/junit/junit.xml');
+    expect(ciWorkflow).toContain('token: ${{ secrets.CODECOV_TOKEN }}');
+    expect(ciWorkflow).toContain('disable_search: true');
+    expect(ciWorkflow).toContain('fail_ci_if_error: false');
+    expect(ciWorkflow).not.toContain('id-token: write');
+
+    expect(codecovConfig).toContain('target: auto');
+    expect(codecovConfig).toContain('target: 80%');
+    expect(codecovConfig.match(/informational: true/g)).toHaveLength(2);
+    expect(codecovConfig).toContain('layout: "diff, flags, files"');
+    expect(codecovConfig).toContain('unit-integration:');
+    expect(codecovConfig).not.toContain('bundle_analysis:');
+    expect(gitignore).toContain('reports/');
+  });
 });
