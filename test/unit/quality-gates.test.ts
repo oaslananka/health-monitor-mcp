@@ -97,6 +97,7 @@ describe('quality gate regression checks', () => {
     const packageJson = readProjectJson<PackageJson>('package.json');
     const renovateConfig = readProjectJson<RenovateConfig>('renovate.json');
     const preCommitConfig = readProjectText('.pre-commit-config.yaml');
+    const ciWorkflow = readProjectText('.github/workflows/ci.yml');
     const semgrepWorkflow = readProjectText('.github/workflows/semgrep.yml');
     const semgrepRules = readProjectText('.semgrep.yml');
     const sonarConfig = readProjectText('.sonarcloud.properties');
@@ -130,6 +131,8 @@ describe('quality gate regression checks', () => {
     expect(preCommitConfig).toContain('sonar-secrets');
     expect(preCommitConfig).toContain('stages: [pre-push]');
 
+    expect(ciWorkflow).toContain('docker run --rm --volume "$PWD:/workspace:ro"');
+    expect(ciWorkflow).toContain('renovate/renovate:43.272.4@sha256:');
     expect(semgrepWorkflow).toContain('semgrep ci');
     expect(semgrepWorkflow).toContain('SEMGREP_APP_TOKEN');
     expect(semgrepWorkflow).toContain('semgrep/semgrep:1.170.0@sha256:');
