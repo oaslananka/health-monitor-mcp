@@ -261,8 +261,11 @@ describe('quality gate regression checks', () => {
     expect(ciWorkflow).toContain('exit-code: 1');
     expect(ciWorkflow).toContain('format: sarif');
     expect(ciWorkflow).toContain('output: trivy-results.sarif');
-    expect(ciWorkflow).toContain('if: always()');
+    expect(ciWorkflow).toContain("if: ${{ always() && hashFiles('trivy-results.sarif') != '' }}");
     expect(ciWorkflow).toContain('sarif_file: trivy-results.sarif');
+    expect(ciWorkflow).toMatch(
+      /docker:[\s\S]*?permissions:[\s\S]*?contents: read[\s\S]*?security-events: write/
+    );
     expect(ciWorkflow).not.toContain('scanners: vuln,secret');
     expect(ciWorkflow).not.toContain('merge_group:');
 
