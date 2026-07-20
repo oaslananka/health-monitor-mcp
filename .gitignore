@@ -16,3 +16,6 @@ review-thread-summary.json
 release-state.json
 security-evidence/
 scorecard.sarif
+
+# Local isolated development worktrees
+.worktrees/
