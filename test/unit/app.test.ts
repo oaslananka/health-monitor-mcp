@@ -87,28 +87,23 @@ describe('app tool registration', () => {
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
   });
 
-  it('registers all monitoring tools including Azure pipeline tooling', async () => {
+  it('registers only the supported MCP health monitoring tools', async () => {
     const tools = createToolMap();
-    const names = [...tools.keys()];
+    const names = [...tools.keys()].sort();
 
-    expect(names).toEqual(
-      expect.arrayContaining([
-        'register_azure_pipelines',
-        'register_server',
-        'check_pipeline_status',
-        'check_server',
-        'check_all',
-        'get_pipeline_logs',
-        'check_all_projects',
-        'get_uptime',
-        'get_dashboard',
-        'get_report',
-        'list_servers',
-        'unregister_server',
-        'get_monitor_stats',
-        'set_alert'
-      ])
-    );
+    expect(names).toEqual([
+      'check_all',
+      'check_server',
+      'get_dashboard',
+      'get_monitor_stats',
+      'get_report',
+      'get_uptime',
+      'list_servers',
+      'register_server',
+      'set_alert',
+      'unregister_server'
+    ]);
+    expect(names.some((name) => name.includes('azure') || name.includes('pipeline'))).toBe(false);
 
     const setAlert = getTool(tools, 'set_alert');
 

@@ -18,15 +18,16 @@ describe('migrations', () => {
     expect(migrations).toEqual([
       { version: 1, description: 'initial schema' },
       { version: 2, description: 'add response time analytics support' },
-      { version: 3, description: 'dedupe pipeline runs by stable build key' }
+      { version: 3, description: 'dedupe pipeline runs by stable build key' },
+      { version: 4, description: 'remove retired Azure DevOps monitoring data' }
     ]);
     expect(columns.map((column) => column.name)).toContain('response_time_updated_at');
-    expect(
-      db
-        .prepare("PRAGMA index_list('pipeline_runs')")
-        .all()
-        .some((index) => (index as { name: string }).name === 'idx_pipeline_runs_stable_key')
-    ).toBe(true);
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      .all() as Array<{ name: string }>;
+    expect(tables.map((row) => row.name)).not.toEqual(
+      expect.arrayContaining(['azure_pipelines', 'pipeline_runs'])
+    );
   });
 
   it('is idempotent when rerun on the same database', () => {
@@ -41,6 +42,25 @@ describe('migrations', () => {
       }
     ).count;
 
-    expect(count).toBe(3);
+    expect(count).toBe(4);
+  });
+
+  it('removes retired Azure tables during an upgrade while preserving monitor data', () => {
+    const db = getDb();
+    db.exec(`
+      DELETE FROM schema_migrations WHERE version = 4;
+    `);
+
+    runMigrations(db);
+
+    const tables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      .all() as Array<{ name: string }>;
+    expect(tables.map((row) => row.name)).not.toEqual(
+      expect.arrayContaining(['azure_pipelines', 'pipeline_runs'])
+    );
+    expect(tables.map((row) => row.name)).toEqual(
+      expect.arrayContaining(['servers', 'health_checks', 'alerts'])
+    );
   });
 });
