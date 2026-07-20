@@ -47,7 +47,7 @@ describe('quality gate regression checks', () => {
     const coverageThreshold = jestConfig.coverageThreshold?.global;
 
     expect(packageJson.scripts['test:coverage']).toContain('--coverage');
-    expect(packageJson.scripts['ci:check']).toContain('pnpm run test:coverage');
+    expect(packageJson.scripts['ci:check']).toContain('pnpm run test:ci');
     expect(jestConfig.collectCoverageFrom).toEqual(expect.arrayContaining(['src/**/*.ts']));
     expect(coverageThreshold).toEqual(
       expect.objectContaining({
