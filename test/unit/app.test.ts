@@ -520,13 +520,15 @@ describe('app tool registration', () => {
             {
               name: 'Build',
               result: 'failed',
-              log: { url: 'https://logs.example/build-step' }
+              log: {
+                url: 'https://dev.azure.com/oaslananka/open-source/_apis/build/builds/91/logs/7'
+              }
             }
           ]
         });
       }
 
-      if (value === 'https://logs.example/build-step') {
+      if (value === 'https://dev.azure.com/oaslananka/open-source/_apis/build/builds/91/logs/7') {
         return createAzureResponse('line-1\nline-2\nline-3');
       }
 
