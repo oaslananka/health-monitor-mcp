@@ -1,7 +1,7 @@
 # Remove Azure DevOps and Consolidate the v1.1.0 Maintenance Release
 
-**Date:** 2026-07-21  
-**Issues:** #39, #51, #53, #77, #78  
+**Date:** 2026-07-21
+**Issues:** #39, #51, #53, #77, #78
 **Release target:** 1.1.0
 
 ## Decision
