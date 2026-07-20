@@ -22,7 +22,9 @@ outside the repository. The monitor never prints decrypted PAT values.
 
 - `HEALTH_MONITOR_RETENTION_DAYS` defaults to `30`.
 - `HEALTH_MONITOR_MAX_CONCURRENCY` defaults to `5`.
-- `HEALTH_MONITOR_HTTP_TIMEOUT_MS` defaults to `10000`.
+- `HEALTH_MONITOR_HTTP_TIMEOUT_MS` defaults to `10000` for outbound MCP checks.
+- `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES` defaults to `1048576` for inbound `POST /mcp` bodies.
+- `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS` defaults to `15000` for reading an inbound body.
 - `HEALTH_MONITOR_AZURE_TIMEOUT_MS` defaults to `10000`.
 - `HEALTH_MONITOR_WEBHOOK_TIMEOUT_MS` defaults to `5000`.
 - `HEALTH_MONITOR_HTTP_SESSION_TTL_MS` defaults to `1800000` when stateful HTTP sessions are enabled.
@@ -94,3 +96,9 @@ HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://chat.example.com,https://ops.exampl
 not supported and returns `405 Method Not Allowed` with `Allow: POST`. Reverse proxies should
 preserve `Origin`, `Accept`, and `Authorization` headers and terminate TLS before forwarding to the
 loopback-bound service whenever possible.
+
+Set the reverse proxy request-body limit to the same value as, or lower than,
+`HEALTH_MONITOR_HTTP_MAX_BODY_BYTES`. Set its body-read timeout to the same duration as, or shorter
+than, `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS`. Oversized requests receive HTTP `413`; incomplete
+bodies receive HTTP `408`; both responses use JSON-RPC error envelopes and close the connection.
+This keeps rejected bodies from being buffered independently by the proxy and application.

@@ -74,6 +74,98 @@ async function request(
   });
 }
 
+type StreamingRequest = {
+  req: http.ClientRequest;
+  response: Promise<HttpResult>;
+  closed: Promise<void>;
+};
+
+function openStreamingRequest(
+  port: number,
+  headers: Record<string, string>,
+  responseTimeoutMs = 750
+): StreamingRequest {
+  let settled = false;
+  let timer: NodeJS.Timeout;
+  let resolveResponse: (result: HttpResult) => void;
+  let rejectResponse: (error: Error) => void;
+
+  const response = new Promise<HttpResult>((resolve, reject) => {
+    resolveResponse = resolve;
+    rejectResponse = reject;
+  });
+
+  const req = http.request(
+    {
+      hostname: '127.0.0.1',
+      port,
+      path: '/mcp',
+      method: 'POST',
+      headers
+    },
+    (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      res.on('end', () => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timer);
+        resolveResponse({
+          statusCode: res.statusCode ?? 0,
+          body: Buffer.concat(chunks).toString('utf8'),
+          headers: res.headers
+        });
+      });
+    }
+  );
+
+  const closed = new Promise<void>((resolve) => {
+    req.once('close', () => resolve());
+  });
+
+  req.on('error', (error) => {
+    if (settled) {
+      return;
+    }
+
+    settled = true;
+    clearTimeout(timer);
+    rejectResponse(error);
+  });
+
+  timer = setTimeout(() => {
+    if (settled) {
+      return;
+    }
+
+    settled = true;
+    req.destroy();
+    rejectResponse(new Error('Timed out waiting for HTTP response'));
+  }, responseTimeoutMs);
+
+  return { req, response, closed };
+}
+
+function expectJsonRpcError(
+  result: HttpResult,
+  statusCode: number,
+  errorCode: number,
+  message: string
+): void {
+  expect(result.statusCode).toBe(statusCode);
+  expect(JSON.parse(result.body)).toEqual({
+    jsonrpc: '2.0',
+    error: {
+      code: errorCode,
+      message
+    },
+    id: null
+  });
+}
+
 function initializeRequestBody(id = 1): string {
   return JSON.stringify({
     jsonrpc: '2.0',
@@ -101,6 +193,16 @@ function toolsListRequestBody(id = 2): string {
 describe('server-http', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it('keeps Node header and request timeouts above the application body deadline', () => {
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      requestBodyTimeoutMs: 250
+    });
+
+    expect(server.requestTimeout).toBe(1_250);
+    expect(server.headersTimeout).toBe(1_250);
   });
 
   it('serves a health response', async () => {
@@ -489,6 +591,182 @@ describe('server-http', () => {
 
       expect(result.statusCode).toBe(413);
       expect(result.body).toContain('Payload too large');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it.each([
+    ['stateless', false],
+    ['stateful', true]
+  ])(
+    'accepts an exact-limit malformed body in %s mode and returns JSON-RPC parse error',
+    async (_label, statefulSessions) => {
+      const body = '{invalid-json';
+      const server = createHttpServer({
+        authToken: 'local-test-token',
+        statefulSessions,
+        maxRequestBodyBytes: Buffer.byteLength(body)
+      });
+      const port = await startServer(server);
+
+      try {
+        const result = await request(port, '/mcp', 'POST', body, {
+          Authorization: 'Bearer local-test-token'
+        });
+
+        expectJsonRpcError(result, 400, -32700, 'Parse error');
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }
+  );
+
+  it.each([
+    ['stateless', false],
+    ['stateful', true]
+  ])(
+    'rejects oversized Content-Length before body transmission in %s mode',
+    async (_label, statefulSessions) => {
+      const monitorFactory = jest.fn(() => ({
+        connect: async () => undefined,
+        close: async () => undefined
+      }));
+      const server = createHttpServer({
+        authToken: 'local-test-token',
+        statefulSessions,
+        maxRequestBodyBytes: 32,
+        monitorFactory
+      });
+      const port = await startServer(server);
+      const streaming = openStreamingRequest(port, {
+        Authorization: 'Bearer local-test-token',
+        'Content-Type': 'application/json',
+        'Content-Length': '33'
+      });
+
+      try {
+        streaming.req.flushHeaders();
+        const result = await streaming.response;
+
+        expectJsonRpcError(result, 413, -32001, 'Payload too large');
+        expect(result.headers.connection).toBe('close');
+        expect(monitorFactory).not.toHaveBeenCalled();
+        await streaming.closed;
+      } finally {
+        streaming.req.destroy();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }
+  );
+
+  it.each([
+    ['stateless', false],
+    ['stateful', true]
+  ])(
+    'rejects an over-limit chunked body before the client finishes in %s mode',
+    async (_label, statefulSessions) => {
+      const monitorFactory = jest.fn(() => ({
+        connect: async () => undefined,
+        close: async () => undefined
+      }));
+      const server = createHttpServer({
+        authToken: 'local-test-token',
+        statefulSessions,
+        maxRequestBodyBytes: 32,
+        monitorFactory
+      });
+      const port = await startServer(server);
+      const streaming = openStreamingRequest(port, {
+        Authorization: 'Bearer local-test-token',
+        'Content-Type': 'application/json'
+      });
+
+      try {
+        streaming.req.write('{"payload":"');
+        streaming.req.write('x'.repeat(40));
+        const result = await streaming.response;
+
+        expectJsonRpcError(result, 413, -32001, 'Payload too large');
+        expect(result.headers.connection).toBe('close');
+        expect(monitorFactory).not.toHaveBeenCalled();
+        await streaming.closed;
+      } finally {
+        streaming.req.destroy();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }
+  );
+
+  it.each([
+    ['stateless', false],
+    ['stateful', true]
+  ])('times out an incomplete request body in %s mode', async (_label, statefulSessions) => {
+    const monitorFactory = jest.fn(() => ({
+      connect: async () => undefined,
+      close: async () => undefined
+    }));
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      statefulSessions,
+      maxRequestBodyBytes: 128,
+      requestBodyTimeoutMs: 50,
+      monitorFactory
+    });
+    const port = await startServer(server);
+    const streaming = openStreamingRequest(
+      port,
+      {
+        Authorization: 'Bearer local-test-token',
+        'Content-Type': 'application/json',
+        'Content-Length': '64'
+      },
+      1_000
+    );
+
+    try {
+      streaming.req.write('{');
+      const result = await streaming.response;
+
+      expectJsonRpcError(result, 408, -32002, 'Request body timeout');
+      expect(result.headers.connection).toBe('close');
+      expect(monitorFactory).not.toHaveBeenCalled();
+      await streaming.closed;
+    } finally {
+      streaming.req.destroy();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('does not create a monitor for an aborted body and remains healthy', async () => {
+    const monitorFactory = jest.fn(() => ({
+      connect: async () => undefined,
+      close: async () => undefined
+    }));
+    const server = createHttpServer({
+      authToken: 'local-test-token',
+      requestBodyTimeoutMs: 250,
+      monitorFactory
+    });
+    const port = await startServer(server);
+    const streaming = openStreamingRequest(port, {
+      Authorization: 'Bearer local-test-token',
+      'Content-Type': 'application/json',
+      'Content-Length': '64'
+    });
+
+    streaming.response.catch(() => undefined);
+
+    try {
+      streaming.req.write('{');
+      streaming.req.destroy();
+      await streaming.closed;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+
+      const health = await request(port, '/health', 'GET');
+
+      expect(monitorFactory).not.toHaveBeenCalled();
+      expect(health.statusCode).toBe(200);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

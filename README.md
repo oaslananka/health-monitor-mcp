@@ -94,6 +94,8 @@ is planned for v1.1, and no webhook MCP tool is shipped in v1.0.x.
 - HTTP bind host: `HOST=127.0.0.1` by default
 - Remote-safe HTTP profile: `HEALTH_MONITOR_PROFILE=remote-safe`
 - Remote HTTP Origin allowlist: `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example`
+- HTTP request body limit: `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES=1048576` by default
+- HTTP request body timeout: `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS=15000` by default
 - Optional stateful HTTP sessions: `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS=1`
 - Stateful HTTP session TTL: `HEALTH_MONITOR_HTTP_SESSION_TTL_MS=1800000` by default
 - Stateful HTTP session cap: `HEALTH_MONITOR_HTTP_MAX_SESSIONS=100` by default
