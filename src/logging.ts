@@ -47,7 +47,7 @@ export function log(level: LogLevel, message: string, context: Record<string, un
       console.warn(serialized);
       break;
     default:
-      console.log(serialized);
+      console.error(serialized);
       break;
   }
 }
