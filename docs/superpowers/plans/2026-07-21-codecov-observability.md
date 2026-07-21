@@ -6,7 +6,7 @@
 
 **Architecture:** The CI validation job generates one full Jest run with LCOV and JUnit outputs. Immutable Codecov actions upload those reports with the existing repository token, while `codecov.yml` defines informational project/patch policies. Existing Jest thresholds remain authoritative and Bundle Analysis stays disabled because the package has no application bundler.
 
-**Tech Stack:** Node.js 24.18.0, pnpm 11.0.9, Jest 29, ts-jest, jest-junit 17.0.0, GitHub Actions, Codecov Action v7.0.0, Codecov Action v7.0.0 for test-result uploads.
+**Tech Stack:** Node.js 24.18.0, pnpm 11.14.0, Jest 29, ts-jest, jest-junit 17.0.0, GitHub Actions, Codecov Action v7.0.0, Codecov Action v7.0.0 for test-result uploads.
 
 ## Global Constraints
 
@@ -17,7 +17,7 @@
 - Generate `coverage/lcov.info` and `reports/junit/junit.xml` from one complete CI test run.
 - Use `fail_ci_if_error: false` and `if: ${{ !cancelled() }}` for both uploads.
 - Do not add Rollup, Vite, Webpack, or a Codecov bundle plugin.
-- Preserve Node.js 24.18.0 and pnpm 11.0.9.
+- Preserve Node.js 24.18.0 and pnpm 11.14.0.
 
 ---
 

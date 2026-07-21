@@ -2,7 +2,7 @@
 
 ## Runtime Pin
 
-The repository pins Node.js 24.18.0 and pnpm 11.0.9 in `.mise.toml`.
+The repository pins Node.js 24.18.0 and pnpm 11.14.0 in `.mise.toml`.
 
 ```bash
 mise trust

@@ -9,7 +9,7 @@ Use pnpm through Corepack:
 
 ```bash
 corepack enable
-corepack prepare pnpm@11.0.9 --activate
+corepack prepare pnpm@11.14.0 --activate
 pnpm install --frozen-lockfile
 pnpm run setup:security
 python3 -m venv .venv-security

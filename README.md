@@ -157,7 +157,7 @@ docker run --rm \
 
 ## Development
 
-The repository pins Node.js 24.18.0 and pnpm 11.0.9 through `.mise.toml`.
+The repository pins Node.js 24.18.0 and pnpm 11.14.0 through `.mise.toml`.
 
 ```bash
 mise trust

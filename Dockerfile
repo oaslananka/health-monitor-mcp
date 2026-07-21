@@ -1,4 +1,4 @@
-ARG NODE_IMAGE=node:24-bookworm-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e
+ARG NODE_IMAGE=node:24-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d
 
 FROM ${NODE_IMAGE} AS builder
 
@@ -10,7 +10,7 @@ WORKDIR /app
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 
-RUN corepack enable && corepack prepare pnpm@11.0.9 --activate
+RUN corepack enable && corepack prepare pnpm@11.14.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY tsconfig.build.json tsconfig.json jest.config.cjs ./
@@ -19,20 +19,16 @@ COPY mcp.json README.md LICENSE CHANGELOG.md ./
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm run build
+RUN pnpm prune --prod --ignore-scripts \
+    && rm -rf /root/.cache/node/corepack /pnpm/store
 
 FROM ${NODE_IMAGE} AS runtime
 
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
 
-RUN corepack enable && corepack prepare pnpm@11.0.9 --activate
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
-RUN pnpm prune --prod --ignore-scripts
-
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/mcp.json ./mcp.json
 COPY --from=builder /app/README.md ./README.md

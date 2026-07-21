@@ -18,8 +18,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Added ordered bounded concurrency shared by scheduled checks and interactive `check_all` operations.
 - Added stable agent error envelopes with remediation for missing servers, empty registries, disabled stdio, and rejected stdio commands.
-- Added repository-local Node.js 24.18.0 and pnpm 11.0.9 runtime pins.
+- Added repository-local Node.js 24.18.0 and pnpm 11.14.0 runtime pins.
 - Added exact release-tag and commit verification for release assets, npm, GHCR, and MCP Registry publication.
+- Added Codecov LCOV and JUnit Test Analytics uploads while keeping local Jest thresholds blocking.
+- Added high/critical Trivy scanning and SARIF reporting for the built container image.
 
 ### Changed
 
@@ -41,6 +43,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Removed the retired provider credential surface instead of retaining unused PAT storage and fetch logic.
 - Kept local stdio disabled by default and returned actionable policy errors without exposing internal details.
 - Preserved bearer authentication, Origin policy, bounded HTTP bodies, SBOMs, provenance, and checksum verification.
+- Refreshed the pinned Node 24 container base to current Debian security packages and removed pnpm/Corepack setup from the runtime stage.
 
 ## [1.0.0] - 2026-05-26
 

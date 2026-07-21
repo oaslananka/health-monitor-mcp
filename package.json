@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "description": "MCP server for monitoring other MCP servers — track health, uptime, tool errors, response times, alerts, and reports",
   "type": "module",
-  "packageManager": "pnpm@11.0.9",
+  "packageManager": "pnpm@11.14.0",
   "main": "./dist/mcp.js",
   "types": "./dist/mcp.d.ts",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
