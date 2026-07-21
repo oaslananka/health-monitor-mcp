@@ -20,7 +20,7 @@ The script blocks when:
 - tracked files are dirty;
 - the exact npm version already exists.
 
-The npm workflow treats an already-published version as idempotent only when it is the sole blocker and `scripts/verify-npm-package.mjs` confirms package integrity.
+The npm workflow treats an already-published version as idempotent only when it is the sole blocker and `scripts/verify-npm-package.mjs` confirms the registry tarball SRI and normalized package file contents. Local and registry tar archive metadata may differ without changing package contents.
 
 ## Exact Commit Gate
 

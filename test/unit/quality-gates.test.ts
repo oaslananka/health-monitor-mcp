@@ -189,6 +189,8 @@ describe('quality gate regression checks', () => {
     expect(registryWorkflow).toContain('inputs:');
     expect(registryWorkflow).toContain('tag_name:');
     expect(registryWorkflow).toContain('verify-release-ref');
+    expect(registryWorkflow).toContain("inputs.tag_name != ''");
+    expect(registryWorkflow).not.toContain("github.event_name == 'workflow_call'");
     expect(registryWorkflow).not.toContain('workflow_run:');
     expect(registryWorkflow).not.toContain(`release:
     types: [published]`);
@@ -207,8 +209,10 @@ describe('quality gate regression checks', () => {
       'npm publish --access public --provenance || node scripts/verify-npm-package.mjs'
     );
     expect(publishWorkflow).toContain('node scripts/verify-npm-package.mjs');
-    expect(verifyScript).toContain("npm', ['pack', '--json', '--dry-run']");
-    expect(verifyScript).toContain("'dist.integrity'");
+    expect(verifyScript).toContain('packageFileIndex');
+    expect(verifyScript).toContain('assertPackageContentsEqual');
+    expect(verifyScript).toContain('integrityForBuffer');
+    expect(verifyScript).not.toContain('does not match local pack');
   });
 
   it('publishes coverage and test analytics without replacing local coverage gates', () => {

@@ -75,10 +75,8 @@ jobs:
     if: >-
       ${{
         github.repository_owner == 'oaslananka' &&
-        (github.event_name == 'workflow_call' ||
-         (github.event_name == 'workflow_dispatch' &&
-          inputs.dry_run != true &&
-          inputs.tag_name != ''))
+        inputs.tag_name != '' &&
+        (github.event_name != 'workflow_dispatch' || inputs.dry_run != true)
       }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15

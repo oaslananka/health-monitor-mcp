@@ -6,6 +6,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Made npm release verification compare authenticated package contents instead of environment-dependent tarball metadata.
+- Made reusable MCP Registry publication run for release callers by relying on validated workflow inputs.
+
 ## [1.1.0] - 2026-07-21
 
 ### Removed

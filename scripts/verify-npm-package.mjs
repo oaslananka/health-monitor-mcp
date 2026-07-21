@@ -1,12 +1,20 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+import {
+  assertPackageContentsEqual,
+  integrityForBuffer,
+  packageFileIndex
+} from './package-tarball.mjs';
 
 const DEFAULT_ATTEMPTS = 6;
 const DEFAULT_RETRY_DELAY_MS = 10000;
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';
 
-function readJson(path) {
-  return JSON.parse(fs.readFileSync(path, 'utf8'));
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
 function resolveCommand(command) {
@@ -53,21 +61,32 @@ function sleep(ms) {
   });
 }
 
-function localPackMetadata() {
-  const result = run('npm', ['pack', '--json', '--dry-run']);
+function localPackageTarball(directory) {
+  const result = run('npm', [
+    'pack',
+    '--json',
+    '--ignore-scripts',
+    '--pack-destination',
+    directory
+  ]);
 
   if (result.status !== 0) {
-    throw new Error(`npm pack --dry-run failed: ${result.stderr || result.stdout}`);
+    throw new Error(`npm pack failed: ${result.stderr || result.stdout}`);
   }
 
-  const metadata = parseJson(result.stdout, 'npm pack --dry-run');
+  const metadata = parseJson(result.stdout, 'npm pack');
   const entry = Array.isArray(metadata) ? metadata[0] : metadata;
 
-  if (!entry?.integrity) {
-    throw new Error('npm pack --dry-run did not report package integrity');
+  if (!entry?.filename) {
+    throw new Error('npm pack did not report a package filename');
   }
 
-  return entry;
+  const tarballPath = path.join(directory, path.basename(entry.filename));
+  if (!fs.existsSync(tarballPath)) {
+    throw new Error(`npm pack did not create ${tarballPath}`);
+  }
+
+  return fs.readFileSync(tarballPath);
 }
 
 function registryPackageMetadata(packageName, version) {
@@ -83,20 +102,43 @@ function registryPackageMetadata(packageName, version) {
   ]);
 
   if (result.status !== 0) {
-    throw new Error(result.stderr || result.stdout || `npm view failed for ${packageName}@${version}`);
+    throw new Error(
+      result.stderr || result.stdout || `npm view failed for ${packageName}@${version}`
+    );
   }
 
   return parseJson(result.stdout, 'npm view');
 }
 
-async function registryPackageMetadataWithRetry(packageName, version) {
+function validateRegistryMetadata(packageJson, registryMetadata) {
+  if (registryMetadata.version !== packageJson.version) {
+    throw new Error(
+      `registry version ${registryMetadata.version} does not match package ${packageJson.version}`
+    );
+  }
+
+  if (typeof registryMetadata['dist.integrity'] !== 'string') {
+    throw new Error('registry metadata is missing dist.integrity');
+  }
+
+  if (typeof registryMetadata['dist.tarball'] !== 'string') {
+    throw new Error('registry metadata is missing dist.tarball');
+  }
+
+  const tarballUrl = new URL(registryMetadata['dist.tarball']);
+  if (tarballUrl.protocol !== 'https:' || tarballUrl.hostname !== 'registry.npmjs.org') {
+    throw new Error(`registry tarball URL is not trusted: ${tarballUrl.href}`);
+  }
+}
+
+async function withRetry(operation, label) {
   const attempts = positiveIntegerFromEnv('NPM_VERIFY_ATTEMPTS', DEFAULT_ATTEMPTS);
   const retryDelayMs = positiveIntegerFromEnv('NPM_VERIFY_DELAY_MS', DEFAULT_RETRY_DELAY_MS);
   let lastError;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return registryPackageMetadata(packageName, version);
+      return await operation();
     } catch (error) {
       lastError = error;
 
@@ -106,39 +148,64 @@ async function registryPackageMetadataWithRetry(packageName, version) {
     }
   }
 
-  throw lastError;
+  throw new Error(`${label} failed after ${attempts} attempts: ${lastError?.message ?? lastError}`);
 }
 
-function assertRegistryMatchesLocal(packageJson, registryMetadata, packMetadata) {
-  if (registryMetadata.version !== packageJson.version) {
-    throw new Error(
-      `registry version ${registryMetadata.version} does not match package ${packageJson.version}`
-    );
+async function fetchRegistryTarball(url) {
+  const response = await fetch(url, {
+    headers: { accept: 'application/octet-stream' },
+    redirect: 'error'
+  });
+
+  if (!response.ok) {
+    throw new Error(`registry tarball request returned HTTP ${response.status}`);
   }
 
-  if (registryMetadata['dist.integrity'] !== packMetadata.integrity) {
-    throw new Error(
-      `registry integrity ${registryMetadata['dist.integrity']} does not match local pack ${packMetadata.integrity}`
-    );
-  }
+  return Buffer.from(await response.arrayBuffer());
 }
 
 const packageJson = readJson('package.json');
-const packMetadata = localPackMetadata();
-const registryMetadata = await registryPackageMetadataWithRetry(packageJson.name, packageJson.version);
+const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'health-monitor-npm-verify-'));
 
-assertRegistryMatchesLocal(packageJson, registryMetadata, packMetadata);
+try {
+  const localTarball = localPackageTarball(temporaryDirectory);
+  const registryMetadata = await withRetry(
+    () => Promise.resolve(registryPackageMetadata(packageJson.name, packageJson.version)),
+    'npm registry metadata verification'
+  );
 
-console.log(
-  JSON.stringify(
-    {
-      ok: true,
-      package: packageJson.name,
-      version: packageJson.version,
-      integrity: registryMetadata['dist.integrity'],
-      tarball: registryMetadata['dist.tarball']
-    },
-    null,
-    2
-  )
-);
+  validateRegistryMetadata(packageJson, registryMetadata);
+
+  const registryTarball = await withRetry(
+    () => fetchRegistryTarball(registryMetadata['dist.tarball']),
+    'npm registry tarball download'
+  );
+  const registryIntegrity = integrityForBuffer(registryTarball, registryMetadata['dist.integrity']);
+
+  if (registryIntegrity !== registryMetadata['dist.integrity']) {
+    throw new Error(
+      `registry tarball integrity ${registryIntegrity} does not match declared ${registryMetadata['dist.integrity']}`
+    );
+  }
+
+  const localEntries = packageFileIndex(localTarball);
+  const registryEntries = packageFileIndex(registryTarball);
+  assertPackageContentsEqual(localEntries, registryEntries);
+
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        package: packageJson.name,
+        version: packageJson.version,
+        integrity: registryMetadata['dist.integrity'],
+        tarball: registryMetadata['dist.tarball'],
+        files: registryEntries.size
+      },
+      null,
+      2
+    )
+  );
+} finally {
+  fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+}

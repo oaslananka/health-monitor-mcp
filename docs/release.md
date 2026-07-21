@@ -41,7 +41,7 @@ pnpm run release:verify-ref -- --tag health-monitor-mcp-v1.1.0
 5. `Publish npm` starts from `release.published`, waits for `npm-production` environment approval, checks out and verifies the release tag, runs the full CI gate, publishes with GitHub OIDC provenance, and verifies registry integrity.
 6. `Publish npm` calls the reusable `Publish MCP Registry` workflow only after npm publication succeeds. The called workflow checks out and verifies the exact component tag, confirms the npm version is visible, signs in through GitHub OIDC, and publishes `server.json`.
 
-Manual `workflow_dispatch` inputs remain available for idempotent recovery. They must reference an existing component tag and pass the same exact-ref verification.
+Manual `workflow_dispatch` inputs remain available for idempotent recovery. They must reference an existing component tag and pass the same exact-ref verification. Reusable publication depends on the validated `tag_name` input rather than `github.event_name`, because a called workflow retains the caller event such as `release`.
 
 ## npm Production Gate
 
@@ -54,9 +54,9 @@ The npm workflow requires:
 - `pnpm run ci`;
 - `scripts/release-state.mjs --require-tag`;
 - npm trusted publishing and provenance;
-- `scripts/verify-npm-package.mjs` integrity comparison.
+- `scripts/verify-npm-package.mjs` registry SRI and package-content comparison.
 
-If the exact version already exists, publication is skipped only when registry verification succeeds.
+If the exact version already exists, publication is skipped only when registry verification succeeds. The verifier downloads the registry tarball, validates its declared SRI, and compares normalized file content hashes with a locally generated package. Tar timestamps, ownership, and regular-file modes are not treated as package-content differences.
 
 Configure npm trusted publishing with:
 
