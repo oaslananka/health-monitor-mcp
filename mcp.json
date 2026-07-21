@@ -1,11 +1,14 @@
 {
   "name": "health-monitor-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor MCP servers with health checks, uptime history, response times, alerts, and operational reports",
   "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "health-monitor-mcp"],
+  "args": [
+    "-y",
+    "health-monitor-mcp"
+  ],
   "env": {
     "HEALTH_MONITOR_DB": {
       "description": "Custom path for the SQLite database (optional)",
