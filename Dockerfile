@@ -27,6 +27,20 @@ FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
+RUN rm -rf \
+    /usr/local/lib/node_modules/npm \
+    /usr/local/lib/node_modules/corepack \
+    /opt/yarn-v* \
+    /root/.cache/node/corepack \
+    && rm -f \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx \
+    /usr/local/bin/corepack \
+    /usr/local/bin/pnpm \
+    /usr/local/bin/pnpx \
+    /usr/local/bin/yarn \
+    /usr/local/bin/yarnpkg
+
 COPY package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist

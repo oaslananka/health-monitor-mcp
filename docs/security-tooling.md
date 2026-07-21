@@ -117,6 +117,9 @@ The required `Docker Build` job builds `health-monitor-mcp:ci` and scans that ex
 Trivy. The scan is limited to fixed `HIGH` and `CRITICAL` vulnerabilities and uploads SARIF to GitHub
 Code Scanning even when the vulnerability gate fails. Secret scanning is deliberately excluded from
 Trivy because GitHub push protection and Gitleaks already own that responsibility.
+The final runtime stage removes npm, npx, Corepack, pnpm, and Yarn. Build tooling stays in the
+builder stage, preventing package-manager dependencies and caches from becoming production attack
+surface.
 
 The Trivy action, its nested setup action, and Codecov are pinned to full commit SHAs and explicitly
 allowed by the repository selected-actions policy. Renovate manages future action and pre-commit pin

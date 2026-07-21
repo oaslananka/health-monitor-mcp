@@ -43,7 +43,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Removed the retired provider credential surface instead of retaining unused PAT storage and fetch logic.
 - Kept local stdio disabled by default and returned actionable policy errors without exposing internal details.
 - Preserved bearer authentication, Origin policy, bounded HTTP bodies, SBOMs, provenance, and checksum verification.
-- Refreshed the pinned Node 24 container base to current Debian security packages and removed pnpm/Corepack setup from the runtime stage.
+- Refreshed the pinned Node 24 container base to current Debian security packages and removed npm, npx, Corepack, pnpm, and Yarn from the runtime stage.
 
 ## [1.0.0] - 2026-05-26
 

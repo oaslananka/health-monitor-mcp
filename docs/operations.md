@@ -114,6 +114,9 @@ The `Docker Build` required check builds `health-monitor-mcp:ci`, performs a CLI
 Trivy against the local image. Fixed high or critical vulnerabilities fail the job. SARIF is uploaded
 to GitHub Code Scanning when a report exists. The scanner does not duplicate GitHub/Gitleaks secret
 scanning.
+The final runtime image contains Node.js and production dependencies only; npm, npx, Corepack, pnpm,
+and Yarn are removed after the builder stage. Install or mount trusted stdio executables explicitly
+instead of downloading packages inside a running container.
 
 ## Repository Protection
 
