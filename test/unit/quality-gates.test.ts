@@ -296,5 +296,10 @@ describe('quality gate regression checks', () => {
     expect(runtimeStage).not.toContain('corepack prepare');
     expect(runtimeStage).not.toContain('pnpm prune');
     expect(runtimeStage).not.toContain('PNPM_HOME');
+    expect(runtimeStage).toContain('/usr/local/lib/node_modules/npm');
+    expect(runtimeStage).toContain('/usr/local/lib/node_modules/corepack');
+    expect(runtimeStage).toContain('/opt/yarn-v*');
+    expect(runtimeStage).toContain('/usr/local/bin/npm');
+    expect(runtimeStage).toContain('/usr/local/bin/npx');
   });
 });
