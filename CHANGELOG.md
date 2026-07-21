@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.1.2](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.1...health-monitor-mcp-v1.1.2) (2026-07-21)
+
+
+### Bug Fixes
+
+* **security:** patch transitive dependency advisories ([#97](https://github.com/oaslananka/health-monitor-mcp/issues/97)) ([42570cb](https://github.com/oaslananka/health-monitor-mcp/commit/42570cbd0c9bfb5cf8bf94c2b7cc8e8a158c826a)), closes [#96](https://github.com/oaslananka/health-monitor-mcp/issues/96)
+
 ## [1.1.1](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.0...health-monitor-mcp-v1.1.1) (2026-07-21)
 
 
