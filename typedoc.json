@@ -12,7 +12,7 @@
   "plugin": ["typedoc-plugin-markdown"],
   "readme": "none",
   "name": "health-monitor-mcp",
-  "includeVersion": true,
+  "includeVersion": false,
   "skipErrorChecking": false,
   "excludePrivate": true,
   "excludeProtected": false,

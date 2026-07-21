@@ -1,8 +1,8 @@
-**health-monitor-mcp v1.1.0**
+**health-monitor-mcp**
 
 ***
 
-# health-monitor-mcp v1.1.0
+# health-monitor-mcp
 
 ## Modules
 
