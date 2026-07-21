@@ -3,6 +3,7 @@
 > MCP server health monitoring, uptime history, latency tracking, alert evaluation, and operational reports through natural-language tools.
 
 [![CI](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/oaslananka/health-monitor-mcp/graph/badge.svg)](https://codecov.io/gh/oaslananka/health-monitor-mcp)
 [![Release](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/oaslananka/health-monitor-mcp/badge)](https://scorecard.dev/viewer/?uri=github.com/oaslananka/health-monitor-mcp)
@@ -43,18 +44,18 @@ Example MCP client configuration:
 
 ## Tools
 
-| Tool | Purpose | Typical prompt |
-| ---- | ------- | -------------- |
-| `register_server` | Register an MCP target | `Register https://inventory.example.com/mcp as inventory-prod` |
-| `check_server` | Run one live health check | `Check inventory-prod now` |
-| `check_all` | Check all matching targets with bounded concurrency | `Check all production MCP servers` |
-| `get_uptime` | Return uptime and latency history | `Show 24h uptime for inventory-prod` |
-| `get_dashboard` | Return a JSON dashboard | `Give me a 24h dashboard` |
-| `get_report` | Return a Markdown report | `Generate a 24h health report` |
-| `list_servers` | List registered targets | `List monitored servers` |
-| `unregister_server` | Remove a target | `Stop monitoring local-debugger` |
-| `set_alert` | Configure thresholds | `Alert if inventory-prod exceeds 500ms` |
-| `get_monitor_stats` | Inspect monitor-level activity | `How many checks are stored?` |
+| Tool                | Purpose                                             | Typical prompt                                                 |
+| ------------------- | --------------------------------------------------- | -------------------------------------------------------------- |
+| `register_server`   | Register an MCP target                              | `Register https://inventory.example.com/mcp as inventory-prod` |
+| `check_server`      | Run one live health check                           | `Check inventory-prod now`                                     |
+| `check_all`         | Check all matching targets with bounded concurrency | `Check all production MCP servers`                             |
+| `get_uptime`        | Return uptime and latency history                   | `Show 24h uptime for inventory-prod`                           |
+| `get_dashboard`     | Return a JSON dashboard                             | `Give me a 24h dashboard`                                      |
+| `get_report`        | Return a Markdown report                            | `Generate a 24h health report`                                 |
+| `list_servers`      | List registered targets                             | `List monitored servers`                                       |
+| `unregister_server` | Remove a target                                     | `Stop monitoring local-debugger`                               |
+| `set_alert`         | Configure thresholds                                | `Alert if inventory-prod exceeds 500ms`                        |
+| `get_monitor_stats` | Inspect monitor-level activity                      | `How many checks are stored?`                                  |
 
 Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
@@ -107,21 +108,21 @@ Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`
 
 ## Configuration
 
-| Variable | Default | Purpose |
-| -------- | ------- | ------- |
-| `HEALTH_MONITOR_DB` | `~/.mcp-health-monitor/health.db` | SQLite database path |
-| `HEALTH_MONITOR_AUTO_CHECK` | `0` | Enable scheduled checks with `1` |
-| `HEALTH_MONITOR_RETENTION_DAYS` | `30` | Health-history retention |
-| `HEALTH_MONITOR_MAX_CONCURRENCY` | `5` | Scheduled and interactive check concurrency |
-| `HEALTH_MONITOR_ALLOW_STDIO` | `0` | Allow trusted local stdio checks |
-| `HEALTH_MONITOR_STDIO_ALLOWLIST` | unset | Optional comma-separated executable allowlist |
-| `HEALTH_MONITOR_HTTP_TOKEN` | unset | Bearer token for `POST /mcp` |
-| `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST` | unset | Allowed remote client origins |
-| `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES` | `1048576` | Maximum inbound MCP body |
-| `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS` | `15000` | Inbound body read timeout |
-| `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS` | `0` | Enable stateful Streamable HTTP sessions |
-| `HEALTH_MONITOR_HTTP_SESSION_TTL_MS` | `1800000` | Stateful session TTL |
-| `HEALTH_MONITOR_HTTP_MAX_SESSIONS` | `100` | Stateful session cap |
+| Variable                                | Default                           | Purpose                                       |
+| --------------------------------------- | --------------------------------- | --------------------------------------------- |
+| `HEALTH_MONITOR_DB`                     | `~/.mcp-health-monitor/health.db` | SQLite database path                          |
+| `HEALTH_MONITOR_AUTO_CHECK`             | `0`                               | Enable scheduled checks with `1`              |
+| `HEALTH_MONITOR_RETENTION_DAYS`         | `30`                              | Health-history retention                      |
+| `HEALTH_MONITOR_MAX_CONCURRENCY`        | `5`                               | Scheduled and interactive check concurrency   |
+| `HEALTH_MONITOR_ALLOW_STDIO`            | `0`                               | Allow trusted local stdio checks              |
+| `HEALTH_MONITOR_STDIO_ALLOWLIST`        | unset                             | Optional comma-separated executable allowlist |
+| `HEALTH_MONITOR_HTTP_TOKEN`             | unset                             | Bearer token for `POST /mcp`                  |
+| `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST`  | unset                             | Allowed remote client origins                 |
+| `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES`    | `1048576`                         | Maximum inbound MCP body                      |
+| `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS`   | `15000`                           | Inbound body read timeout                     |
+| `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS` | `0`                               | Enable stateful Streamable HTTP sessions      |
+| `HEALTH_MONITOR_HTTP_SESSION_TTL_MS`    | `1800000`                         | Stateful session TTL                          |
+| `HEALTH_MONITOR_HTTP_MAX_SESSIONS`      | `100`                             | Stateful session cap                          |
 
 ## HTTP Deployment
 
@@ -156,7 +157,7 @@ docker run --rm \
 
 ## Development
 
-The repository pins Node.js 24.18.0 and pnpm 11.0.9 through `.mise.toml`.
+The repository pins Node.js 24.18.0 and pnpm 11.14.0 through `.mise.toml`.
 
 ```bash
 mise trust
@@ -180,6 +181,18 @@ pnpm run check:metadata
 pnpm run check:package
 ```
 
+## Coverage and Test Analytics
+
+Jest remains the blocking coverage gate with repository-local thresholds. The CI validation job runs
+all unit and integration tests once, writes `coverage/lcov.info` and
+`reports/junit/junit.xml`, and uploads both reports to Codecov. Codecov project and patch statuses
+start as informational with `target: auto` and a 1% tolerance, adding pull-request diff coverage,
+file-level visibility, and failed-test analytics without duplicating the local merge gate.
+
+Codecov Bundle Analysis is intentionally not enabled. This package ships Node.js entrypoints compiled
+with `tsc`; it does not currently produce a Rollup, Vite, or Webpack application bundle whose download
+size is a product metric.
+
 ## Architecture and Roadmap
 
 - [Architecture](docs/architecture.md)
@@ -194,15 +207,15 @@ pnpm run check:package
 
 This repository owns its product-specific MCP configuration, plugin manifest, and skills:
 
-| File | Purpose |
-| ---- | ------- |
-| `.claude-plugin/plugin.json` | Claude Code plugin manifest |
-| `.mcp.json` | Project-local MCP configuration |
-| `.codex/config.example.toml` | Codex CLI example |
-| `.vscode/mcp.example.json` | VS Code / Copilot example |
-| `opencode.example.jsonc` | OpenCode example |
-| `skills/` | Product-specific monitoring workflows |
-| `docs/agent-runtime-config.md` | Runtime setup and validation |
+| File                           | Purpose                               |
+| ------------------------------ | ------------------------------------- |
+| `.claude-plugin/plugin.json`   | Claude Code plugin manifest           |
+| `.mcp.json`                    | Project-local MCP configuration       |
+| `.codex/config.example.toml`   | Codex CLI example                     |
+| `.vscode/mcp.example.json`     | VS Code / Copilot example             |
+| `opencode.example.jsonc`       | OpenCode example                      |
+| `skills/`                      | Product-specific monitoring workflows |
+| `docs/agent-runtime-config.md` | Runtime setup and validation          |
 
 ## Security and Contributing
 

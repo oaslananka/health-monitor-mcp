@@ -36,11 +36,35 @@ jobs:
       - name: Enable pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@11.14.0 --activate
 
       - run: pnpm install --frozen-lockfile
       - name: Run build, lint, coverage, and API docs check
         run: pnpm run ci:check
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unit-integration
+          name: health-monitor-mcp
+          report_type: coverage
+          disable_search: true
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./reports/junit/junit.xml
+          flags: unit-integration
+          name: health-monitor-mcp-tests
+          report_type: test_results
+          disable_search: true
+          fail_ci_if_error: false
       - run: pnpm run security
       - name: Install REUSE
         run: python3 -m pip install --user reuse==6.2.0
@@ -80,6 +104,9 @@ jobs:
     name: Docker Build
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -91,6 +118,27 @@ jobs:
 
       - name: CLI smoke
         run: docker run --rm health-monitor-mcp:ci node dist/mcp.js --version
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: health-monitor-mcp:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          format: sarif
+          output: trivy-results.sarif
+          limit-severities-for-sarif: true
+          version: v0.70.0
+
+      - name: Upload Trivy SARIF
+        if: ${{ always() && hashFiles('trivy-results.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@3ce22a6e336a7fcc318bc58ae1986395bdc83ba7
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-container
 
   codeql:
     name: CodeQL Analysis
@@ -128,7 +176,7 @@ jobs:
       - name: Enable pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@11.14.0 --activate
 
       - run: pnpm install --frozen-lockfile
       - name: Install pre-commit

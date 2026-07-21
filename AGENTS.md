@@ -68,6 +68,7 @@ Newer registry releases may exist, but the v1.1 maintenance line intentionally k
 | `zod`                              | `3.25.76` | Preserve the existing schema-first API without v4 breaking changes while avoiding the incomplete `3.25.0` package payload.              |
 | `typescript`                       | `5.8.3`   | Modern strict TypeScript without adopting the v6 toolchain yet.                                                                         |
 | `jest`                             | `29.7.0`  | Stay on the established Jest major used by the repo.                                                                                    |
+| `jest-junit`                       | `17.0.0`  | Generate JUnit XML for Codecov Test Analytics while retaining Jest 29 as the test runner.                                               |
 | `@jest/globals`                    | `29.7.0`  | Direct dependency required for explicit ESM Jest imports under pnpm's strict dependency layout.                                         |
 | `ts-jest`                          | `29.3.2`  | Compatible with Jest 29 and ESM TypeScript tests.                                                                                       |
 | `eslint`                           | `9.39.4`  | Patched ESLint 9 line that resolves the current plugin-kit advisory without changing majors.                                            |

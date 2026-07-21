@@ -2,6 +2,7 @@ node_modules/
 dist/
 .mcp-health-monitor/
 coverage/
+reports/
 .TEMP/
 .codex-checkpoints/
 npm-debug.log*

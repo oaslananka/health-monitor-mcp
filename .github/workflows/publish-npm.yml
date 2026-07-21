@@ -58,7 +58,7 @@ jobs:
       - name: Enable pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@11.0.9 --activate
+          corepack prepare pnpm@11.14.0 --activate
 
       - run: pnpm install --frozen-lockfile
       - name: Verify exact release ref

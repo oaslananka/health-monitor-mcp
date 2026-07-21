@@ -47,7 +47,7 @@ describe('quality gate regression checks', () => {
     const coverageThreshold = jestConfig.coverageThreshold?.global;
 
     expect(packageJson.scripts['test:coverage']).toContain('--coverage');
-    expect(packageJson.scripts['ci:check']).toContain('pnpm run test:coverage');
+    expect(packageJson.scripts['ci:check']).toContain('pnpm run test:ci');
     expect(jestConfig.collectCoverageFrom).toEqual(expect.arrayContaining(['src/**/*.ts']));
     expect(coverageThreshold).toEqual(
       expect.objectContaining({
@@ -209,5 +209,97 @@ describe('quality gate regression checks', () => {
     expect(publishWorkflow).toContain('node scripts/verify-npm-package.mjs');
     expect(verifyScript).toContain("npm', ['pack', '--json', '--dry-run']");
     expect(verifyScript).toContain("'dist.integrity'");
+  });
+
+  it('publishes coverage and test analytics without replacing local coverage gates', () => {
+    const packageJson = readProjectJson<PackageJson>('package.json');
+    const ciWorkflow = readProjectText('.github/workflows/ci.yml');
+    const codecovConfig = readProjectText('codecov.yml');
+    const gitignore = readProjectText('.gitignore');
+
+    expect(packageJson.scripts['ci:static']).toContain('pnpm run docs:api:check');
+    expect(packageJson.scripts['test:ci']).toContain('--coverage');
+    expect(packageJson.scripts['test:ci']).toContain('--reporters=default');
+    expect(packageJson.scripts['test:ci']).toContain('--reporters=jest-junit');
+    expect(packageJson.scripts['ci:check']).toContain('pnpm run ci:static');
+    expect(packageJson.scripts['ci:check']).toContain('pnpm run test:ci');
+
+    expect(ciWorkflow).toContain('codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f');
+    expect(
+      ciWorkflow.match(/codecov\/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f/g)
+    ).toHaveLength(2);
+    expect(ciWorkflow).not.toContain('codecov/test-results-action@');
+    expect(ciWorkflow.match(/if: \$\{\{ !cancelled\(\) \}\}/g)).toHaveLength(2);
+    expect(ciWorkflow).toContain('files: ./coverage/lcov.info');
+    expect(ciWorkflow).toContain('files: ./reports/junit/junit.xml');
+    expect(ciWorkflow).toContain('report_type: test_results');
+    expect(ciWorkflow).toContain('token: ${{ secrets.CODECOV_TOKEN }}');
+    expect(ciWorkflow).toContain('disable_search: true');
+    expect(ciWorkflow).toContain('fail_ci_if_error: false');
+    expect(ciWorkflow).not.toContain('id-token: write');
+
+    expect(codecovConfig).toContain('target: auto');
+    expect(codecovConfig.match(/target: auto/g)).toHaveLength(2);
+    expect(codecovConfig.match(/informational: true/g)).toHaveLength(2);
+    expect(codecovConfig).toContain('layout: "diff, flags, files"');
+    expect(codecovConfig).toContain('unit-integration:');
+    expect(codecovConfig).not.toContain('bundle_analysis:');
+    expect(gitignore).toContain('reports/');
+  });
+
+  it('keeps container and workflow security checks focused and enforceable', () => {
+    const ciWorkflow = readProjectText('.github/workflows/ci.yml');
+    const preCommitConfig = readProjectText('.pre-commit-config.yaml');
+
+    expect(ciWorkflow).toContain(
+      'aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25'
+    );
+    expect(ciWorkflow).toContain('image-ref: health-monitor-mcp:ci');
+    expect(ciWorkflow).toContain('scanners: vuln');
+    expect(ciWorkflow).toContain('severity: HIGH,CRITICAL');
+    expect(ciWorkflow).toContain('ignore-unfixed: true');
+    expect(ciWorkflow).toContain('exit-code: 1');
+    expect(ciWorkflow).toContain('format: sarif');
+    expect(ciWorkflow).toContain('output: trivy-results.sarif');
+    expect(ciWorkflow).toContain("if: ${{ always() && hashFiles('trivy-results.sarif') != '' }}");
+    expect(ciWorkflow).toContain('sarif_file: trivy-results.sarif');
+    expect(ciWorkflow).toMatch(
+      /docker:[\s\S]*?permissions:[\s\S]*?contents: read[\s\S]*?security-events: write/
+    );
+    expect(ciWorkflow).not.toContain('scanners: vuln,secret');
+    expect(ciWorkflow).not.toContain('merge_group:');
+
+    expect(preCommitConfig).toContain('- id: check-toml');
+    expect(preCommitConfig).toContain('- id: mixed-line-ending');
+    expect(preCommitConfig).toContain('args: [--fix=no]');
+    expect(preCommitConfig).toContain('repo: https://github.com/rhysd/actionlint');
+    expect(preCommitConfig).toContain('rev: v1.7.12');
+    expect(preCommitConfig).toContain('repo: https://github.com/zizmorcore/zizmor-pre-commit');
+    expect(preCommitConfig).toContain('rev: v1.24.1');
+  });
+
+  it('keeps the runtime image on patched inputs without build-only package managers', () => {
+    const packageJson = readProjectJson<{ packageManager: string }>('package.json');
+    const dockerfile = readProjectText('Dockerfile');
+    const miseConfig = readProjectText('.mise.toml');
+    const runtimeStage = dockerfile.split('FROM ${NODE_IMAGE} AS runtime')[1] ?? '';
+
+    expect(dockerfile).toContain(
+      'node:24-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d'
+    );
+    expect(packageJson.packageManager).toBe('pnpm@11.14.0');
+    expect(miseConfig).toContain('pnpm = "11.14.0"');
+    expect(dockerfile).toContain('corepack prepare pnpm@11.14.0 --activate');
+    expect(dockerfile).toContain('RUN pnpm prune --prod --ignore-scripts');
+    expect(runtimeStage).toContain('COPY --from=builder /app/node_modules ./node_modules');
+    expect(runtimeStage).not.toContain('corepack enable');
+    expect(runtimeStage).not.toContain('corepack prepare');
+    expect(runtimeStage).not.toContain('pnpm prune');
+    expect(runtimeStage).not.toContain('PNPM_HOME');
+    expect(runtimeStage).toContain('/usr/local/lib/node_modules/npm');
+    expect(runtimeStage).toContain('/usr/local/lib/node_modules/corepack');
+    expect(runtimeStage).toContain('/opt/yarn-v*');
+    expect(runtimeStage).toContain('/usr/local/bin/npm');
+    expect(runtimeStage).toContain('/usr/local/bin/npx');
   });
 });

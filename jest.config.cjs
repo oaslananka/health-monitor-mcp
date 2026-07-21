@@ -19,6 +19,8 @@ module.exports = {
   },
   collectCoverageFrom: ['src/**/*.ts'],
   coveragePathIgnorePatterns: ['/node_modules/', '/dist/', 'src/version.ts'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov'],
   coverageThreshold: {
     global: {
       lines: 80,

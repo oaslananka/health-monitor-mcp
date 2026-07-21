@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "description": "MCP server for monitoring other MCP servers — track health, uptime, tool errors, response times, alerts, and reports",
   "type": "module",
-  "packageManager": "pnpm@11.0.9",
+  "packageManager": "pnpm@11.14.0",
   "main": "./dist/mcp.js",
   "types": "./dist/mcp.d.ts",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
@@ -46,6 +46,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=test[/\\\\]unit[/\\\\]",
     "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=test[/\\\\]integration[/\\\\]",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --reporters=default --reporters=jest-junit",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "security": "pnpm audit --audit-level moderate",
     "security:sbom": "node scripts/generate-sbom.mjs",
@@ -55,7 +56,8 @@
     "check:metadata": "node scripts/validate-mcp-metadata.mjs",
     "check:package": "pnpm pack --dry-run",
     "release:dry-run": "node scripts/release-state.mjs --dry-run",
-    "ci:check": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm run docs:api:check && pnpm run test:coverage",
+    "ci:static": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm run docs:api:check",
+    "ci:check": "pnpm run ci:static && pnpm run test:ci",
     "ci": "pnpm run ci:check && pnpm run security && pnpm run security:supply-chain && pnpm run check:metadata && pnpm run check:package && pnpm run release:dry-run",
     "prepare": "pnpm run build",
     "prepublishOnly": "node scripts/prepublish-check.mjs",
@@ -121,6 +123,7 @@
     "eslint": "9.39.4",
     "globals": "17.4.0",
     "jest": "29.7.0",
+    "jest-junit": "17.0.0",
     "prettier": "3.5.3",
     "snyk": "1.1306.1",
     "ts-jest": "29.3.2",
@@ -128,5 +131,13 @@
     "typedoc": "0.28.19",
     "typedoc-plugin-markdown": "4.11.0",
     "typescript": "5.8.3"
+  },
+  "jest-junit": {
+    "outputDirectory": "reports/junit",
+    "outputName": "junit.xml",
+    "suiteNameTemplate": "{filepath}",
+    "classNameTemplate": "{filepath}",
+    "titleTemplate": "{title}",
+    "ancestorSeparator": " › "
   }
 }
