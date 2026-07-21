@@ -215,6 +215,12 @@ describe('quality gate regression checks', () => {
     expect(verifyScript).not.toContain('does not match local pack');
   });
 
+  it('keeps generated API docs independent of package version', () => {
+    const typedocConfig = readProjectJson<{ includeVersion: boolean }>('typedoc.json');
+
+    expect(typedocConfig.includeVersion).toBe(false);
+  });
+
   it('publishes coverage and test analytics without replacing local coverage gates', () => {
     const packageJson = readProjectJson<PackageJson>('package.json');
     const ciWorkflow = readProjectText('.github/workflows/ci.yml');

@@ -10,6 +10,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Bug Fixes
 
 * **release:** make publication verification portable ([#94](https://github.com/oaslananka/health-monitor-mcp/issues/94)) ([f65ffc5](https://github.com/oaslananka/health-monitor-mcp/commit/f65ffc5f253cd2b59f98fb29ee51d8f34a153776)), closes [#93](https://github.com/oaslananka/health-monitor-mcp/issues/93)
+* **docs:** keep generated API documentation independent of package patch versions
 
 ## [Unreleased]
 
