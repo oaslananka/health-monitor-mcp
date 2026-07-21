@@ -41,6 +41,31 @@ type JestConfig = {
 const require = createRequire(import.meta.url);
 const jestConfig = require('../../jest.config.cjs') as JestConfig;
 
+function yamlVersion(text: string, key: string): string {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = text.match(
+    new RegExp(`^\\s{2}["']?${escapedKey}["']?:\\s+(\\d+\\.\\d+\\.\\d+)$`, 'm')
+  );
+
+  if (!match?.[1]) throw new Error(`missing version override for ${key}`);
+  return match[1];
+}
+
+function expectVersionAtLeast(actual: string, minimum: string): void {
+  const actualParts = actual.split('.').map(Number);
+  const minimumParts = minimum.split('.').map(Number);
+
+  for (let index = 0; index < 3; index += 1) {
+    const actualPart = actualParts[index] ?? 0;
+    const minimumPart = minimumParts[index] ?? 0;
+
+    if (actualPart > minimumPart) return;
+    if (actualPart < minimumPart) {
+      throw new Error(`${actual} is below required floor ${minimum}`);
+    }
+  }
+}
+
 describe('quality gate regression checks', () => {
   it('runs coverage thresholds in the regular CI check path', () => {
     const packageJson = readProjectJson<PackageJson>('package.json');
@@ -161,6 +186,21 @@ describe('quality gate regression checks', () => {
     expect(packageJson.scripts['security:semgrep']).toContain('pre-commit run semgrep');
     expect(packageJson.scripts['security:snyk']).toContain('snyk test');
     expect(packageJson.scripts['precommit:run']).toContain('pre-commit run');
+  });
+
+  it('pins patched transitive dependency floors for newly disclosed advisories', () => {
+    const workspaceConfig = readProjectText('pnpm-workspace.yaml');
+    const lockfile = readProjectText('pnpm-lock.yaml');
+
+    expectVersionAtLeast(yamlVersion(workspaceConfig, 'body-parser'), '2.3.0');
+    expectVersionAtLeast(yamlVersion(workspaceConfig, '@hono/node-server'), '2.0.5');
+    expectVersionAtLeast(yamlVersion(workspaceConfig, 'fast-uri'), '3.1.3');
+    expectVersionAtLeast(yamlVersion(workspaceConfig, 'linkify-it'), '5.0.2');
+
+    expect(lockfile).not.toContain('body-parser@2.2.2');
+    expect(lockfile).not.toContain('@hono/node-server@1.19.14');
+    expect(lockfile).not.toContain('fast-uri@3.1.2');
+    expect(lockfile).not.toContain('linkify-it@5.0.1');
   });
 
   it('orchestrates public release surfaces from one exact component tag', () => {
