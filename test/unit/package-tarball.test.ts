@@ -51,7 +51,7 @@ function createTarball(
   const entries = Object.entries(files).map(([path, value]) =>
     tarEntry(path, Buffer.from(value, 'utf8'), options)
   );
-  return gzipSync(Buffer.concat([...entries, Buffer.alloc(1024)]), { mtime: options.mtime });
+  return gzipSync(Buffer.concat([...entries, Buffer.alloc(1024)]));
 }
 
 async function loadModule(): Promise<PackageTarballModule> {
