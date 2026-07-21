@@ -16,6 +16,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Patched newly disclosed transitive dependency vulnerabilities in the MCP runtime and API documentation toolchain.
 - Made npm release verification compare authenticated package contents instead of environment-dependent tarball metadata.
 - Made reusable MCP Registry publication run for release callers by relying on validated workflow inputs.
 
