@@ -25,7 +25,7 @@
 
 ### Task 2: Implement tarball content verification
 
-- Create `scripts/package-tarball.mjs` and `scripts/package-tarball.d.mts`.
+- Create `scripts/package-tarball.mjs`.
 - Export SRI calculation, tar content indexing, and content comparison functions.
 - Update `scripts/verify-npm-package.mjs` to create a temporary local tarball, fetch and authenticate the registry tarball, compare normalized contents, and clean up.
 - Run focused tests and the verifier against npm 1.1.0.

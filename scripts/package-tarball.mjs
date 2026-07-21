@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 
 const TAR_BLOCK_SIZE = 512;
+const MAX_TARBALL_BYTES = 64 * 1024 * 1024;
+const MAX_ARCHIVE_BYTES = 256 * 1024 * 1024;
 const ZERO_BLOCK = Buffer.alloc(TAR_BLOCK_SIZE);
 
 function readString(buffer, offset, length) {
@@ -15,21 +17,29 @@ function readString(buffer, offset, length) {
 
 function readTarNumber(buffer, offset, length) {
   const field = buffer.subarray(offset, offset + length);
+  let value;
 
   if ((field[0] & 0x80) !== 0) {
     const bytes = Buffer.from(field);
     bytes[0] &= 0x7f;
-    let value = 0;
+    value = 0;
 
     for (const byte of bytes) {
       value = value * 256 + byte;
+      if (!Number.isSafeInteger(value)) throw new Error('invalid tar number');
     }
-
-    return value;
+  } else {
+    const encoded = readString(buffer, offset, length).replace(/\s+/g, '');
+    if (encoded === '') return 0;
+    if (!/^[0-7]+$/.test(encoded)) throw new Error('invalid tar number');
+    value = Number.parseInt(encoded, 8);
   }
 
-  const value = readString(buffer, offset, length).replace(/\s+/g, '');
-  return value === '' ? 0 : Number.parseInt(value, 8);
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error('invalid tar number');
+  }
+
+  return value;
 }
 
 function parsePaxRecords(buffer) {
@@ -91,7 +101,11 @@ export function integrityForBuffer(buffer, declaredIntegrity) {
 }
 
 export function packageFileIndex(tarball) {
-  const archive = gunzipSync(tarball);
+  if (tarball.length > MAX_TARBALL_BYTES) {
+    throw new Error('package tarball exceeds compressed size limit');
+  }
+
+  const archive = gunzipSync(tarball, { maxOutputLength: MAX_ARCHIVE_BYTES });
   const entries = new Map();
   let offset = 0;
   let globalPax = {};

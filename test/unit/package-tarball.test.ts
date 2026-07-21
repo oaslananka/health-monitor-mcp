@@ -1,4 +1,4 @@
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
 type PackageEntry = {
   size: number;
@@ -112,6 +112,28 @@ describe('package tarball verification', () => {
         module.packageFileIndex(registry)
       )
     ).toThrow('registry package has unexpected file README.md');
+  });
+
+  it('rejects unsafe package paths', async () => {
+    const module = await loadModule();
+    const tarball = createTarball({ '../escape.txt': 'nope\n' }, { mode: 0o644, mtime: 1 });
+
+    expect(() => module.packageFileIndex(tarball)).toThrow(
+      'unsafe package path package/../escape.txt'
+    );
+  });
+
+  it('rejects malformed numeric header fields', async () => {
+    const module = await loadModule();
+    const archive = gunzipSync(
+      createTarball({ 'package.json': '{}\n' }, { mode: 0o644, mtime: 1 })
+    );
+    writeString(archive, 124, 12, '99999999999\0');
+    archive.fill(0x20, 148, 156);
+    const checksum = archive.subarray(0, 512).reduce((sum, byte) => sum + byte, 0);
+    writeString(archive, 148, 8, `${checksum.toString(8).padStart(6, '0')}\0 `);
+
+    expect(() => module.packageFileIndex(gzipSync(archive))).toThrow('invalid tar number');
   });
 
   it('computes the declared sha512 integrity format', async () => {
