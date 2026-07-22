@@ -302,6 +302,67 @@ describe('generic HTTP target checker', () => {
     );
   });
 
+  it('normalizes repeated headers and traverses JSON arrays safely', async () => {
+    const { server, origin } = await listen((_request, response) => {
+      response.setHeader('set-cookie', ['a=1', 'b=2']);
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ items: [{ status: 'ready' }] }));
+    });
+    servers.push(server);
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = origin;
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => [{ address: '127.0.0.1', family: 4 }]
+    });
+
+    const result = await checkHttpTarget(
+      createTarget({
+        url: `${origin}/arrays`,
+        header_assertions: [{ name: 'set-cookie', equals: 'a=1, b=2' }],
+        json_assertions: [
+          { path: 'items.0.status', equals: 'ready' },
+          { path: 'items.2.status', equals: 'ready' },
+          { path: 'missing.value', equals: null }
+        ]
+      }),
+      5_000,
+      { profile: 'full' }
+    );
+
+    expect(result.status).toBe('down');
+    expect(result.assertions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'header', path: 'set-cookie', passed: true }),
+        expect.objectContaining({ type: 'json_equals', path: 'items.0.status', passed: true }),
+        expect.objectContaining({ type: 'json_equals', path: 'items.2.status', passed: false }),
+        expect.objectContaining({ type: 'json_equals', path: 'missing.value', passed: false })
+      ])
+    );
+  });
+
+  it('stops before policy resolution when the total budget is already exhausted', async () => {
+    let clockCalls = 0;
+    const resolve = jest.fn(async () => {
+      throw new Error('resolution should not run');
+    });
+    setHttpTargetRuntimeForTests({
+      now: () => {
+        clockCalls += 1;
+        return clockCalls === 1 ? 0 : 100;
+      },
+      resolve
+    });
+
+    const result = await checkHttpTarget(createTarget(), 50, { profile: 'full' });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: 'timeout',
+        error_message: expect.stringContaining('timed out after 50ms')
+      })
+    );
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
   it('reports TLS details and fails an expiry threshold without returning certificate chains', async () => {
     setHttpTargetPolicyRuntimeForTests({
       lookup: async () => [{ address: '8.8.8.8', family: 4 }]

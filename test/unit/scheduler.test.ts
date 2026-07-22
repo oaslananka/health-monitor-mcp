@@ -342,6 +342,33 @@ describe('scheduler', () => {
     );
   });
 
+  it('isolates an HTTP scheduler rejection without recording a check', async () => {
+    const recordHttpCheck = jest.fn();
+    const logMock = jest.fn() as unknown as typeof console.log;
+
+    setSchedulerRuntimeForTests({
+      listRegisteredServers: () => [],
+      listGitHubActionsTargets: () => [],
+      listGitLabPipelineTargets: () => [],
+      listHttpTargets: () => [createHttpTarget('broken-http')],
+      checkHttpTarget: jest.fn(async () => {
+        throw new Error('http boom');
+      }),
+      recordHttpCheck,
+      now: () => 0,
+      log: logMock
+    });
+
+    await runSchedulerCycle();
+
+    expect(recordHttpCheck).not.toHaveBeenCalled();
+    expect(logMock).toHaveBeenCalledWith(
+      'error',
+      'Scheduled check failed',
+      expect.objectContaining({ kind: 'http_target', name: 'broken-http', error: 'http boom' })
+    );
+  });
+
   it('passes scheduler stdio policy into scheduled checks', async () => {
     const checkServer = jest.fn(async () => ({
       status: 'up' as const,

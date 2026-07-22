@@ -182,6 +182,36 @@ describe('HTTP target registry', () => {
     );
   });
 
+  it('defensively handles malformed stored arrays and maps failures to the down filter', () => {
+    registerHttpTarget(registration());
+    getDb()
+      .prepare(
+        `
+        UPDATE http_targets
+        SET expected_statuses = ?, header_assertions = ?, body_contains = ?,
+            json_assertions = ?, tags = ?
+        WHERE name = ?
+      `
+      )
+      .run('{bad', '{}', 'null', '"not-an-array"', '["ops"]', 'public-health');
+
+    expect(getHttpTarget('public-health')).toEqual(
+      expect.objectContaining({
+        expected_statuses: [],
+        header_assertions: [],
+        body_contains: [],
+        json_assertions: [],
+        tags: ['ops']
+      })
+    );
+
+    recordHttpCheck('public-health', check('timeout', { response: null }), 1_000);
+    expect(listHttpTargets({ status: 'down' })).toEqual([
+      expect.objectContaining({ name: 'public-health', last_status: 'timeout' })
+    ]);
+    expect(listHttpTargets({ status: 'up' })).toHaveLength(0);
+  });
+
   it('builds dashboard aggregates and prunes expired history', () => {
     process.env.HEALTH_MONITOR_RETENTION_DAYS = '1';
     registerHttpTarget(registration());

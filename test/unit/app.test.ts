@@ -789,6 +789,48 @@ describe('app tool registration', () => {
     );
   });
 
+  it('isolates an unexpected HTTP batch checker rejection', async () => {
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = 'https://status.internal.example';
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => [{ address: '10.20.30.40', family: 4 }]
+    });
+    const tools = createToolMap({ profile: 'full' });
+    const registerHttp = getTool(tools, 'register_http_target');
+    const checkAll = getTool(tools, 'check_all');
+
+    await registerHttp.handler({
+      name: 'rejected-http',
+      url: 'https://status.internal.example/health',
+      expected_statuses: [200],
+      header_assertions: [],
+      body_contains: [],
+      json_assertions: [],
+      tags: ['rejection'],
+      check_interval_minutes: 5
+    });
+    setHttpTargetRuntimeForTests({
+      now: () => {
+        throw 'clock rejected';
+      }
+    });
+
+    const batch = parseJson(await checkAll.handler({ tags: ['rejection'], timeout_ms: 5_000 }));
+
+    expect(batch).toEqual(
+      expect.objectContaining({
+        summary: '0/1 targets UP, 1 DOWN',
+        results: [
+          expect.objectContaining({
+            kind: 'http_target',
+            name: 'rejected-http',
+            status: 'error',
+            error_message: 'Unknown HTTP target error'
+          })
+        ]
+      })
+    );
+  });
+
   it('rejects stdio registration and execution when stdio policy is disabled', async () => {
     const tools = createToolMap({ allowStdio: false });
     const registerServer = getTool(tools, 'register_server');

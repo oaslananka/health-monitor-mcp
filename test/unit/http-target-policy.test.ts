@@ -32,6 +32,8 @@ describe('HTTP target SSRF policy', () => {
   });
 
   it('classifies public and non-public IPv4 and IPv6 addresses', () => {
+    expect(isPublicIpAddress('not-an-ip')).toBe(false);
+
     for (const address of ['8.8.8.8', '1.1.1.1', '2606:4700:4700::1111', '2001:4860:4860::8888']) {
       expect(isPublicIpAddress(address)).toBe(true);
     }
@@ -149,5 +151,30 @@ describe('HTTP target SSRF policy', () => {
         selected_family: 4
       })
     );
+  });
+
+  it('handles literal public IPs and ignores invalid allowlist entries', async () => {
+    let lookups = 0;
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => {
+        lookups += 1;
+        return [{ address: '10.0.0.5', family: 4 as const }];
+      }
+    });
+
+    await expect(assertHttpTargetUrlAllowed('https://8.8.8.8/health', 'full')).resolves.toEqual(
+      expect.objectContaining({
+        hostname: '8.8.8.8',
+        selected_address: '8.8.8.8',
+        selected_family: 4
+      })
+    );
+    expect(lookups).toBe(0);
+
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = 'not-a-url,https://private.example/path';
+    await expect(
+      assertHttpTargetUrlAllowed('https://private.example/health', 'full')
+    ).rejects.toThrow('non-public address');
+    expect(lookups).toBe(1);
   });
 });
