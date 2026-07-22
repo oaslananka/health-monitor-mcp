@@ -189,6 +189,54 @@ const MIGRATIONS: Migration[] = [
           ON github_actions_checks(timestamp DESC);
       `);
     }
+  },
+  {
+    version: 6,
+    description: 'add GitLab pipeline monitoring provider',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS gitlab_pipeline_targets (
+          name TEXT PRIMARY KEY,
+          base_url TEXT NOT NULL,
+          project_path TEXT NOT NULL,
+          ref TEXT,
+          token_env TEXT NOT NULL DEFAULT 'GITLAB_TOKEN',
+          tags TEXT NOT NULL DEFAULT '[]',
+          check_interval_minutes INTEGER NOT NULL DEFAULT 5,
+          created_at INTEGER NOT NULL,
+          last_checked INTEGER,
+          last_status TEXT NOT NULL DEFAULT 'unknown',
+          last_response_time_ms INTEGER,
+          last_pipeline_id INTEGER,
+          last_pipeline_status TEXT,
+          last_pipeline_url TEXT,
+          consecutive_failures INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS gitlab_pipeline_checks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          target_name TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          response_time_ms INTEGER,
+          pipeline_id INTEGER,
+          pipeline_iid INTEGER,
+          pipeline_status TEXT,
+          ref TEXT,
+          commit_sha TEXT,
+          source TEXT,
+          pipeline_url TEXT,
+          error_message TEXT,
+          failed_jobs TEXT,
+          FOREIGN KEY (target_name) REFERENCES gitlab_pipeline_targets(name) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_gitlab_pipeline_checks_target_time
+          ON gitlab_pipeline_checks(target_name, timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_gitlab_pipeline_checks_timestamp
+          ON gitlab_pipeline_checks(timestamp DESC);
+      `);
+    }
   }
 ];
 

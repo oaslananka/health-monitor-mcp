@@ -1,5 +1,7 @@
 import { z } from 'zod/v3';
 
+import { normalizeGitLabBaseUrl } from './gitlab-origin.js';
+
 export const McpServerTypeSchema = z.enum(['http', 'stdio', 'sse']);
 export const HealthStatusSchema = z.enum(['up', 'down', 'timeout', 'error']);
 export const ListableStatusSchema = z.enum(['up', 'down', 'unknown']);
@@ -212,6 +214,72 @@ export const UnregisterGitHubActionsSchema = z.object({
   name: SafeNameSchema
 });
 
+const GitLabBaseUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(2048)
+  .refine((value) => {
+    try {
+      normalizeGitLabBaseUrl(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'GitLab base URL must be an HTTPS origin without credentials, path, query, or fragment')
+  .transform((value) => normalizeGitLabBaseUrl(value));
+
+const GitLabProjectSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .regex(
+    /^(?:\d+|[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+)$/,
+    'GitLab project must be a numeric ID or namespace/project path'
+  )
+  .refine(
+    (value) =>
+      /^\d+$/.test(value) ||
+      value.split('/').every((segment) => segment !== '.' && segment !== '..'),
+    'GitLab project path cannot contain dot segments'
+  );
+
+const GitLabRefSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .refine((value) => !hasControlCharacter(value), 'Control characters are not allowed');
+
+export const RegisterGitLabPipelineSchema = z.object({
+  name: SafeNameSchema.describe('Unique local name for this GitLab pipeline target'),
+  base_url: GitLabBaseUrlSchema.default('https://gitlab.com').describe(
+    'GitLab HTTPS origin; self-hosted origins require HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST'
+  ),
+  project: GitLabProjectSchema.describe('Numeric project ID or namespace/project path'),
+  ref: GitLabRefSchema.optional().describe('Optional branch or tag filter'),
+  token_env: TokenEnvironmentSchema.default('GITLAB_TOKEN').describe(
+    'Environment variable containing a GitLab token; the token value is never persisted'
+  ),
+  tags: z.array(SafeTagSchema).max(20).default([]).describe('Tags for grouping'),
+  check_interval_minutes: z.number().int().min(1).max(60).default(5)
+});
+
+export const CheckGitLabPipelineSchema = z.object({
+  name: SafeNameSchema.describe('GitLab pipeline target name to check'),
+  timeout_ms: z.number().int().min(1000).max(30000).default(5000)
+});
+
+export const ListGitLabPipelinesSchema = z.object({
+  tags: z.array(SafeTagSchema).max(20).optional(),
+  status: ListableStatusSchema.optional()
+});
+
+export const UnregisterGitLabPipelineSchema = z.object({
+  name: SafeNameSchema
+});
+
 export const EmptySchema = z.object({});
 
 export type McpServerType = z.infer<typeof McpServerTypeSchema>;
@@ -229,6 +297,10 @@ export type RegisterGitHubActionsInput = z.infer<typeof RegisterGitHubActionsSch
 export type CheckGitHubActionsInput = z.infer<typeof CheckGitHubActionsSchema>;
 export type ListGitHubActionsInput = z.infer<typeof ListGitHubActionsSchema>;
 export type UnregisterGitHubActionsInput = z.infer<typeof UnregisterGitHubActionsSchema>;
+export type RegisterGitLabPipelineInput = z.infer<typeof RegisterGitLabPipelineSchema>;
+export type CheckGitLabPipelineInput = z.infer<typeof CheckGitLabPipelineSchema>;
+export type ListGitLabPipelinesInput = z.infer<typeof ListGitLabPipelinesSchema>;
+export type UnregisterGitLabPipelineInput = z.infer<typeof UnregisterGitLabPipelineSchema>;
 export type AlertFindingType = z.infer<typeof AlertFindingTypeSchema>;
 
 export interface GitHubActionsStepDiagnostic {
@@ -308,6 +380,75 @@ export interface GitHubActionsCheckRecord {
   branch: string | null;
   commit_sha: string | null;
   run_url: string | null;
+  error_message: string | null;
+  failed_jobs: string | null;
+}
+
+export interface GitLabJobDiagnostic {
+  id: number;
+  name: string;
+  stage: string;
+  status: string;
+  ref: string | null;
+  commit_sha: string;
+  url: string;
+  started_at: string | null;
+  finished_at: string | null;
+  trace_excerpt: string | null;
+  trace_error: string | null;
+}
+
+export interface GitLabPipelineDetails {
+  id: number;
+  iid: number;
+  status: string;
+  ref: string;
+  commit_sha: string;
+  source: string;
+  url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitLabPipelineCheckResult {
+  status: HealthStatus;
+  response_time_ms: number | null;
+  error_message: string | null;
+  pipeline: GitLabPipelineDetails | null;
+  failed_jobs: GitLabJobDiagnostic[];
+}
+
+export interface RegisteredGitLabPipelineTarget {
+  name: string;
+  base_url: string;
+  project: string;
+  ref: string | null;
+  token_env: string;
+  tags: string[];
+  check_interval_minutes: number;
+  created_at: number;
+  last_checked: number | null;
+  last_status: HealthStatus | 'unknown';
+  last_response_time_ms: number | null;
+  last_pipeline_id: number | null;
+  last_pipeline_status: string | null;
+  last_pipeline_url: string | null;
+  consecutive_failures: number;
+}
+
+export interface GitLabPipelineCheckRecord {
+  id: number;
+  target_name: string;
+  timestamp: number;
+  status: HealthStatus;
+  response_time_ms: number | null;
+  pipeline_id: number | null;
+  pipeline_iid: number | null;
+  pipeline_status: string | null;
+  ref: string | null;
+  commit_sha: string | null;
+  source: string | null;
+  pipeline_url: string | null;
   error_message: string | null;
   failed_jobs: string | null;
 }

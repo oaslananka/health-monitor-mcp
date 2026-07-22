@@ -20,7 +20,8 @@ describe('migrations', () => {
       { version: 2, description: 'add response time analytics support' },
       { version: 3, description: 'dedupe pipeline runs by stable build key' },
       { version: 4, description: 'remove retired Azure DevOps monitoring data' },
-      { version: 5, description: 'add GitHub Actions monitoring provider' }
+      { version: 5, description: 'add GitHub Actions monitoring provider' },
+      { version: 6, description: 'add GitLab pipeline monitoring provider' }
     ]);
     expect(columns.map((column) => column.name)).toContain('response_time_updated_at');
 
@@ -43,6 +44,26 @@ describe('migrations', () => {
     expect(githubCheckColumns.map((column) => column.name)).toEqual(
       expect.arrayContaining(['target_name', 'run_id', 'commit_sha', 'failed_jobs'])
     );
+
+    const gitlabTargetColumns = db
+      .prepare('PRAGMA table_info(gitlab_pipeline_targets)')
+      .all() as Array<{ name: string }>;
+    const gitlabCheckColumns = db
+      .prepare('PRAGMA table_info(gitlab_pipeline_checks)')
+      .all() as Array<{ name: string }>;
+    expect(gitlabTargetColumns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'name',
+        'base_url',
+        'project_path',
+        'token_env',
+        'last_pipeline_id',
+        'last_pipeline_status'
+      ])
+    );
+    expect(gitlabCheckColumns.map((column) => column.name)).toEqual(
+      expect.arrayContaining(['target_name', 'pipeline_id', 'commit_sha', 'failed_jobs'])
+    );
     const tables = db
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
       .all() as Array<{ name: string }>;
@@ -63,7 +84,7 @@ describe('migrations', () => {
       }
     ).count;
 
-    expect(count).toBe(5);
+    expect(count).toBe(6);
   });
 
   it('removes retired Azure tables during an upgrade while preserving monitor data', () => {
@@ -105,6 +126,31 @@ describe('migrations', () => {
     db.prepare('DELETE FROM github_actions_targets WHERE name = ?').run('repo-ci');
 
     const count = db.prepare('SELECT COUNT(*) AS count FROM github_actions_checks').get() as {
+      count: number;
+    };
+    expect(count.count).toBe(0);
+  });
+
+  it('cascades GitLab pipeline check history when a target is removed', () => {
+    const db = getDb();
+    db.prepare(
+      `
+      INSERT INTO gitlab_pipeline_targets (
+        name, base_url, project_path, token_env, tags,
+        check_interval_minutes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `
+    ).run('gitlab-ci', 'https://gitlab.com', 'group/project', 'GITLAB_TOKEN', '[]', 5, 1);
+    db.prepare(
+      `
+      INSERT INTO gitlab_pipeline_checks (target_name, timestamp, status)
+      VALUES (?, ?, ?)
+    `
+    ).run('gitlab-ci', 2, 'up');
+
+    db.prepare('DELETE FROM gitlab_pipeline_targets WHERE name = ?').run('gitlab-ci');
+
+    const count = db.prepare('SELECT COUNT(*) AS count FROM gitlab_pipeline_checks').get() as {
       count: number;
     };
     expect(count.count).toBe(0);
