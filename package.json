@@ -1,6 +1,6 @@
 {
   "name": "health-monitor-mcp",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Monitor MCP servers, CI workflows, and HTTP endpoints with health history, TLS expiry, response assertions, and diagnostics",
   "type": "module",
   "packageManager": "pnpm@11.14.0",

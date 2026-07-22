@@ -1,11 +1,14 @@
 {
   "name": "health-monitor-mcp",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor MCP, CI, and HTTP targets with health history, TLS expiry, assertions, and diagnostics",
   "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "health-monitor-mcp"],
+  "args": [
+    "-y",
+    "health-monitor-mcp"
+  ],
   "env": {
     "HEALTH_MONITOR_DB": {
       "description": "Custom path for the SQLite database (optional)",

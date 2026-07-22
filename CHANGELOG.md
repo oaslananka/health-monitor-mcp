@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.4.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.3.0...health-monitor-mcp-v1.4.0) (2026-07-22)
+
+
+### Features
+
+* add generic HTTP and TLS monitoring ([#108](https://github.com/oaslananka/health-monitor-mcp/issues/108)) ([0c20632](https://github.com/oaslananka/health-monitor-mcp/commit/0c206321f6edc9609d98fe3acb459795b759f0ba))
+
 ## [1.3.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.1...health-monitor-mcp-v1.3.0) (2026-07-22)
 
 ### Features
