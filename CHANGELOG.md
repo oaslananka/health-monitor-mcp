@@ -6,39 +6,34 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [1.2.1](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.0...health-monitor-mcp-v1.2.1) (2026-07-22)
 
-
 ### Bug Fixes
 
-* enforce MCP Registry description limit ([#104](https://github.com/oaslananka/health-monitor-mcp/issues/104)) ([2ece744](https://github.com/oaslananka/health-monitor-mcp/commit/2ece744a260c2c1cbc1fbee69ab96c18a6d1b529))
+- enforce MCP Registry description limit ([#104](https://github.com/oaslananka/health-monitor-mcp/issues/104)) ([2ece744](https://github.com/oaslananka/health-monitor-mcp/commit/2ece744a260c2c1cbc1fbee69ab96c18a6d1b529))
 
 ## [1.2.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.3...health-monitor-mcp-v1.2.0) (2026-07-22)
 
-
 ### Features
 
-* add GitHub Actions workflow monitoring ([#101](https://github.com/oaslananka/health-monitor-mcp/issues/101)) ([eea54d9](https://github.com/oaslananka/health-monitor-mcp/commit/eea54d9b8e4a63981b50e2b5d546c0f732db1672))
+- add GitHub Actions workflow monitoring ([#101](https://github.com/oaslananka/health-monitor-mcp/issues/101)) ([eea54d9](https://github.com/oaslananka/health-monitor-mcp/commit/eea54d9b8e4a63981b50e2b5d546c0f732db1672))
 
 ## [1.1.3](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.2...health-monitor-mcp-v1.1.3) (2026-07-22)
 
-
 ### Bug Fixes
 
-* **security:** secure the published npm dependency graph ([#99](https://github.com/oaslananka/health-monitor-mcp/issues/99)) ([977d6d1](https://github.com/oaslananka/health-monitor-mcp/commit/977d6d13f8c6f3b589e336e989e450c5408f4547)), closes [#96](https://github.com/oaslananka/health-monitor-mcp/issues/96)
+- **security:** secure the published npm dependency graph ([#99](https://github.com/oaslananka/health-monitor-mcp/issues/99)) ([977d6d1](https://github.com/oaslananka/health-monitor-mcp/commit/977d6d13f8c6f3b589e336e989e450c5408f4547)), closes [#96](https://github.com/oaslananka/health-monitor-mcp/issues/96)
 
 ## [1.1.2](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.1...health-monitor-mcp-v1.1.2) (2026-07-21)
 
-
 ### Bug Fixes
 
-* **security:** patch transitive dependency advisories ([#97](https://github.com/oaslananka/health-monitor-mcp/issues/97)) ([42570cb](https://github.com/oaslananka/health-monitor-mcp/commit/42570cbd0c9bfb5cf8bf94c2b7cc8e8a158c826a)), closes [#96](https://github.com/oaslananka/health-monitor-mcp/issues/96)
+- **security:** patch transitive dependency advisories ([#97](https://github.com/oaslananka/health-monitor-mcp/issues/97)) ([42570cb](https://github.com/oaslananka/health-monitor-mcp/commit/42570cbd0c9bfb5cf8bf94c2b7cc8e8a158c826a)), closes [#96](https://github.com/oaslananka/health-monitor-mcp/issues/96)
 
 ## [1.1.1](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.0...health-monitor-mcp-v1.1.1) (2026-07-21)
 
-
 ### Bug Fixes
 
-* **release:** make publication verification portable ([#94](https://github.com/oaslananka/health-monitor-mcp/issues/94)) ([f65ffc5](https://github.com/oaslananka/health-monitor-mcp/commit/f65ffc5f253cd2b59f98fb29ee51d8f34a153776)), closes [#93](https://github.com/oaslananka/health-monitor-mcp/issues/93)
-* **docs:** keep generated API documentation independent of package patch versions
+- **release:** make publication verification portable ([#94](https://github.com/oaslananka/health-monitor-mcp/issues/94)) ([f65ffc5](https://github.com/oaslananka/health-monitor-mcp/commit/f65ffc5f253cd2b59f98fb29ee51d8f34a153776)), closes [#93](https://github.com/oaslananka/health-monitor-mcp/issues/93)
+- **docs:** keep generated API documentation independent of package patch versions
 
 ## [Unreleased]
 
@@ -50,6 +45,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Added GitHub Actions workflow registration, checks, failed job and step diagnostics, scheduling, dashboards, and reports.
 - Added environment-only GitHub authentication: only `token_env` is persisted, while token values remain in runtime environment variables.
+- Added GitLab.com and allowlisted self-hosted GitLab pipeline monitoring with failed job, stage, ref, commit, URL, and bounded trace diagnostics.
+- Added environment-only GitLab authentication and explicit `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST` enforcement.
+- Extended bounded `check_all`, scheduler, dashboards, reports, statistics, and retention across MCP, GitHub Actions, and GitLab targets.
 
 ### Fixed
 

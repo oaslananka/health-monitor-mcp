@@ -8,4 +8,4 @@
 
 > `const` **UnregisterSchema**: `ZodObject`\<\{ `name`: `ZodEffects`\<`ZodEffects`\<`ZodString`, `string`, `string`\>, `string`, `string`\>; \}, `"strip"`, `ZodTypeAny`, \{ `name`: `string`; \}, \{ `name`: `string`; \}\>
 
-Defined in: [types.ts:142](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L142)
+Defined in: [types.ts:144](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L144)

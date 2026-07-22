@@ -92,6 +92,12 @@ GitHub provider registrations persist only `token_env`, such as `GITHUB_TOKEN`. 
 
 Public repositories may be checked without a token at GitHub's unauthenticated rate limit. Private repositories require a token with repository Actions read permission. Do not place token values in tool arguments, tags, names, URLs, documentation examples, or checked-in environment files.
 
+## GitLab Provider Credentials and Origins
+
+GitLab registrations also persist only `token_env`, such as `GITLAB_TOKEN`. The GitLab token value remains in the runtime environment and must never appear in tool inputs, stored rows, trace excerpts, logs, or reports. Public GitLab.com projects may be checked without authentication; private projects require an appropriately scoped read token.
+
+GitLab.com is the only default origin. Every self-hosted origin must be HTTPS and exactly listed in `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST`. The API client rejects credentials, paths, queries, fragments, HTTP origins, and unlisted hosts. Pipeline/job JSON and trace bodies have independent byte limits; trace excerpts remove ANSI and GitLab section markers before returning a bounded tail.
+
 ## Semgrep
 
 Repository-local, high-confidence rules live in `.semgrep.yml`. Run them directly with the pinned

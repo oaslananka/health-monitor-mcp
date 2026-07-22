@@ -27,7 +27,7 @@ HOST=0.0.0.0
 ## Retention and Concurrency
 
 - `HEALTH_MONITOR_RETENTION_DAYS` defaults to `30`.
-- `HEALTH_MONITOR_MAX_CONCURRENCY` defaults to `5` and applies to MCP and GitHub Actions checks in scheduled and interactive `check_all` calls.
+- `HEALTH_MONITOR_MAX_CONCURRENCY` defaults to `5` and applies to MCP, GitHub Actions, and GitLab checks in scheduled and interactive `check_all` calls.
 - `HEALTH_MONITOR_HTTP_TIMEOUT_MS` defaults to `10000` for outbound MCP checks.
 - `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES` defaults to `1048576` for inbound `POST /mcp` bodies.
 - `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS` defaults to `15000` for reading an inbound body.
@@ -101,9 +101,25 @@ Registration stores `token_env="GITHUB_TOKEN"`, not the value. Keep the token in
 
 The provider uses `https://api.github.com`, requests the latest workflow run, and fetches at most 100 latest-attempt jobs only when failure diagnostics are needed.
 
+## GitLab Pipeline Provider
+
+GitLab.com public projects can be monitored without authentication. Private projects require a token with project, pipeline, job, and trace read access:
+
+```bash
+export GITLAB_TOKEN=your-runtime-secret
+```
+
+Registration persists `token_env="GITLAB_TOKEN"`, never the value. Self-hosted GitLab origins must use HTTPS and be explicitly allowlisted:
+
+```bash
+export HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST=https://gitlab.internal.example
+```
+
+Only exact origins are accepted; credentials, paths, queries, fragments, HTTP origins, and unlisted hosts are rejected. The provider requests one latest pipeline, at most 100 jobs, at most 20 failure diagnostics, and only a bounded tail of each failed job trace.
+
 ## Database Upgrades
 
-Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Migration v5 creates `github_actions_targets` and `github_actions_checks`; it stores only token environment-variable names. Back up the database before upgrading when historical retention outside the supported product is required.
+Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Migration v5 creates `github_actions_targets` and `github_actions_checks`. Migration v6 creates `gitlab_pipeline_targets` and `gitlab_pipeline_checks`. Both providers store only token environment-variable names. Back up the database before upgrading when historical retention outside the supported product is required.
 
 ## Codecov Operations
 

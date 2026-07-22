@@ -8,4 +8,4 @@
 
 > `const` **McpServerTypeSchema**: `ZodEnum`\<\[`"http"`, `"stdio"`, `"sse"`\]\>
 
-Defined in: [types.ts:3](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L3)
+Defined in: [types.ts:5](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L5)

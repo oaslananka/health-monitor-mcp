@@ -6,7 +6,7 @@
 
 # Interface: GitHubActionsCheckResult
 
-Defined in: [types.ts:268](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L268)
+Defined in: [types.ts:340](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L340)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:268](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **status**: `"up"` \| `"down"` \| `"timeout"` \| `"error"`
 
-Defined in: [types.ts:269](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L269)
+Defined in: [types.ts:341](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L341)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:269](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **response\_time\_ms**: `number` \| `null`
 
-Defined in: [types.ts:270](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L270)
+Defined in: [types.ts:342](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L342)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:270](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **error\_message**: `string` \| `null`
 
-Defined in: [types.ts:271](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L271)
+Defined in: [types.ts:343](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L343)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.ts:271](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **run**: [`GitHubActionsRunDetails`](GitHubActionsRunDetails.md) \| `null`
 
-Defined in: [types.ts:272](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L272)
+Defined in: [types.ts:344](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L344)
 
 ***
 
@@ -46,4 +46,4 @@ Defined in: [types.ts:272](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **failed\_jobs**: [`GitHubActionsJobDiagnostic`](GitHubActionsJobDiagnostic.md)[]
 
-Defined in: [types.ts:273](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L273)
+Defined in: [types.ts:345](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L345)

@@ -1,6 +1,6 @@
 # health-monitor-mcp
 
-> MCP server and GitHub Actions monitoring, uptime history, diagnostics, alert evaluation, and operational reports through natural-language tools.
+> MCP server, GitHub Actions, and GitLab CI/CD monitoring with health history, diagnostics, alert evaluation, and operational reports through natural-language tools.
 
 [![CI](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/oaslananka/health-monitor-mcp/graph/badge.svg)](https://codecov.io/gh/oaslananka/health-monitor-mcp)
@@ -11,7 +11,7 @@
 
 ## What This Does
 
-`health-monitor-mcp` keeps local registries of MCP servers and GitHub Actions workflows, performs live checks, records history in SQLite, evaluates MCP alert thresholds, and returns JSON or Markdown evidence suitable for agents and operators.
+`health-monitor-mcp` keeps local registries of MCP servers, GitHub Actions workflows, and GitLab pipelines, performs live checks, records history in SQLite, evaluates MCP alert thresholds, and returns JSON or Markdown evidence suitable for agents and operators.
 
 Supported target transports:
 
@@ -19,8 +19,9 @@ Supported target transports:
 - **SSE** for legacy MCP servers.
 - **stdio** for trusted local executables after explicit opt-in.
 - **GitHub Actions** workflow runs, failed jobs, and failed steps for public or private repositories.
+- **GitLab CI/CD** pipelines, failed jobs, stages, refs, commits, URLs, and bounded trace excerpts for GitLab.com or allowlisted self-hosted instances.
 
-Azure DevOps monitoring was retired in v1.1.0. GitHub Actions is the first provider added by the v1.2.0 multi-provider roadmap.
+Azure DevOps monitoring was retired in v1.1.0. GitHub Actions shipped in v1.2.0; GitLab CI/CD is the next provider in the multi-provider roadmap.
 
 ## Quick Start
 
@@ -45,24 +46,28 @@ Example MCP client configuration:
 
 ## Tools
 
-| Tool                         | Purpose                                                   | Typical prompt                                      |
-| ---------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
-| `register_server`            | Register an MCP target                                    | `Register inventory-prod`                           |
-| `check_server`               | Run one MCP health check                                  | `Check inventory-prod now`                          |
-| `register_github_actions`    | Register a GitHub workflow                                | `Monitor ci.yml in owner/repo`                      |
-| `check_github_actions`       | Check latest run and failed job/step diagnostics          | `Check repo-ci now`                                 |
-| `check_all`                  | Check all matching target kinds with bounded concurrency  | `Check all production targets`                      |
-| `get_uptime`                 | Return MCP uptime and latency history                     | `Show 24h uptime for inventory-prod`                |
-| `get_dashboard`              | Return a cross-provider JSON dashboard                    | `Give me a 24h dashboard`                           |
-| `get_report`                 | Return a cross-provider Markdown report                   | `Generate a 24h health report`                      |
-| `list_servers`               | List registered MCP targets                               | `List monitored MCP servers`                        |
-| `list_github_actions`        | List registered GitHub workflow targets                   | `List monitored workflows`                          |
-| `unregister_server`          | Remove an MCP target                                      | `Stop monitoring local-debugger`                    |
-| `unregister_github_actions`  | Remove a GitHub workflow target and its history            | `Stop monitoring repo-ci`                           |
-| `set_alert`                  | Configure MCP health thresholds                           | `Alert if inventory-prod exceeds 500ms`             |
-| `get_monitor_stats`          | Inspect cross-provider monitor activity                   | `How many checks are stored?`                       |
+| Tool                         | Purpose                                                 | Typical prompt                          |
+| ---------------------------- | ------------------------------------------------------- | --------------------------------------- |
+| `register_server`            | Register an MCP target                                  | `Register inventory-prod`               |
+| `check_server`               | Run one MCP health check                                | `Check inventory-prod now`              |
+| `register_github_actions`    | Register a GitHub workflow                              | `Monitor ci.yml in owner/repo`          |
+| `check_github_actions`       | Check latest GitHub run and failed job/step diagnostics | `Check repo-ci now`                     |
+| `register_gitlab_pipeline`   | Register a GitLab project pipeline                      | `Monitor group/project on GitLab`       |
+| `check_gitlab_pipeline`      | Check latest pipeline and bounded failed-job traces     | `Check gitlab-ci now`                   |
+| `check_all`                  | Check all target kinds with bounded concurrency         | `Check all production targets`          |
+| `get_uptime`                 | Return MCP uptime and latency history                   | `Show 24h uptime for inventory-prod`    |
+| `get_dashboard`              | Return a cross-provider JSON dashboard                  | `Give me a 24h dashboard`               |
+| `get_report`                 | Return a cross-provider Markdown report                 | `Generate a 24h health report`          |
+| `list_servers`               | List registered MCP targets                             | `List monitored MCP servers`            |
+| `list_github_actions`        | List registered GitHub workflow targets                 | `List monitored workflows`              |
+| `list_gitlab_pipelines`      | List registered GitLab pipeline targets                 | `List monitored GitLab pipelines`       |
+| `unregister_server`          | Remove an MCP target                                    | `Stop monitoring local-debugger`        |
+| `unregister_github_actions`  | Remove a GitHub target and its history                  | `Stop monitoring repo-ci`               |
+| `unregister_gitlab_pipeline` | Remove a GitLab target and its history                  | `Stop monitoring gitlab-ci`             |
+| `set_alert`                  | Configure MCP health thresholds                         | `Alert if inventory-prod exceeds 500ms` |
+| `get_monitor_stats`          | Inspect cross-provider monitor activity                 | `How many checks are stored?`           |
 
-Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
+Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
 ## Register Targets
 
@@ -106,6 +111,31 @@ check_github_actions name="repo-ci" timeout_ms=5000
 
 Only the environment-variable name in `token_env` is stored. The token value is read at check time and is never written to SQLite, logs, reports, or tool responses.
 
+## Register GitLab Pipelines
+
+Public GitLab.com projects can be checked without authentication. Private projects require a token exposed only through the runtime environment:
+
+```bash
+export GITLAB_TOKEN=your-runtime-secret
+```
+
+```text
+register_gitlab_pipeline name="gitlab-ci" project="group/project" ref="main" token_env="GITLAB_TOKEN" tags=["production","ci"]
+check_gitlab_pipeline name="gitlab-ci" timeout_ms=5000
+```
+
+GitLab.com is allowed by default. A self-hosted instance must use an HTTPS origin and be explicitly allowed:
+
+```bash
+export HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST=https://gitlab.internal.example
+```
+
+```text
+register_gitlab_pipeline name="private-gitlab" base_url="https://gitlab.internal.example" project="platform/service" token_env="GITLAB_TOKEN"
+```
+
+Only `token_env` is persisted. Token values, response bodies, and full traces are never stored or returned. Failed-job trace excerpts are range-requested, sanitized, and bounded.
+
 ## Health Checks and Reports
 
 ```text
@@ -116,7 +146,7 @@ get_dashboard hours=24 include_tool_stats=true
 get_report hours=24
 ```
 
-`HEALTH_MONITOR_MAX_CONCURRENCY` limits MCP and GitHub Actions checks through one shared scheduled and interactive queue. Results preserve MCP-then-GitHub registration order even when checks complete out of order.
+`HEALTH_MONITOR_MAX_CONCURRENCY` limits MCP, GitHub Actions, and GitLab checks through one shared scheduled and interactive queue. Results preserve MCP-then-GitHub-then-GitLab registration order even when checks complete out of order.
 
 ## Alerts
 
@@ -128,22 +158,24 @@ Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`
 
 ## Configuration
 
-| Variable                                | Default                           | Purpose                                       |
-| --------------------------------------- | --------------------------------- | --------------------------------------------- |
-| `HEALTH_MONITOR_DB`                     | `~/.mcp-health-monitor/health.db` | SQLite database path                          |
-| `HEALTH_MONITOR_AUTO_CHECK`             | `0`                               | Enable scheduled checks with `1`              |
-| `HEALTH_MONITOR_RETENTION_DAYS`         | `30`                              | Health-history retention                      |
-| `HEALTH_MONITOR_MAX_CONCURRENCY`        | `5`                               | Scheduled and interactive check concurrency   |
-| `GITHUB_TOKEN`                         | unset                             | Optional token with GitHub Actions read access     |
-| `HEALTH_MONITOR_ALLOW_STDIO`            | `0`                               | Allow trusted local stdio checks              |
-| `HEALTH_MONITOR_STDIO_ALLOWLIST`        | unset                             | Optional comma-separated executable allowlist |
-| `HEALTH_MONITOR_HTTP_TOKEN`             | unset                             | Bearer token for `POST /mcp`                  |
-| `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST`  | unset                             | Allowed remote client origins                 |
-| `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES`    | `1048576`                         | Maximum inbound MCP body                      |
-| `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS`   | `15000`                           | Inbound body read timeout                     |
-| `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS` | `0`                               | Enable stateful Streamable HTTP sessions      |
-| `HEALTH_MONITOR_HTTP_SESSION_TTL_MS`    | `1800000`                         | Stateful session TTL                          |
-| `HEALTH_MONITOR_HTTP_MAX_SESSIONS`      | `100`                             | Stateful session cap                          |
+| Variable                                   | Default                           | Purpose                                         |
+| ------------------------------------------ | --------------------------------- | ----------------------------------------------- |
+| `HEALTH_MONITOR_DB`                        | `~/.mcp-health-monitor/health.db` | SQLite database path                            |
+| `HEALTH_MONITOR_AUTO_CHECK`                | `0`                               | Enable scheduled checks with `1`                |
+| `HEALTH_MONITOR_RETENTION_DAYS`            | `30`                              | Health-history retention                        |
+| `HEALTH_MONITOR_MAX_CONCURRENCY`           | `5`                               | Scheduled and interactive check concurrency     |
+| `GITHUB_TOKEN`                             | unset                             | Optional GitHub Actions read token              |
+| `GITLAB_TOKEN`                             | unset                             | Optional GitLab project/pipeline/job read token |
+| `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST` | unset                             | Allowed self-hosted GitLab HTTPS origins        |
+| `HEALTH_MONITOR_ALLOW_STDIO`               | `0`                               | Allow trusted local stdio checks                |
+| `HEALTH_MONITOR_STDIO_ALLOWLIST`           | unset                             | Optional comma-separated executable allowlist   |
+| `HEALTH_MONITOR_HTTP_TOKEN`                | unset                             | Bearer token for `POST /mcp`                    |
+| `HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST`     | unset                             | Allowed remote client origins                   |
+| `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES`       | `1048576`                         | Maximum inbound MCP body                        |
+| `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS`      | `15000`                           | Inbound body read timeout                       |
+| `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS`    | `0`                               | Enable stateful Streamable HTTP sessions        |
+| `HEALTH_MONITOR_HTTP_SESSION_TTL_MS`       | `1800000`                         | Stateful session TTL                            |
+| `HEALTH_MONITOR_HTTP_MAX_SESSIONS`         | `100`                             | Stateful session cap                            |
 
 ## HTTP Deployment
 

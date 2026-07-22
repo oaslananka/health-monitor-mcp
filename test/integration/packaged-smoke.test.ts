@@ -135,24 +135,32 @@ describe('packaged MCP smoke tests', () => {
       'check_server',
       'register_github_actions',
       'check_github_actions',
+      'register_gitlab_pipeline',
+      'check_gitlab_pipeline',
       'check_all',
       'get_uptime',
       'get_dashboard',
       'get_report',
       'list_servers',
       'list_github_actions',
+      'list_gitlab_pipelines',
       'unregister_server',
       'unregister_github_actions',
+      'unregister_gitlab_pipeline',
       'set_alert',
       'get_monitor_stats'
     ]);
     expect(mcpMetadata.env).toEqual(
       expect.objectContaining({
-        GITHUB_TOKEN: expect.objectContaining({ required: false })
+        GITHUB_TOKEN: expect.objectContaining({ required: false }),
+        GITLAB_TOKEN: expect.objectContaining({ required: false }),
+        HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST: expect.objectContaining({ required: false })
       })
     );
     expect(JSON.stringify(mcpMetadata)).not.toMatch(/azure|pat_token/i);
     expect(serverMetadata).toContain('"GITHUB_TOKEN"');
+    expect(serverMetadata).toContain('"GITLAB_TOKEN"');
+    expect(serverMetadata).toContain('"HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST"');
     expect(serverMetadata).toContain('"isSecret": true');
     expect(serverMetadata).not.toMatch(/azure|pat_token/i);
 
