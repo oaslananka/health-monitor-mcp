@@ -24,6 +24,7 @@ const failedConclusions = new Set([
   'stale'
 ]);
 const failedStepConclusions = new Set(['failure', 'cancelled', 'timed_out', 'action_required']);
+const nonTerminalStatuses = new Set(['queued', 'in_progress', 'waiting', 'requested', 'pending']);
 
 const workflowRunSchema = z.object({
   id: z.number().int(),
@@ -340,22 +341,28 @@ export async function checkGitHubActionsTarget(
       failedJobs = mapFailedJobs(jobsPayload);
     }
 
-    const isDown =
-      run.status === 'completed' &&
-      run.conclusion !== null &&
-      failedConclusions.has(run.conclusion);
-    const isSuccessful =
-      run.status !== 'completed' ||
-      run.conclusion === null ||
-      successfulConclusions.has(run.conclusion) ||
-      isDown;
+    let status: GitHubActionsCheckResult['status'];
 
-    if (!isSuccessful) {
-      throw new Error(`GitHub workflow returned unsupported conclusion ${run.conclusion}.`);
+    if (run.status === 'completed') {
+      if (run.conclusion === null) {
+        throw new Error('GitHub workflow completed without a conclusion.');
+      }
+
+      if (failedConclusions.has(run.conclusion)) {
+        status = 'down';
+      } else if (successfulConclusions.has(run.conclusion)) {
+        status = 'up';
+      } else {
+        throw new Error(`GitHub workflow returned unsupported conclusion ${run.conclusion}.`);
+      }
+    } else if (nonTerminalStatuses.has(run.status)) {
+      status = 'up';
+    } else {
+      throw new Error(`GitHub workflow returned unsupported status ${run.status}.`);
     }
 
     return {
-      status: isDown ? 'down' : 'up',
+      status,
       response_time_ms: githubActionsRuntime.now() - startedAt,
       error_message: null,
       run,

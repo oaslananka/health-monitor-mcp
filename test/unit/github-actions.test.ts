@@ -290,4 +290,34 @@ describe('GitHub Actions API checker', () => {
       })
     );
   });
+
+  it('rejects completed runs without a conclusion and unknown run statuses', async () => {
+    const fetchMock = sequenceFetch(
+      jsonResponse({
+        total_count: 1,
+        workflow_runs: [workflowRun({ status: 'completed', conclusion: null })]
+      }),
+      jsonResponse({
+        total_count: 1,
+        workflow_runs: [workflowRun({ status: 'mystery', conclusion: null })]
+      })
+    );
+    setGitHubActionsRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
+
+    const missingConclusion = await checkGitHubActionsTarget(createTarget(), 5_000);
+    const unknownStatus = await checkGitHubActionsTarget(createTarget(), 5_000);
+
+    expect(missingConclusion).toEqual(
+      expect.objectContaining({
+        status: 'error',
+        error_message: expect.stringContaining('completed without a conclusion')
+      })
+    );
+    expect(unknownStatus).toEqual(
+      expect.objectContaining({
+        status: 'error',
+        error_message: expect.stringContaining('unsupported status mystery')
+      })
+    );
+  });
 });
