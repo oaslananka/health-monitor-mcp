@@ -419,6 +419,10 @@ describe('quality gate regression checks', () => {
         expect.objectContaining({ name: 'GITHUB_TOKEN', isRequired: false, isSecret: true })
       ])
     );
+    expect(mcpMetadata.description.length).toBeLessThanOrEqual(100);
+    expect(serverMetadata.description.length).toBeLessThanOrEqual(100);
+    const registryWorkflow = readProjectText('.github/workflows/publish-mcp-registry.yml');
+    expect(registryWorkflow).toContain('server.description.length > 100');
     expect(readme).toContain('register_github_actions');
     expect(usage).toContain('token_env="GITHUB_TOKEN"');
     expect(architecture).toContain('github_actions_targets');
