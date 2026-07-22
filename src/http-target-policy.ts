@@ -130,18 +130,33 @@ function isPublicIpv6(address: string): boolean {
 
   if (parts.every((part) => part === 0)) return false;
   if (parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1) return false;
+
+  const embeddedIpv4 = `${parts[6]! >>> 8}.${parts[6]! & 0xff}.${parts[7]! >>> 8}.${parts[7]! & 0xff}`;
+  const ipv4Compatible = parts.slice(0, 6).every((part) => part === 0);
+  if (ipv4Compatible) return false;
+
+  const ipv4Mapped = parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff;
+  if (ipv4Mapped) return isPublicIpv4(embeddedIpv4);
+
+  const wellKnownNat64 =
+    first === 0x0064 && second === 0xff9b && parts.slice(2, 6).every((part) => part === 0);
+  if (wellKnownNat64) return isPublicIpv4(embeddedIpv4);
+
+  if (first === 0x0064 && second === 0xff9b && third === 0x0001) return false;
+  if (first === 0x0100 && second === 0 && third === 0 && parts[3] === 0) {
+    return false;
+  }
   if ((first! & 0xfe00) === 0xfc00) return false;
   if ((first! & 0xffc0) === 0xfe80 || (first! & 0xffc0) === 0xfec0) return false;
   if ((first! & 0xff00) === 0xff00) return false;
+  if (first === 0x2001 && second === 0x0000) return false;
   if (first === 0x2001 && second === 0x0db8) return false;
   if (first === 0x2001 && second === 0x0002 && third === 0) return false;
   if (first === 0x2001 && (second! & 0xfff0) === 0x0010) return false;
-
-  const ipv4Mapped = parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff;
-  if (ipv4Mapped) {
-    const embedded = `${parts[6]! >>> 8}.${parts[6]! & 0xff}.${parts[7]! >>> 8}.${parts[7]! & 0xff}`;
-    return isPublicIpv4(embedded);
-  }
+  if (first === 0x2001 && (second! & 0xfff0) === 0x0020) return false;
+  if (first === 0x2002) return false;
+  if (first === 0x3fff && (second! & 0xf000) === 0) return false;
+  if (first === 0x5f00) return false;
 
   return true;
 }
