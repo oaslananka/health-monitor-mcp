@@ -13,6 +13,7 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && corepack prepare pnpm@11.14.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY tsconfig.build.json tsconfig.json jest.config.cjs ./
 COPY src ./src
 COPY mcp.json README.md LICENSE CHANGELOG.md ./
