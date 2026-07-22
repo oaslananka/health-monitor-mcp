@@ -1,29 +1,49 @@
 import { getMaxConcurrency } from './config.js';
 import { mapWithConcurrency } from './concurrency.js';
 import { checkServer } from './checker.js';
+import { checkGitHubActionsTarget } from './github-actions.js';
+import { listGitHubActionsTargets, recordGitHubActionsCheck } from './github-actions-registry.js';
 import { log } from './logging.js';
 import { listRegisteredServers, recordHealthCheck } from './registry.js';
-import type { CheckResult, RegisteredServer } from './types.js';
+import type {
+  CheckResult,
+  GitHubActionsCheckResult,
+  RegisteredGitHubActionsTarget,
+  RegisteredServer
+} from './types.js';
 
 interface SchedulerRuntime {
   listRegisteredServers: () => RegisteredServer[];
+  listGitHubActionsTargets: () => RegisteredGitHubActionsTarget[];
   checkServer: (
     server: RegisteredServer,
     timeoutMs: number,
     options?: { allowStdio?: boolean | undefined }
   ) => Promise<CheckResult>;
+  checkGitHubActionsTarget: (
+    target: RegisteredGitHubActionsTarget,
+    timeoutMs: number
+  ) => Promise<GitHubActionsCheckResult>;
   recordHealthCheck: (serverName: string, result: CheckResult) => void;
+  recordGitHubActionsCheck: (targetName: string, result: GitHubActionsCheckResult) => void;
   log: typeof log;
   now: () => number;
 }
+
+type ScheduledTarget =
+  | { kind: 'mcp_server'; name: string; target: RegisteredServer }
+  | { kind: 'github_actions'; name: string; target: RegisteredGitHubActionsTarget };
 
 const DEFAULT_INTERVAL_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
 
 const createDefaultRuntime = (): SchedulerRuntime => ({
   listRegisteredServers,
+  listGitHubActionsTargets: () => listGitHubActionsTargets(),
   checkServer,
+  checkGitHubActionsTarget,
   recordHealthCheck,
+  recordGitHubActionsCheck,
   log,
   now: () => Date.now()
 });
@@ -33,12 +53,18 @@ let schedulerTimer: NodeJS.Timeout | null = null;
 let schedulerRunning = false;
 let schedulerAllowStdio: boolean | undefined;
 
-function isServerDue(server: RegisteredServer, now: number): boolean {
-  if (!server.last_checked) {
+function isTargetDue(
+  target: Pick<
+    RegisteredServer | RegisteredGitHubActionsTarget,
+    'last_checked' | 'check_interval_minutes'
+  >,
+  now: number
+): boolean {
+  if (!target.last_checked) {
     return true;
   }
 
-  return now - server.last_checked >= server.check_interval_minutes * 60 * 1000;
+  return now - target.last_checked >= target.check_interval_minutes * 60 * 1000;
 }
 
 export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise<void> {
@@ -50,27 +76,50 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
 
   try {
     const now = schedulerRuntime.now();
-    const dueServers = schedulerRuntime
-      .listRegisteredServers()
-      .filter((server) => isServerDue(server, now));
+    const dueTargets: ScheduledTarget[] = [
+      ...schedulerRuntime
+        .listRegisteredServers()
+        .filter((server) => isTargetDue(server, now))
+        .map((server) => ({ kind: 'mcp_server' as const, name: server.name, target: server })),
+      ...schedulerRuntime
+        .listGitHubActionsTargets()
+        .filter((target) => isTargetDue(target, now))
+        .map((target) => ({ kind: 'github_actions' as const, name: target.name, target }))
+    ];
 
-    if (dueServers.length === 0) {
+    if (dueTargets.length === 0) {
       return;
     }
 
-    await mapWithConcurrency(dueServers, getMaxConcurrency(), async (server) => {
+    await mapWithConcurrency(dueTargets, getMaxConcurrency(), async (scheduledTarget) => {
       try {
-        const result = await schedulerRuntime.checkServer(server, timeoutMs, {
-          allowStdio: schedulerAllowStdio
-        });
-        schedulerRuntime.recordHealthCheck(server.name, result);
+        if (scheduledTarget.kind === 'mcp_server') {
+          const result = await schedulerRuntime.checkServer(scheduledTarget.target, timeoutMs, {
+            allowStdio: schedulerAllowStdio
+          });
+          schedulerRuntime.recordHealthCheck(scheduledTarget.name, result);
+          schedulerRuntime.log('info', 'Scheduled check complete', {
+            kind: scheduledTarget.kind,
+            name: scheduledTarget.name,
+            status: result.status
+          });
+          return;
+        }
+
+        const result = await schedulerRuntime.checkGitHubActionsTarget(
+          scheduledTarget.target,
+          timeoutMs
+        );
+        schedulerRuntime.recordGitHubActionsCheck(scheduledTarget.name, result);
         schedulerRuntime.log('info', 'Scheduled check complete', {
-          name: server.name,
+          kind: scheduledTarget.kind,
+          name: scheduledTarget.name,
           status: result.status
         });
       } catch (error) {
         schedulerRuntime.log('error', 'Scheduled check failed', {
-          name: server.name,
+          kind: scheduledTarget.kind,
+          name: scheduledTarget.name,
           error: error instanceof Error ? error.message : String(error)
         });
       }
