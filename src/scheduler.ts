@@ -3,18 +3,26 @@ import { mapWithConcurrency } from './concurrency.js';
 import { checkServer } from './checker.js';
 import { checkGitHubActionsTarget } from './github-actions.js';
 import { listGitHubActionsTargets, recordGitHubActionsCheck } from './github-actions-registry.js';
+import { checkGitLabPipelineTarget } from './gitlab-pipelines.js';
+import {
+  listGitLabPipelineTargets,
+  recordGitLabPipelineCheck
+} from './gitlab-pipeline-registry.js';
 import { log } from './logging.js';
 import { listRegisteredServers, recordHealthCheck } from './registry.js';
 import type {
   CheckResult,
   GitHubActionsCheckResult,
+  GitLabPipelineCheckResult,
   RegisteredGitHubActionsTarget,
+  RegisteredGitLabPipelineTarget,
   RegisteredServer
 } from './types.js';
 
 interface SchedulerRuntime {
   listRegisteredServers: () => RegisteredServer[];
   listGitHubActionsTargets: () => RegisteredGitHubActionsTarget[];
+  listGitLabPipelineTargets: () => RegisteredGitLabPipelineTarget[];
   checkServer: (
     server: RegisteredServer,
     timeoutMs: number,
@@ -24,15 +32,21 @@ interface SchedulerRuntime {
     target: RegisteredGitHubActionsTarget,
     timeoutMs: number
   ) => Promise<GitHubActionsCheckResult>;
+  checkGitLabPipelineTarget: (
+    target: RegisteredGitLabPipelineTarget,
+    timeoutMs: number
+  ) => Promise<GitLabPipelineCheckResult>;
   recordHealthCheck: (serverName: string, result: CheckResult) => void;
   recordGitHubActionsCheck: (targetName: string, result: GitHubActionsCheckResult) => void;
+  recordGitLabPipelineCheck: (targetName: string, result: GitLabPipelineCheckResult) => void;
   log: typeof log;
   now: () => number;
 }
 
 type ScheduledTarget =
   | { kind: 'mcp_server'; name: string; target: RegisteredServer }
-  | { kind: 'github_actions'; name: string; target: RegisteredGitHubActionsTarget };
+  | { kind: 'github_actions'; name: string; target: RegisteredGitHubActionsTarget }
+  | { kind: 'gitlab_pipeline'; name: string; target: RegisteredGitLabPipelineTarget };
 
 const DEFAULT_INTERVAL_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -40,10 +54,13 @@ const DEFAULT_TIMEOUT_MS = 8_000;
 const createDefaultRuntime = (): SchedulerRuntime => ({
   listRegisteredServers,
   listGitHubActionsTargets: () => listGitHubActionsTargets(),
+  listGitLabPipelineTargets: () => listGitLabPipelineTargets(),
   checkServer,
   checkGitHubActionsTarget,
+  checkGitLabPipelineTarget,
   recordHealthCheck,
   recordGitHubActionsCheck,
+  recordGitLabPipelineCheck,
   log,
   now: () => Date.now()
 });
@@ -55,7 +72,7 @@ let schedulerAllowStdio: boolean | undefined;
 
 function isTargetDue(
   target: Pick<
-    RegisteredServer | RegisteredGitHubActionsTarget,
+    RegisteredServer | RegisteredGitHubActionsTarget | RegisteredGitLabPipelineTarget,
     'last_checked' | 'check_interval_minutes'
   >,
   now: number
@@ -84,7 +101,11 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
       ...schedulerRuntime
         .listGitHubActionsTargets()
         .filter((target) => isTargetDue(target, now))
-        .map((target) => ({ kind: 'github_actions' as const, name: target.name, target }))
+        .map((target) => ({ kind: 'github_actions' as const, name: target.name, target })),
+      ...schedulerRuntime
+        .listGitLabPipelineTargets()
+        .filter((target) => isTargetDue(target, now))
+        .map((target) => ({ kind: 'gitlab_pipeline' as const, name: target.name, target }))
     ];
 
     if (dueTargets.length === 0) {
@@ -106,11 +127,25 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
           return;
         }
 
-        const result = await schedulerRuntime.checkGitHubActionsTarget(
+        if (scheduledTarget.kind === 'github_actions') {
+          const result = await schedulerRuntime.checkGitHubActionsTarget(
+            scheduledTarget.target,
+            timeoutMs
+          );
+          schedulerRuntime.recordGitHubActionsCheck(scheduledTarget.name, result);
+          schedulerRuntime.log('info', 'Scheduled check complete', {
+            kind: scheduledTarget.kind,
+            name: scheduledTarget.name,
+            status: result.status
+          });
+          return;
+        }
+
+        const result = await schedulerRuntime.checkGitLabPipelineTarget(
           scheduledTarget.target,
           timeoutMs
         );
-        schedulerRuntime.recordGitHubActionsCheck(scheduledTarget.name, result);
+        schedulerRuntime.recordGitLabPipelineCheck(scheduledTarget.name, result);
         schedulerRuntime.log('info', 'Scheduled check complete', {
           kind: scheduledTarget.kind,
           name: scheduledTarget.name,
