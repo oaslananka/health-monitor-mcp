@@ -5,6 +5,14 @@ import { checkServer } from './checker.js';
 import { getMaxConcurrency } from './config.js';
 import { mapWithConcurrency } from './concurrency.js';
 import { getDb, getResolvedDbPath } from './db.js';
+import { checkGitHubActionsTarget } from './github-actions.js';
+import {
+  getGitHubActionsDashboardReport,
+  getGitHubActionsTarget,
+  listGitHubActionsTargets,
+  recordGitHubActionsCheck
+} from './github-actions-registry.js';
+import { registerGitHubActionsTools } from './github-actions-tools.js';
 import {
   createRuntimePolicy,
   STDIO_DISABLED_MESSAGE,
@@ -41,6 +49,7 @@ import type {
   CheckAllInput,
   CheckResult,
   CheckServerInput,
+  GitHubActionsCheckResult,
   GetDashboardInput,
   GetReportInput,
   GetUptimeInput,
@@ -116,6 +125,16 @@ function buildErrorResult(error: unknown): CheckResult {
   };
 }
 
+function buildGitHubActionsErrorResult(error: unknown): GitHubActionsCheckResult {
+  return {
+    status: 'error',
+    response_time_ms: null,
+    error_message: error instanceof Error ? error.message : 'Unknown GitHub Actions error',
+    run: null,
+    failed_jobs: []
+  };
+}
+
 function enrichWithAlerts(
   serverName: string,
   result: CheckResult,
@@ -188,6 +207,7 @@ async function checkServerWithPolicy(
 
 function formatMarkdownReport(input: GetReportInput): string {
   const report = getDashboardReport(input.hours);
+  const githubReport = getGitHubActionsDashboardReport(input.hours);
   const lines = [
     '# MCP Health Report',
     '',
@@ -214,6 +234,24 @@ function formatMarkdownReport(input: GetReportInput): string {
     lines.push('| -- | -- | -- | -- | -- | -- | -- |');
   }
 
+  lines.push(
+    '',
+    '## GitHub Actions',
+    '',
+    '| Target | Repository | Workflow | Branch | Status | Conclusion | Uptime | Avg RT | Failures | Run |',
+    '| ------ | ---------- | -------- | ------ | ------ | ---------- | ------ | ------ | -------- | --- |'
+  );
+
+  for (const entry of githubReport) {
+    lines.push(
+      `| ${escapeMarkdownTableCell(entry.name)} | ${escapeMarkdownTableCell(`${entry.owner}/${entry.repository}`)} | ${escapeMarkdownTableCell(entry.workflow)} | ${escapeMarkdownTableCell(entry.branch ?? '--')} | ${formatCurrentStatus(entry.current_status)} | ${escapeMarkdownTableCell(entry.latest_conclusion ?? '--')} | ${formatMetric(entry.uptime_percent, '%')} | ${formatMetric(entry.avg_response_time_ms, 'ms')} | ${entry.consecutive_failures} | ${entry.latest_run_url ? `[open](${entry.latest_run_url})` : '--'} |`
+    );
+  }
+
+  if (githubReport.length === 0) {
+    lines.push('| -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |');
+  }
+
   return lines.join('\n');
 }
 
@@ -222,6 +260,7 @@ export function registerMonitoringTools(
   options: MonitoringToolOptions = {}
 ): void {
   const policy = createRuntimePolicy(options);
+  registerGitHubActionsTools(server);
 
   server.registerTool(
     'register_server',
@@ -315,9 +354,9 @@ export function registerMonitoringTools(
   server.registerTool(
     'check_all',
     {
-      title: 'Check All Servers',
+      title: 'Check All Targets',
       description:
-        'Check all registered MCP servers with bounded concurrency from HEALTH_MONITOR_MAX_CONCURRENCY. Results preserve registration order; optional tags filter the targets.',
+        'Check all registered MCP servers and GitHub Actions workflows with one bounded concurrency limit. Results preserve MCP-then-GitHub registration order; optional tags filter both target kinds.',
       inputSchema: CheckAllSchema,
       annotations: {
         readOnlyHint: true,
@@ -327,69 +366,106 @@ export function registerMonitoringTools(
     },
     async (input: CheckAllInput) => {
       const servers = listServers({ tags: input.tags });
-      if (servers.length === 0) {
+      const githubTargets = listGitHubActionsTargets({ tags: input.tags });
+      const targets = [
+        ...servers.map((server) => ({ kind: 'mcp_server' as const, name: server.name })),
+        ...githubTargets.map((target) => ({ kind: 'github_actions' as const, name: target.name }))
+      ];
+
+      if (targets.length === 0) {
         return formatResponse(
           toolError(
             'NO_SERVERS_REGISTERED',
             input.tags?.length
-              ? 'No registered servers match the requested tags.'
-              : 'No MCP servers are registered.',
-            'Run register_server first or adjust the tag filter, then retry check_all.'
+              ? 'No registered monitoring targets match the requested tags.'
+              : 'No MCP servers or GitHub Actions workflows are registered.',
+            'Run register_server or register_github_actions first, or adjust the tag filter, then retry check_all.'
           )
         );
       }
 
       const maxConcurrency = getMaxConcurrency();
-      const results = await mapWithConcurrency(servers, maxConcurrency, async (listedServer) => {
-        const serverConfig = getServer(listedServer.name);
-        if (!serverConfig) {
+      const results = await mapWithConcurrency(targets, maxConcurrency, async (target) => {
+        if (target.kind === 'mcp_server') {
+          const serverConfig = getServer(target.name);
+          if (!serverConfig) {
+            return {
+              kind: target.kind,
+              name: target.name,
+              ...buildErrorResult(new Error(`Server not found: ${target.name}`)),
+              alerts: { has_alerts: false, findings: [] }
+            };
+          }
+
+          try {
+            const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
+            recordHealthCheck(target.name, result);
+            return {
+              kind: target.kind,
+              name: target.name,
+              ...result,
+              alerts: enrichWithAlerts(target.name, result)
+            };
+          } catch (error) {
+            const result = buildErrorResult(error);
+            recordHealthCheck(target.name, result);
+            return {
+              kind: target.kind,
+              name: target.name,
+              ...result,
+              alerts: enrichWithAlerts(target.name, result)
+            };
+          }
+        }
+
+        const githubConfig = getGitHubActionsTarget(target.name);
+        if (!githubConfig) {
           return {
-            name: listedServer.name,
-            ...buildErrorResult(new Error(`Server not found: ${listedServer.name}`)),
-            alerts: {
-              has_alerts: false,
-              findings: []
-            }
+            kind: target.kind,
+            name: target.name,
+            ...buildGitHubActionsErrorResult(
+              new Error(`GitHub Actions target not found: ${target.name}`)
+            )
           };
         }
 
         try {
-          const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
-          recordHealthCheck(listedServer.name, result);
-          return {
-            name: listedServer.name,
-            ...result,
-            alerts: enrichWithAlerts(listedServer.name, result)
-          };
+          const result = await checkGitHubActionsTarget(githubConfig, input.timeout_ms);
+          recordGitHubActionsCheck(target.name, result);
+          return { kind: target.kind, name: target.name, ...result };
         } catch (error) {
-          const result = buildErrorResult(error);
-          recordHealthCheck(listedServer.name, result);
-          return {
-            name: listedServer.name,
-            ...result,
-            alerts: enrichWithAlerts(listedServer.name, result)
-          };
+          const result = buildGitHubActionsErrorResult(error);
+          recordGitHubActionsCheck(target.name, result);
+          return { kind: target.kind, name: target.name, ...result };
         }
       });
-      const checks = results.map((result, index) =>
-        result.status === 'fulfilled'
-          ? result.value
-          : {
-              name: servers[index]?.name ?? 'unknown',
-              ...buildErrorResult(result.reason),
-              alerts: {
-                has_alerts: false,
-                findings: []
-              }
-            }
-      );
+
+      const checks = results.map((result, index) => {
+        if (result.status === 'fulfilled') return result.value;
+        const target = targets[index];
+        if (target?.kind === 'github_actions') {
+          return {
+            kind: target.kind,
+            name: target.name,
+            ...buildGitHubActionsErrorResult(result.reason)
+          };
+        }
+
+        return {
+          kind: 'mcp_server' as const,
+          name: target?.name ?? 'unknown',
+          ...buildErrorResult(result.reason),
+          alerts: { has_alerts: false, findings: [] }
+        };
+      });
       const upCount = checks.filter((result) => result.status === 'up').length;
+      const noun = githubTargets.length > 0 ? 'targets' : 'servers';
 
       return formatResponse({
-        summary: `${upCount}/${checks.length} servers UP, ${checks.length - upCount} DOWN`,
+        summary: `${upCount}/${checks.length} ${noun} UP, ${checks.length - upCount} DOWN`,
         checked_at: new Date().toISOString(),
         max_concurrency: maxConcurrency,
-        queued: Math.max(0, servers.length - maxConcurrency),
+        queued: Math.max(0, targets.length - maxConcurrency),
         results: checks
       });
     }
@@ -444,7 +520,7 @@ export function registerMonitoringTools(
     {
       title: 'Get Health Dashboard',
       description:
-        'Get a dashboard overview of all registered MCP servers with uptime and performance stats.',
+        'Get a dashboard overview of registered MCP servers and GitHub Actions workflows with uptime and performance stats.',
       inputSchema: GetDashboardSchema,
       annotations: {
         readOnlyHint: true,
@@ -454,10 +530,12 @@ export function registerMonitoringTools(
     },
     async (input: GetDashboardInput) => {
       const report = getDashboardReport(input.hours);
+      const githubReport = getGitHubActionsDashboardReport(input.hours);
       const uptimeValues = report
         .map((entry) => entry.uptime_percent)
         .filter((value): value is number => value !== null);
       const upCount = report.filter((entry) => entry.current_status === 'up').length;
+      const githubUpCount = githubReport.filter((entry) => entry.current_status === 'up').length;
 
       return formatResponse({
         period_hours: input.hours,
@@ -465,6 +543,10 @@ export function registerMonitoringTools(
           total_servers: report.length,
           currently_up: upCount,
           currently_down: report.length - upCount,
+          total_targets: report.length + githubReport.length,
+          github_actions_targets: githubReport.length,
+          github_actions_up: githubUpCount,
+          github_actions_down: githubReport.length - githubUpCount,
           avg_uptime_percent:
             uptimeValues.length > 0
               ? Math.round(
@@ -473,6 +555,7 @@ export function registerMonitoringTools(
               : null
         },
         include_tool_stats: input.include_tool_stats,
+        github_actions: githubReport,
         servers: report.map((serverReport) => {
           const latest = getLatestDashboardResult(serverReport);
           const payload = {
@@ -500,7 +583,7 @@ export function registerMonitoringTools(
     {
       title: 'Get Health Report (Markdown)',
       description:
-        'Get a human-readable Markdown health report for all servers. Paste directly into chat or docs.',
+        'Get a human-readable Markdown health report for MCP servers and GitHub Actions workflows. Paste directly into chat or docs.',
       inputSchema: GetReportSchema,
       annotations: {
         readOnlyHint: true,
@@ -567,15 +650,36 @@ export function registerMonitoringTools(
       const totalServers = (
         db.prepare('SELECT COUNT(*) AS count FROM servers').get() as { count: number }
       ).count;
-      const oldestCheck = (
-        db.prepare('SELECT MIN(timestamp) AS timestamp FROM health_checks').get() as {
-          timestamp: number | null;
+      const totalGitHubTargets = (
+        db.prepare('SELECT COUNT(*) AS count FROM github_actions_targets').get() as {
+          count: number;
         }
+      ).count;
+      const totalGitHubChecks = (
+        db.prepare('SELECT COUNT(*) AS count FROM github_actions_checks').get() as { count: number }
+      ).count;
+      const oldestCheck = (
+        db
+          .prepare(
+            `
+            SELECT MIN(timestamp) AS timestamp
+            FROM (
+              SELECT timestamp FROM health_checks
+              UNION ALL
+              SELECT timestamp FROM github_actions_checks
+            )
+          `
+          )
+          .get() as { timestamp: number | null }
       ).timestamp;
 
       return formatResponse({
         total_servers_registered: totalServers,
         total_checks_performed: totalChecks,
+        total_github_actions_targets: totalGitHubTargets,
+        total_github_actions_checks: totalGitHubChecks,
+        total_targets_registered: totalServers + totalGitHubTargets,
+        total_checks_all_providers: totalChecks + totalGitHubChecks,
         monitoring_since: oldestCheck ? new Date(oldestCheck).toISOString() : null,
         db_path: getResolvedDbPath()
       });
