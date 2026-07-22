@@ -137,6 +137,58 @@ const MIGRATIONS: Migration[] = [
         DROP TABLE IF EXISTS azure_pipelines;
       `);
     }
+  },
+  {
+    version: 5,
+    description: 'add GitHub Actions monitoring provider',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS github_actions_targets (
+          name TEXT PRIMARY KEY,
+          owner TEXT NOT NULL,
+          repository TEXT NOT NULL,
+          workflow TEXT NOT NULL,
+          branch TEXT,
+          token_env TEXT NOT NULL DEFAULT 'GITHUB_TOKEN',
+          tags TEXT NOT NULL DEFAULT '[]',
+          check_interval_minutes INTEGER NOT NULL DEFAULT 5,
+          created_at INTEGER NOT NULL,
+          last_checked INTEGER,
+          last_status TEXT NOT NULL DEFAULT 'unknown',
+          last_response_time_ms INTEGER,
+          last_run_id INTEGER,
+          last_conclusion TEXT,
+          last_run_url TEXT,
+          consecutive_failures INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS github_actions_checks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          target_name TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          response_time_ms INTEGER,
+          run_id INTEGER,
+          workflow_name TEXT,
+          run_number INTEGER,
+          run_attempt INTEGER,
+          run_status TEXT,
+          conclusion TEXT,
+          event TEXT,
+          branch TEXT,
+          commit_sha TEXT,
+          run_url TEXT,
+          error_message TEXT,
+          failed_jobs TEXT,
+          FOREIGN KEY (target_name) REFERENCES github_actions_targets(name) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_github_actions_checks_target_time
+          ON github_actions_checks(target_name, timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_github_actions_checks_timestamp
+          ON github_actions_checks(timestamp DESC);
+      `);
+    }
   }
 ];
 
