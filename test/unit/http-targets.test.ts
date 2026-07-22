@@ -242,6 +242,66 @@ describe('generic HTTP target checker', () => {
     );
   });
 
+  it('enforces the total timeout even when the response keeps streaming data', async () => {
+    const { server, origin } = await listen((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/plain' });
+      let sent = 0;
+      const timer = setInterval(() => {
+        response.write('x');
+        sent += 1;
+        if (sent === 8) {
+          clearInterval(timer);
+          response.end();
+        }
+      }, 20);
+      response.on('close', () => clearInterval(timer));
+    });
+    servers.push(server);
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = origin;
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => [{ address: '127.0.0.1', family: 4 }]
+    });
+
+    const result = await checkHttpTarget(createTarget({ url: `${origin}/stream` }), 55, {
+      profile: 'full'
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: 'timeout',
+        error_message: expect.stringContaining('timed out')
+      })
+    );
+  });
+
+  it('does not treat an object JSON value as equal to null', async () => {
+    const { server, origin } = await listen((_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ node: {} }));
+    });
+    servers.push(server);
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = origin;
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => [{ address: '127.0.0.1', family: 4 }]
+    });
+
+    const result = await checkHttpTarget(
+      createTarget({
+        url: `${origin}/json`,
+        json_assertions: [{ path: 'node', equals: null }]
+      }),
+      5_000,
+      { profile: 'full' }
+    );
+
+    expect(result.status).toBe('down');
+    expect(result.assertions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'json_equals', path: 'node', passed: false })
+      ])
+    );
+  });
+
   it('reports TLS details and fails an expiry threshold without returning certificate chains', async () => {
     setHttpTargetPolicyRuntimeForTests({
       lookup: async () => [{ address: '8.8.8.8', family: 4 }]

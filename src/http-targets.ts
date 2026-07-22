@@ -205,10 +205,15 @@ async function withBudget<T>(promise: Promise<T>, timeoutMs: number, message: st
   });
 }
 
-function scalarValue(value: unknown): string | number | boolean | null {
-  return value === null || ['string', 'number', 'boolean'].includes(typeof value)
-    ? (value as string | number | boolean | null)
-    : null;
+function scalarValue(value: unknown): {
+  is_scalar: boolean;
+  value: string | number | boolean | null;
+} {
+  if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) {
+    return { is_scalar: true, value: value as string | number | boolean | null };
+  }
+
+  return { is_scalar: false, value: null };
 }
 
 function readJsonPath(root: unknown, path: string): { found: boolean; value: unknown } {
@@ -290,14 +295,14 @@ function evaluateAssertions(
 
     for (const assertion of target.json_assertions) {
       const result = readJsonPath(parsed, assertion.path);
-      const actual = scalarValue(result.value);
-      const passed = result.found && Object.is(actual, assertion.equals);
+      const scalar = scalarValue(result.value);
+      const passed = result.found && scalar.is_scalar && Object.is(scalar.value, assertion.equals);
       assertions.push({
         type: 'json_equals',
         passed,
         path: assertion.path,
         expected: assertion.equals,
-        actual,
+        actual: scalar.value,
         message: passed
           ? `JSON path ${assertion.path} matched.`
           : `JSON path ${assertion.path} did not match the configured value.`
