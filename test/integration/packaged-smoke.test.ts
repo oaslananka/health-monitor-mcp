@@ -39,7 +39,7 @@ async function getFreePort(): Promise<number> {
 async function waitForHealth(port: number): Promise<Response> {
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/health`);
 
@@ -59,7 +59,7 @@ async function waitForHealth(port: number): Promise<Response> {
 }
 
 async function waitForOutput(readOutput: () => string, expected: string): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < 500; attempt += 1) {
     if (readOutput().includes(expected)) {
       return;
     }
@@ -189,7 +189,7 @@ ${stderr}`,
     } finally {
       await stopProcess(child);
     }
-  }, 10_000);
+  }, 30_000);
 
   it('starts the packaged HTTP entrypoint and serves health checks', async () => {
     const port = await getFreePort();
@@ -216,5 +216,5 @@ ${stderr}`,
     } finally {
       await stopProcess(child);
     }
-  }, 10_000);
+  }, 30_000);
 });

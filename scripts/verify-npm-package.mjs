@@ -18,8 +18,8 @@ function readJson(filePath) {
 }
 
 function resolveCommand(command) {
-  if (process.platform === 'win32' && command === 'npm') {
-    return 'npm.cmd';
+  if (process.platform === 'win32' && ['npm', 'pnpm'].includes(command)) {
+    return `${command}.cmd`;
   }
 
   return command;
@@ -62,28 +62,34 @@ function sleep(ms) {
 }
 
 function localPackageTarball(directory) {
-  const result = run('npm', [
-    'pack',
-    '--json',
-    '--ignore-scripts',
-    '--pack-destination',
-    directory
-  ]);
+  const suppliedTarball = process.env.LOCAL_PACKAGE_TARBALL;
+  if (suppliedTarball) {
+    const tarballPath = path.resolve(suppliedTarball);
+    if (!fs.existsSync(tarballPath)) {
+      throw new Error(`LOCAL_PACKAGE_TARBALL does not exist: ${tarballPath}`);
+    }
 
-  if (result.status !== 0) {
-    throw new Error(`npm pack failed: ${result.stderr || result.stdout}`);
+    return fs.readFileSync(tarballPath);
   }
 
-  const metadata = parseJson(result.stdout, 'npm pack');
+  const result = run('pnpm', ['pack', '--json', '--pack-destination', directory]);
+
+  if (result.status !== 0) {
+    throw new Error(`pnpm pack failed: ${result.stderr || result.stdout}`);
+  }
+
+  const metadata = parseJson(result.stdout, 'pnpm pack');
   const entry = Array.isArray(metadata) ? metadata[0] : metadata;
 
   if (!entry?.filename) {
-    throw new Error('npm pack did not report a package filename');
+    throw new Error('pnpm pack did not report a package filename');
   }
 
-  const tarballPath = path.join(directory, path.basename(entry.filename));
+  const tarballPath = path.isAbsolute(entry.filename)
+    ? entry.filename
+    : path.join(directory, path.basename(entry.filename));
   if (!fs.existsSync(tarballPath)) {
-    throw new Error(`npm pack did not create ${tarballPath}`);
+    throw new Error(`pnpm pack did not create ${tarballPath}`);
   }
 
   return fs.readFileSync(tarballPath);

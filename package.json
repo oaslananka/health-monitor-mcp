@@ -54,7 +54,7 @@
     "security:reuse": "python -m reuse lint",
     "security:supply-chain": "pnpm run security:sbom && pnpm run security:licenses && pnpm run security:reuse",
     "check:metadata": "node scripts/validate-mcp-metadata.mjs",
-    "check:package": "pnpm pack --dry-run",
+    "check:package": "pnpm run check:consumer-package",
     "release:dry-run": "node scripts/release-state.mjs --dry-run",
     "ci:static": "pnpm run build && pnpm run typecheck && pnpm run lint && pnpm run lint:test && pnpm run format:check && pnpm run docs:api:check",
     "ci:check": "pnpm run ci:static && pnpm run test:ci",
@@ -67,7 +67,8 @@
     "precommit:install": "pre-commit install --hook-type pre-commit",
     "precommit:install:push": "pre-commit install --hook-type pre-push",
     "precommit:run": "pre-commit run --all-files --hook-stage pre-commit",
-    "release:verify-ref": "node scripts/verify-release-ref.mjs"
+    "release:verify-ref": "node scripts/verify-release-ref.mjs",
+    "check:consumer-package": "node scripts/check-consumer-package.mjs"
   },
   "engines": {
     "node": ">=24",
@@ -139,5 +140,8 @@
     "classNameTemplate": "{filepath}",
     "titleTemplate": "{title}",
     "ancestorSeparator": " › "
-  }
+  },
+  "bundleDependencies": [
+    "@modelcontextprotocol/sdk"
+  ]
 }

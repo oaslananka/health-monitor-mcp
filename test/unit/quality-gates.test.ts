@@ -8,6 +8,7 @@ import {
 
 type PackageJson = {
   scripts: Record<string, string>;
+  bundleDependencies?: string[];
 };
 
 type RenovateConfig = {
@@ -194,13 +195,32 @@ describe('quality gate regression checks', () => {
 
     expectVersionAtLeast(yamlVersion(workspaceConfig, 'body-parser'), '2.3.0');
     expectVersionAtLeast(yamlVersion(workspaceConfig, '@hono/node-server'), '2.0.5');
-    expectVersionAtLeast(yamlVersion(workspaceConfig, 'fast-uri'), '3.1.3');
+    expectVersionAtLeast(yamlVersion(workspaceConfig, 'fast-uri'), '3.1.4');
     expectVersionAtLeast(yamlVersion(workspaceConfig, 'linkify-it'), '5.0.2');
 
     expect(lockfile).not.toContain('body-parser@2.2.2');
     expect(lockfile).not.toContain('@hono/node-server@1.19.14');
     expect(lockfile).not.toContain('fast-uri@3.1.2');
+    expect(lockfile).not.toContain('fast-uri@3.1.3');
     expect(lockfile).not.toContain('linkify-it@5.0.1');
+  });
+
+  it('ships the patched MCP SDK graph to downstream npm consumers', () => {
+    const packageJson = readProjectJson<PackageJson>('package.json');
+    const workspaceConfig = readProjectText('pnpm-workspace.yaml');
+    const sdkPatch = readProjectText('patches/@modelcontextprotocol__sdk@1.29.0.patch');
+    const dockerfile = readProjectText('Dockerfile');
+
+    expect(packageJson.bundleDependencies).toContain('@modelcontextprotocol/sdk');
+    expect(packageJson.scripts['check:package']).toContain('check:consumer-package');
+    expect(workspaceConfig).toContain('nodeLinker: hoisted');
+    expect(workspaceConfig).toContain('patchedDependencies:');
+    expect(workspaceConfig).toContain("'@modelcontextprotocol/sdk@1.29.0':");
+    expect(sdkPatch).toContain('"@hono/node-server": "^2.0.5"');
+    expect(dockerfile).toContain('COPY patches ./patches');
+    expect(dockerfile.indexOf('COPY patches ./patches')).toBeLessThan(
+      dockerfile.indexOf('RUN pnpm install --frozen-lockfile')
+    );
   });
 
   it('orchestrates public release surfaces from one exact component tag', () => {
@@ -245,10 +265,16 @@ describe('quality gate regression checks', () => {
 
     expect(publishWorkflow).toContain('node scripts/release-state.mjs --require-tag');
     expect(publishWorkflow).toContain('npm_published=');
+    expect(publishWorkflow).toContain('pnpm pack --json --pack-destination');
     expect(publishWorkflow).toContain(
-      'npm publish --access public --provenance || node scripts/verify-npm-package.mjs'
+      'npm publish "$PACKAGE_TARBALL" --access public --provenance'
+    );
+    expect(publishWorkflow).toContain(
+      'LOCAL_PACKAGE_TARBALL: ${{ steps.package.outputs.tarball }}'
     );
     expect(publishWorkflow).toContain('node scripts/verify-npm-package.mjs');
+    expect(verifyScript).toContain('LOCAL_PACKAGE_TARBALL');
+    expect(verifyScript).toContain("run('pnpm', ['pack'");
     expect(verifyScript).toContain('packageFileIndex');
     expect(verifyScript).toContain('assertPackageContentsEqual');
     expect(verifyScript).toContain('integrityForBuffer');
