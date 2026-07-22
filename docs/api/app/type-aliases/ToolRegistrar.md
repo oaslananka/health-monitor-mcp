@@ -8,7 +8,7 @@
 
 > **ToolRegistrar** = `object`
 
-Defined in: [app.ts:87](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L87)
+Defined in: [app.ts:88](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L88)
 
 Minimal tool-registration surface used by the monitor server factory.
 
@@ -18,7 +18,7 @@ Minimal tool-registration surface used by the monitor server factory.
 
 > **registerTool**: (`name`, `config`, `handler`) => `unknown`
 
-Defined in: [app.ts:88](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L88)
+Defined in: [app.ts:89](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L89)
 
 #### Parameters
 
