@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.2.1](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.0...health-monitor-mcp-v1.2.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* enforce MCP Registry description limit ([#104](https://github.com/oaslananka/health-monitor-mcp/issues/104)) ([2ece744](https://github.com/oaslananka/health-monitor-mcp/commit/2ece744a260c2c1cbc1fbee69ab96c18a6d1b529))
+
 ## [1.2.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.3...health-monitor-mcp-v1.2.0) (2026-07-22)
 
 
