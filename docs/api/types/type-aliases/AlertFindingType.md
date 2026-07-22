@@ -8,4 +8,4 @@
 
 > **AlertFindingType** = `z.infer`\<*typeof* [`AlertFindingTypeSchema`](../variables/AlertFindingTypeSchema.md)\>
 
-Defined in: [types.ts:164](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L164)
+Defined in: [types.ts:232](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L232)

@@ -8,4 +8,4 @@
 
 > **ListServersInput** = `z.infer`\<*typeof* [`ListServersSchema`](../variables/ListServersSchema.md)\>
 
-Defined in: [types.ts:163](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L163)
+Defined in: [types.ts:227](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L227)

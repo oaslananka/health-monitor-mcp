@@ -8,6 +8,12 @@
 
 ## Interfaces
 
+- [GitHubActionsStepDiagnostic](interfaces/GitHubActionsStepDiagnostic.md)
+- [GitHubActionsJobDiagnostic](interfaces/GitHubActionsJobDiagnostic.md)
+- [GitHubActionsRunDetails](interfaces/GitHubActionsRunDetails.md)
+- [GitHubActionsCheckResult](interfaces/GitHubActionsCheckResult.md)
+- [RegisteredGitHubActionsTarget](interfaces/RegisteredGitHubActionsTarget.md)
+- [GitHubActionsCheckRecord](interfaces/GitHubActionsCheckRecord.md)
 - [HealthRecord](interfaces/HealthRecord.md)
 - [RegisteredServer](interfaces/RegisteredServer.md)
 - [ServerStatus](interfaces/ServerStatus.md)
@@ -30,6 +36,10 @@
 - [GetReportInput](type-aliases/GetReportInput.md)
 - [UnregisterInput](type-aliases/UnregisterInput.md)
 - [ListServersInput](type-aliases/ListServersInput.md)
+- [RegisterGitHubActionsInput](type-aliases/RegisterGitHubActionsInput.md)
+- [CheckGitHubActionsInput](type-aliases/CheckGitHubActionsInput.md)
+- [ListGitHubActionsInput](type-aliases/ListGitHubActionsInput.md)
+- [UnregisterGitHubActionsInput](type-aliases/UnregisterGitHubActionsInput.md)
 - [AlertFindingType](type-aliases/AlertFindingType.md)
 
 ## Variables
@@ -47,4 +57,8 @@
 - [GetReportSchema](variables/GetReportSchema.md)
 - [UnregisterSchema](variables/UnregisterSchema.md)
 - [ListServersSchema](variables/ListServersSchema.md)
+- [RegisterGitHubActionsSchema](variables/RegisterGitHubActionsSchema.md)
+- [CheckGitHubActionsSchema](variables/CheckGitHubActionsSchema.md)
+- [ListGitHubActionsSchema](variables/ListGitHubActionsSchema.md)
+- [UnregisterGitHubActionsSchema](variables/UnregisterGitHubActionsSchema.md)
 - [EmptySchema](variables/EmptySchema.md)

@@ -8,4 +8,4 @@
 
 > **CheckAllInput** = `z.infer`\<*typeof* [`CheckAllSchema`](../variables/CheckAllSchema.md)\>
 
-Defined in: [types.ts:157](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L157)
+Defined in: [types.ts:221](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L221)
