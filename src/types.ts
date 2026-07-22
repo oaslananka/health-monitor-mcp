@@ -164,7 +164,7 @@ const GitHubWorkflowSchema = z
   .min(1)
   .max(255)
   .refine(
-    (value) => /^[0-9]+$/.test(value) || /^[A-Za-z0-9_.-]+\.ya?ml$/.test(value),
+    (value) => /^\d+$/.test(value) || /^[A-Za-z0-9_.-]+\.ya?ml$/.test(value),
     'Workflow must be a numeric ID or a .yml/.yaml filename'
   );
 

@@ -10,7 +10,8 @@ import {
   getGitHubActionsDashboardReport,
   getGitHubActionsTarget,
   listGitHubActionsTargets,
-  recordGitHubActionsCheck
+  recordGitHubActionsCheck,
+  type GitHubActionsDashboardEntry
 } from './github-actions-registry.js';
 import { registerGitHubActionsTools } from './github-actions-tools.js';
 import {
@@ -183,6 +184,13 @@ function escapeMarkdownTableCell(value: string): string {
     .replace(/[\r\n]+/g, ' ');
 }
 
+function formatGitHubActionsReportRow(entry: GitHubActionsDashboardEntry): string {
+  const repository = `${entry.owner}/${entry.repository}`;
+  const runLink = entry.latest_run_url ? `[open](${entry.latest_run_url})` : '--';
+
+  return `| ${escapeMarkdownTableCell(entry.name)} | ${escapeMarkdownTableCell(repository)} | ${escapeMarkdownTableCell(entry.workflow)} | ${escapeMarkdownTableCell(entry.branch ?? '--')} | ${formatCurrentStatus(entry.current_status)} | ${escapeMarkdownTableCell(entry.latest_conclusion ?? '--')} | ${formatMetric(entry.uptime_percent, '%')} | ${formatMetric(entry.avg_response_time_ms, 'ms')} | ${entry.consecutive_failures} | ${runLink} |`;
+}
+
 function buildStdioDisabledResult(): CheckResult {
   return {
     status: 'error',
@@ -243,9 +251,7 @@ function formatMarkdownReport(input: GetReportInput): string {
   );
 
   for (const entry of githubReport) {
-    lines.push(
-      `| ${escapeMarkdownTableCell(entry.name)} | ${escapeMarkdownTableCell(`${entry.owner}/${entry.repository}`)} | ${escapeMarkdownTableCell(entry.workflow)} | ${escapeMarkdownTableCell(entry.branch ?? '--')} | ${formatCurrentStatus(entry.current_status)} | ${escapeMarkdownTableCell(entry.latest_conclusion ?? '--')} | ${formatMetric(entry.uptime_percent, '%')} | ${formatMetric(entry.avg_response_time_ms, 'ms')} | ${entry.consecutive_failures} | ${entry.latest_run_url ? `[open](${entry.latest_run_url})` : '--'} |`
-    );
+    lines.push(formatGitHubActionsReportRow(entry));
   }
 
   if (githubReport.length === 0) {

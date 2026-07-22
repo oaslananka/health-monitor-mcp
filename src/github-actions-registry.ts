@@ -60,7 +60,11 @@ function mapTarget(row: TargetRow | undefined): RegisteredGitHubActionsTarget | 
 function listableStatus(
   status: RegisteredGitHubActionsTarget['last_status']
 ): 'up' | 'down' | 'unknown' {
-  return status === 'up' ? 'up' : status === 'unknown' ? 'unknown' : 'down';
+  if (status === 'up' || status === 'unknown') {
+    return status;
+  }
+
+  return 'down';
 }
 
 export function registerGitHubActionsTarget(input: RegisterGitHubActionsInput): {

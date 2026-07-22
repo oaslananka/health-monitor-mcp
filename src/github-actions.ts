@@ -283,6 +283,30 @@ function workflowJobsUrl(target: RegisteredGitHubActionsTarget, runId: number): 
   return `${GITHUB_API_BASE}/repos/${owner}/${repository}/actions/runs/${runId}/jobs?filter=latest&per_page=100`;
 }
 
+function resolveRunHealthStatus(run: GitHubActionsRunDetails): GitHubActionsCheckResult['status'] {
+  if (run.status !== 'completed') {
+    if (nonTerminalStatuses.has(run.status)) {
+      return 'up';
+    }
+
+    throw new Error(`GitHub workflow returned unsupported status ${run.status}.`);
+  }
+
+  if (run.conclusion === null) {
+    throw new Error('GitHub workflow completed without a conclusion.');
+  }
+
+  if (failedConclusions.has(run.conclusion)) {
+    return 'down';
+  }
+
+  if (successfulConclusions.has(run.conclusion)) {
+    return 'up';
+  }
+
+  throw new Error(`GitHub workflow returned unsupported conclusion ${run.conclusion}.`);
+}
+
 function errorResult(
   status: GitHubActionsCheckResult['status'],
   message: string,
@@ -341,25 +365,7 @@ export async function checkGitHubActionsTarget(
       failedJobs = mapFailedJobs(jobsPayload);
     }
 
-    let status: GitHubActionsCheckResult['status'];
-
-    if (run.status === 'completed') {
-      if (run.conclusion === null) {
-        throw new Error('GitHub workflow completed without a conclusion.');
-      }
-
-      if (failedConclusions.has(run.conclusion)) {
-        status = 'down';
-      } else if (successfulConclusions.has(run.conclusion)) {
-        status = 'up';
-      } else {
-        throw new Error(`GitHub workflow returned unsupported conclusion ${run.conclusion}.`);
-      }
-    } else if (nonTerminalStatuses.has(run.status)) {
-      status = 'up';
-    } else {
-      throw new Error(`GitHub workflow returned unsupported status ${run.status}.`);
-    }
+    const status = resolveRunHealthStatus(run);
 
     return {
       status,
