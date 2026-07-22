@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.1.3](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.2...health-monitor-mcp-v1.1.3) (2026-07-22)
+
+
+### Bug Fixes
+
+* **security:** secure the published npm dependency graph ([#99](https://github.com/oaslananka/health-monitor-mcp/issues/99)) ([977d6d1](https://github.com/oaslananka/health-monitor-mcp/commit/977d6d13f8c6f3b589e336e989e450c5408f4547)), closes [#96](https://github.com/oaslananka/health-monitor-mcp/issues/96)
+
 ## [1.1.2](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.1...health-monitor-mcp-v1.1.2) (2026-07-21)
 
 
