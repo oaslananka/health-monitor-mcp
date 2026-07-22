@@ -31,7 +31,11 @@ function createTarget(
   };
 }
 
-function jsonResponse(payload: unknown, status = 200, headers: HeadersInit = {}): Response {
+function jsonResponse(
+  payload: unknown,
+  status = 200,
+  headers: Record<string, string> = {}
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
@@ -39,6 +43,14 @@ function jsonResponse(payload: unknown, status = 200, headers: HeadersInit = {})
       ...headers
     }
   });
+}
+
+function sequenceFetch(...responses: Response[]): typeof fetch {
+  return jest.fn(async () => {
+    const response = responses.shift();
+    if (!response) throw new Error('Unexpected fetch call');
+    return response;
+  }) as unknown as typeof fetch;
 }
 
 function workflowRun(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -106,58 +118,59 @@ describe('GitHub Actions API checker', () => {
   });
 
   it('returns failed job and step diagnostics for a failed run', async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          total_count: 1,
-          workflow_runs: [workflowRun({ conclusion: 'failure' })]
-        })
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({
-          total_count: 2,
-          jobs: [
-            {
-              id: 501,
-              name: 'test',
-              status: 'completed',
-              conclusion: 'failure',
-              html_url: 'https://github.com/example/actions/runs/123/job/501',
-              started_at: '2026-07-22T10:01:00Z',
-              completed_at: '2026-07-22T10:03:00Z',
-              steps: [
-                {
-                  number: 1,
-                  name: 'Checkout',
-                  status: 'completed',
-                  conclusion: 'success',
-                  started_at: '2026-07-22T10:01:00Z',
-                  completed_at: '2026-07-22T10:01:10Z'
-                },
-                {
-                  number: 2,
-                  name: 'Run tests',
-                  status: 'completed',
-                  conclusion: 'failure',
-                  started_at: '2026-07-22T10:01:10Z',
-                  completed_at: '2026-07-22T10:03:00Z'
-                }
-              ]
-            },
-            {
-              id: 502,
-              name: 'lint',
-              status: 'completed',
-              conclusion: 'success',
-              html_url: 'https://github.com/example/actions/runs/123/job/502',
-              started_at: null,
-              completed_at: null,
-              steps: []
-            }
-          ]
-        })
-      ) as unknown as typeof fetch;
+    const responses = [
+      jsonResponse({
+        total_count: 1,
+        workflow_runs: [workflowRun({ conclusion: 'failure' })]
+      }),
+      jsonResponse({
+        total_count: 2,
+        jobs: [
+          {
+            id: 501,
+            name: 'test',
+            status: 'completed',
+            conclusion: 'failure',
+            html_url: 'https://github.com/example/actions/runs/123/job/501',
+            started_at: '2026-07-22T10:01:00Z',
+            completed_at: '2026-07-22T10:03:00Z',
+            steps: [
+              {
+                number: 1,
+                name: 'Checkout',
+                status: 'completed',
+                conclusion: 'success',
+                started_at: '2026-07-22T10:01:00Z',
+                completed_at: '2026-07-22T10:01:10Z'
+              },
+              {
+                number: 2,
+                name: 'Run tests',
+                status: 'completed',
+                conclusion: 'failure',
+                started_at: '2026-07-22T10:01:10Z',
+                completed_at: '2026-07-22T10:03:00Z'
+              }
+            ]
+          },
+          {
+            id: 502,
+            name: 'lint',
+            status: 'completed',
+            conclusion: 'success',
+            html_url: 'https://github.com/example/actions/runs/123/job/502',
+            started_at: null,
+            completed_at: null,
+            steps: []
+          }
+        ]
+      })
+    ];
+    const fetchMock = jest.fn(async () => {
+      const response = responses.shift();
+      if (!response) throw new Error('Unexpected fetch call');
+      return response;
+    }) as unknown as typeof fetch;
 
     setGitHubActionsRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
 
@@ -199,12 +212,10 @@ describe('GitHub Actions API checker', () => {
   });
 
   it('returns structured errors for no runs and malformed payloads', async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ total_count: 0, workflow_runs: [] }))
-      .mockResolvedValueOnce(
-        jsonResponse({ workflow_runs: [{ id: 'not-a-number' }] })
-      ) as unknown as typeof fetch;
+    const fetchMock = sequenceFetch(
+      jsonResponse({ total_count: 0, workflow_runs: [] }),
+      jsonResponse({ workflow_runs: [{ id: 'not-a-number' }] })
+    );
     setGitHubActionsRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
 
     const noRuns = await checkGitHubActionsTarget(createTarget(), 5_000);
@@ -226,15 +237,13 @@ describe('GitHub Actions API checker', () => {
 
   it('does not expose tokens in authentication and authorization failures', async () => {
     const secret = 'github_pat_super_secret';
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: 'Bad credentials' }, 401))
-      .mockResolvedValueOnce(
-        jsonResponse({ message: 'API rate limit exceeded for github_pat_super_secret' }, 403, {
-          'x-ratelimit-remaining': '0',
-          'x-ratelimit-reset': '1780000000'
-        })
-      ) as unknown as typeof fetch;
+    const fetchMock = sequenceFetch(
+      jsonResponse({ message: 'Bad credentials' }, 401),
+      jsonResponse({ message: 'API rate limit exceeded for github_pat_super_secret' }, 403, {
+        'x-ratelimit-remaining': '0',
+        'x-ratelimit-reset': '1780000000'
+      })
+    );
     setGitHubActionsRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => secret });
 
     const unauthorized = await checkGitHubActionsTarget(createTarget(), 5_000);
@@ -249,12 +258,10 @@ describe('GitHub Actions API checker', () => {
   });
 
   it('retries one transient response and returns the successful run', async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: 'temporary' }, 502))
-      .mockResolvedValueOnce(
-        jsonResponse({ total_count: 1, workflow_runs: [workflowRun()] })
-      ) as unknown as typeof fetch;
+    const fetchMock = sequenceFetch(
+      jsonResponse({ message: 'temporary' }, 502),
+      jsonResponse({ total_count: 1, workflow_runs: [workflowRun()] })
+    );
     setGitHubActionsRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
 
     const result = await checkGitHubActionsTarget(createTarget(), 5_000);
@@ -265,7 +272,7 @@ describe('GitHub Actions API checker', () => {
 
   it('returns timeout without leaking an unresolved request', async () => {
     const fetchMock = jest.fn(
-      async (_input: RequestInfo | URL, init?: RequestInit) =>
+      async (_input: string | URL | Request, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () => {
             reject(new DOMException('Aborted', 'AbortError'));
