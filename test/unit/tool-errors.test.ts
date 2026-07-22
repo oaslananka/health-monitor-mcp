@@ -51,4 +51,21 @@ describe('toolError', () => {
       ).error.code
     ).toBe('GITLAB_BASE_URL_NOT_ALLOWED');
   });
+
+  it('supports stable HTTP target and URL policy codes', () => {
+    expect(
+      toolError(
+        'HTTP_TARGET_NOT_FOUND',
+        'HTTP target is not registered: missing',
+        'Run register_http_target first, then retry the operation.'
+      ).error.code
+    ).toBe('HTTP_TARGET_NOT_FOUND');
+    expect(
+      toolError(
+        'HTTP_TARGET_URL_NOT_ALLOWED',
+        'HTTP target URL is not allowed',
+        'Review HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST.'
+      ).error.code
+    ).toBe('HTTP_TARGET_URL_NOT_ALLOWED');
+  });
 });
