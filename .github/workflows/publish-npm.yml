@@ -89,11 +89,33 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `npm_published=${alreadyPublished}\n`);
           NODE
 
+      - name: Prepare package tarball
+        id: package
+        run: |
+          pnpm pack --json --pack-destination "$RUNNER_TEMP" > publish-pack.json
+          package_tarball="$(
+            node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const pack = JSON.parse(fs.readFileSync('publish-pack.json', 'utf8'));
+          const entry = Array.isArray(pack) ? pack[0] : pack;
+          if (!entry?.filename) throw new Error('pnpm pack did not report a filename');
+          console.log(entry.filename);
+          NODE
+          )"
+          test -f "$package_tarball"
+          echo "tarball=$package_tarball" >> "$GITHUB_OUTPUT"
+
       - name: Publish package
         if: steps.release-state.outputs.npm_published != 'true'
-        run: npm publish --access public --provenance || node scripts/verify-npm-package.mjs
+        env:
+          PACKAGE_TARBALL: ${{ steps.package.outputs.tarball }}
+          LOCAL_PACKAGE_TARBALL: ${{ steps.package.outputs.tarball }}
+        run: npm publish "$PACKAGE_TARBALL" --access public --provenance || node scripts/verify-npm-package.mjs
 
       - name: Verify npm package
+        env:
+          LOCAL_PACKAGE_TARBALL: ${{ steps.package.outputs.tarball }}
         run: node scripts/verify-npm-package.mjs
 
   publish-registry:

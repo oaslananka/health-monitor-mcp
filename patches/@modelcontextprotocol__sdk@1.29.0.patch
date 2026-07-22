@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index 22d26ca..d0b35c7 100644
+--- a/package.json
++++ b/package.json
+@@ -100,7 +100,7 @@
+         "test:conformance:client:all": "npx @modelcontextprotocol/conformance client --command 'npx tsx test/conformance/src/everythingClient.ts' --suite all --expected-failures test/conformance/conformance-baseline.yml"
+     },
+     "dependencies": {
+-        "@hono/node-server": "^1.19.9",
++        "@hono/node-server": "^2.0.5",
+         "ajv": "^8.17.1",
+         "ajv-formats": "^3.0.1",
+         "content-type": "^1.0.5",

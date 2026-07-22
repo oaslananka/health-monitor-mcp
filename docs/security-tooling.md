@@ -63,6 +63,15 @@ For non-interactive automation, set `SNYK_TOKEN` rather than writing a token int
 The repository's Snyk GitHub App remains the authoritative pull-request check; no duplicate Snyk
 Actions workflow is maintained.
 
+### Published npm consumer graph
+
+`@modelcontextprotocol/sdk@1.29.0` declares an `@hono/node-server` 1.x range that cannot resolve past
+`GHSA-frvp-7c67-39w9`. Until the upstream SDK widens that range, pnpm applies the repository patch in
+`patches/@modelcontextprotocol__sdk@1.29.0.patch` and npm publication bundles the patched SDK graph.
+`pnpm run check:consumer-package` installs the produced tarball into a clean npm project, verifies the
+patched dependency declarations and versions, runs `npm ls`, and requires a zero-vulnerability
+consumer audit. This protects public consumers rather than relying only on root-level pnpm overrides.
+
 ### Sonar Secrets
 
 Create a SonarQube Cloud user token and expose it only in the local shell or a trusted secret
