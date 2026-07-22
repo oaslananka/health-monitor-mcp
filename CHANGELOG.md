@@ -35,6 +35,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Enforced the official MCP Registry 100-character public description limit before release publication.
+
 ### Added
 
 - Added GitHub Actions workflow registration, checks, failed job and step diagnostics, scheduling, dashboards, and reports.

@@ -63,6 +63,8 @@ jobs:
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           if (!server.name || !server.name.startsWith('io.github.oaslananka/')) throw new Error('server.json must use io.github.oaslananka namespace');
           if (!server.version || server.version !== pkg.version) throw new Error(`server.json version ${server.version} must match package.json ${pkg.version}`);
+          if (typeof server.description !== 'string' || server.description.length === 0) throw new Error('server.json description must be a non-empty string');
+          if (server.description.length > 100) throw new Error('server.json description must be at most 100 characters');
           if (!Array.isArray(server.packages) || server.packages.length === 0) throw new Error('server.json must define packages');
           const npmPackage = server.packages.find((entry) => entry.registryType === 'npm');
           if (!npmPackage) throw new Error('server.json must include an npm package entry');

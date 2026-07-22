@@ -22,6 +22,21 @@ if (packageJson.name !== 'health-monitor-mcp') {
   errors.push(`package name mismatch: ${packageJson.name}`);
 }
 
+const MAX_PUBLIC_DESCRIPTION_LENGTH = 100;
+
+for (const [filename, description] of [
+  ['mcp.json', mcpJson.description],
+  ['server.json', serverJson.description]
+]) {
+  if (typeof description !== 'string' || description.length === 0) {
+    errors.push(`${filename} description must be a non-empty string`);
+  } else if (description.length > MAX_PUBLIC_DESCRIPTION_LENGTH) {
+    errors.push(
+      `${filename} description must be at most ${MAX_PUBLIC_DESCRIPTION_LENGTH} characters`
+    );
+  }
+}
+
 if (packageJson.version !== mcpJson.version) {
   errors.push(`mcp.json version ${mcpJson.version} does not match package ${packageJson.version}`);
 }
