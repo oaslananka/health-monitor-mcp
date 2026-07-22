@@ -14,6 +14,15 @@ import {
   type GitHubActionsDashboardEntry
 } from './github-actions-registry.js';
 import { registerGitHubActionsTools } from './github-actions-tools.js';
+import { checkGitLabPipelineTarget } from './gitlab-pipelines.js';
+import {
+  getGitLabPipelineDashboardReport,
+  getGitLabPipelineTarget,
+  listGitLabPipelineTargets,
+  recordGitLabPipelineCheck,
+  type GitLabPipelineDashboardEntry
+} from './gitlab-pipeline-registry.js';
+import { registerGitLabPipelineTools } from './gitlab-pipeline-tools.js';
 import {
   createRuntimePolicy,
   STDIO_DISABLED_MESSAGE,
@@ -51,6 +60,7 @@ import type {
   CheckResult,
   CheckServerInput,
   GitHubActionsCheckResult,
+  GitLabPipelineCheckResult,
   GetDashboardInput,
   GetReportInput,
   GetUptimeInput,
@@ -136,6 +146,16 @@ function buildGitHubActionsErrorResult(error: unknown): GitHubActionsCheckResult
   };
 }
 
+function buildGitLabPipelineErrorResult(error: unknown): GitLabPipelineCheckResult {
+  return {
+    status: 'error',
+    response_time_ms: null,
+    error_message: error instanceof Error ? error.message : 'Unknown GitLab pipeline error',
+    pipeline: null,
+    failed_jobs: []
+  };
+}
+
 function enrichWithAlerts(
   serverName: string,
   result: CheckResult,
@@ -191,6 +211,12 @@ function formatGitHubActionsReportRow(entry: GitHubActionsDashboardEntry): strin
   return `| ${escapeMarkdownTableCell(entry.name)} | ${escapeMarkdownTableCell(repository)} | ${escapeMarkdownTableCell(entry.workflow)} | ${escapeMarkdownTableCell(entry.branch ?? '--')} | ${formatCurrentStatus(entry.current_status)} | ${escapeMarkdownTableCell(entry.latest_conclusion ?? '--')} | ${formatMetric(entry.uptime_percent, '%')} | ${formatMetric(entry.avg_response_time_ms, 'ms')} | ${entry.consecutive_failures} | ${runLink} |`;
 }
 
+function formatGitLabPipelineReportRow(entry: GitLabPipelineDashboardEntry): string {
+  const pipelineLink = entry.latest_pipeline_url ? `[open](${entry.latest_pipeline_url})` : '--';
+
+  return `| ${escapeMarkdownTableCell(entry.name)} | ${escapeMarkdownTableCell(entry.project)} | ${escapeMarkdownTableCell(entry.ref ?? '--')} | ${formatCurrentStatus(entry.current_status)} | ${escapeMarkdownTableCell(entry.latest_pipeline_status ?? '--')} | ${formatMetric(entry.uptime_percent, '%')} | ${formatMetric(entry.avg_response_time_ms, 'ms')} | ${entry.consecutive_failures} | ${pipelineLink} |`;
+}
+
 function buildStdioDisabledResult(): CheckResult {
   return {
     status: 'error',
@@ -216,6 +242,7 @@ async function checkServerWithPolicy(
 function formatMarkdownReport(input: GetReportInput): string {
   const report = getDashboardReport(input.hours);
   const githubReport = getGitHubActionsDashboardReport(input.hours);
+  const gitlabReport = getGitLabPipelineDashboardReport(input.hours);
   const lines = [
     '# MCP Health Report',
     '',
@@ -258,6 +285,22 @@ function formatMarkdownReport(input: GetReportInput): string {
     lines.push('| -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |');
   }
 
+  lines.push(
+    '',
+    '## GitLab Pipelines',
+    '',
+    '| Target | Project | Ref | Status | Pipeline | Uptime | Avg RT | Failures | Run |',
+    '| ------ | ------- | --- | ------ | -------- | ------ | ------ | -------- | --- |'
+  );
+
+  for (const entry of gitlabReport) {
+    lines.push(formatGitLabPipelineReportRow(entry));
+  }
+
+  if (gitlabReport.length === 0) {
+    lines.push('| -- | -- | -- | -- | -- | -- | -- | -- | -- |');
+  }
+
   return lines.join('\n');
 }
 
@@ -267,6 +310,7 @@ export function registerMonitoringTools(
 ): void {
   const policy = createRuntimePolicy(options);
   registerGitHubActionsTools(server);
+  registerGitLabPipelineTools(server);
 
   server.registerTool(
     'register_server',
@@ -362,7 +406,7 @@ export function registerMonitoringTools(
     {
       title: 'Check All Targets',
       description:
-        'Check all registered MCP servers and GitHub Actions workflows with one bounded concurrency limit. Results preserve MCP-then-GitHub registration order; optional tags filter both target kinds.',
+        'Check all registered MCP servers, GitHub Actions workflows, and GitLab pipelines with one bounded concurrency limit. Results preserve MCP-then-GitHub-then-GitLab registration order; optional tags filter all target kinds.',
       inputSchema: CheckAllSchema,
       annotations: {
         readOnlyHint: true,
@@ -373,9 +417,11 @@ export function registerMonitoringTools(
     async (input: CheckAllInput) => {
       const servers = listServers({ tags: input.tags });
       const githubTargets = listGitHubActionsTargets({ tags: input.tags });
+      const gitlabTargets = listGitLabPipelineTargets({ tags: input.tags });
       const targets = [
         ...servers.map((server) => ({ kind: 'mcp_server' as const, name: server.name })),
-        ...githubTargets.map((target) => ({ kind: 'github_actions' as const, name: target.name }))
+        ...githubTargets.map((target) => ({ kind: 'github_actions' as const, name: target.name })),
+        ...gitlabTargets.map((target) => ({ kind: 'gitlab_pipeline' as const, name: target.name }))
       ];
 
       if (targets.length === 0) {
@@ -384,8 +430,8 @@ export function registerMonitoringTools(
             'NO_SERVERS_REGISTERED',
             input.tags?.length
               ? 'No registered monitoring targets match the requested tags.'
-              : 'No MCP servers or GitHub Actions workflows are registered.',
-            'Run register_server or register_github_actions first, or adjust the tag filter, then retry check_all.'
+              : 'No MCP servers, GitHub Actions workflows, or GitLab pipelines are registered.',
+            'Run register_server, register_github_actions, or register_gitlab_pipeline first, or adjust the tag filter, then retry check_all.'
           )
         );
       }
@@ -424,24 +470,47 @@ export function registerMonitoringTools(
           }
         }
 
-        const githubConfig = getGitHubActionsTarget(target.name);
-        if (!githubConfig) {
+        if (target.kind === 'github_actions') {
+          const githubConfig = getGitHubActionsTarget(target.name);
+          if (!githubConfig) {
+            return {
+              kind: target.kind,
+              name: target.name,
+              ...buildGitHubActionsErrorResult(
+                new Error(`GitHub Actions target not found: ${target.name}`)
+              )
+            };
+          }
+
+          try {
+            const result = await checkGitHubActionsTarget(githubConfig, input.timeout_ms);
+            recordGitHubActionsCheck(target.name, result);
+            return { kind: target.kind, name: target.name, ...result };
+          } catch (error) {
+            const result = buildGitHubActionsErrorResult(error);
+            recordGitHubActionsCheck(target.name, result);
+            return { kind: target.kind, name: target.name, ...result };
+          }
+        }
+
+        const gitlabConfig = getGitLabPipelineTarget(target.name);
+        if (!gitlabConfig) {
           return {
             kind: target.kind,
             name: target.name,
-            ...buildGitHubActionsErrorResult(
-              new Error(`GitHub Actions target not found: ${target.name}`)
+            ...buildGitLabPipelineErrorResult(
+              new Error(`GitLab pipeline target not found: ${target.name}`)
             )
           };
         }
 
         try {
-          const result = await checkGitHubActionsTarget(githubConfig, input.timeout_ms);
-          recordGitHubActionsCheck(target.name, result);
+          const result = await checkGitLabPipelineTarget(gitlabConfig, input.timeout_ms);
+          recordGitLabPipelineCheck(target.name, result);
           return { kind: target.kind, name: target.name, ...result };
         } catch (error) {
-          const result = buildGitHubActionsErrorResult(error);
-          recordGitHubActionsCheck(target.name, result);
+          const result = buildGitLabPipelineErrorResult(error);
+          recordGitLabPipelineCheck(target.name, result);
           return { kind: target.kind, name: target.name, ...result };
         }
       });
@@ -457,6 +526,14 @@ export function registerMonitoringTools(
           };
         }
 
+        if (target?.kind === 'gitlab_pipeline') {
+          return {
+            kind: target.kind,
+            name: target.name,
+            ...buildGitLabPipelineErrorResult(result.reason)
+          };
+        }
+
         return {
           kind: 'mcp_server' as const,
           name: target?.name ?? 'unknown',
@@ -465,7 +542,7 @@ export function registerMonitoringTools(
         };
       });
       const upCount = checks.filter((result) => result.status === 'up').length;
-      const noun = githubTargets.length > 0 ? 'targets' : 'servers';
+      const noun = githubTargets.length + gitlabTargets.length > 0 ? 'targets' : 'servers';
 
       return formatResponse({
         summary: `${upCount}/${checks.length} ${noun} UP, ${checks.length - upCount} DOWN`,
@@ -526,7 +603,7 @@ export function registerMonitoringTools(
     {
       title: 'Get Health Dashboard',
       description:
-        'Get a dashboard overview of registered MCP servers and GitHub Actions workflows with uptime and performance stats.',
+        'Get a dashboard overview of registered MCP servers, GitHub Actions workflows, and GitLab pipelines with uptime and performance stats.',
       inputSchema: GetDashboardSchema,
       annotations: {
         readOnlyHint: true,
@@ -537,11 +614,13 @@ export function registerMonitoringTools(
     async (input: GetDashboardInput) => {
       const report = getDashboardReport(input.hours);
       const githubReport = getGitHubActionsDashboardReport(input.hours);
+      const gitlabReport = getGitLabPipelineDashboardReport(input.hours);
       const uptimeValues = report
         .map((entry) => entry.uptime_percent)
         .filter((value): value is number => value !== null);
       const upCount = report.filter((entry) => entry.current_status === 'up').length;
       const githubUpCount = githubReport.filter((entry) => entry.current_status === 'up').length;
+      const gitlabUpCount = gitlabReport.filter((entry) => entry.current_status === 'up').length;
 
       return formatResponse({
         period_hours: input.hours,
@@ -549,10 +628,13 @@ export function registerMonitoringTools(
           total_servers: report.length,
           currently_up: upCount,
           currently_down: report.length - upCount,
-          total_targets: report.length + githubReport.length,
+          total_targets: report.length + githubReport.length + gitlabReport.length,
           github_actions_targets: githubReport.length,
           github_actions_up: githubUpCount,
           github_actions_down: githubReport.length - githubUpCount,
+          gitlab_pipeline_targets: gitlabReport.length,
+          gitlab_pipelines_up: gitlabUpCount,
+          gitlab_pipelines_down: gitlabReport.length - gitlabUpCount,
           avg_uptime_percent:
             uptimeValues.length > 0
               ? Math.round(
@@ -562,6 +644,7 @@ export function registerMonitoringTools(
         },
         include_tool_stats: input.include_tool_stats,
         github_actions: githubReport,
+        gitlab_pipelines: gitlabReport,
         servers: report.map((serverReport) => {
           const latest = getLatestDashboardResult(serverReport);
           const payload = {
@@ -589,7 +672,7 @@ export function registerMonitoringTools(
     {
       title: 'Get Health Report (Markdown)',
       description:
-        'Get a human-readable Markdown health report for MCP servers and GitHub Actions workflows. Paste directly into chat or docs.',
+        'Get a human-readable Markdown health report for MCP servers, GitHub Actions workflows, and GitLab pipelines. Paste directly into chat or docs.',
       inputSchema: GetReportSchema,
       annotations: {
         readOnlyHint: true,
@@ -664,6 +747,16 @@ export function registerMonitoringTools(
       const totalGitHubChecks = (
         db.prepare('SELECT COUNT(*) AS count FROM github_actions_checks').get() as { count: number }
       ).count;
+      const totalGitLabTargets = (
+        db.prepare('SELECT COUNT(*) AS count FROM gitlab_pipeline_targets').get() as {
+          count: number;
+        }
+      ).count;
+      const totalGitLabChecks = (
+        db.prepare('SELECT COUNT(*) AS count FROM gitlab_pipeline_checks').get() as {
+          count: number;
+        }
+      ).count;
       const oldestCheck = (
         db
           .prepare(
@@ -673,6 +766,8 @@ export function registerMonitoringTools(
               SELECT timestamp FROM health_checks
               UNION ALL
               SELECT timestamp FROM github_actions_checks
+              UNION ALL
+              SELECT timestamp FROM gitlab_pipeline_checks
             )
           `
           )
@@ -684,8 +779,10 @@ export function registerMonitoringTools(
         total_checks_performed: totalChecks,
         total_github_actions_targets: totalGitHubTargets,
         total_github_actions_checks: totalGitHubChecks,
-        total_targets_registered: totalServers + totalGitHubTargets,
-        total_checks_all_providers: totalChecks + totalGitHubChecks,
+        total_gitlab_pipeline_targets: totalGitLabTargets,
+        total_gitlab_pipeline_checks: totalGitLabChecks,
+        total_targets_registered: totalServers + totalGitHubTargets + totalGitLabTargets,
+        total_checks_all_providers: totalChecks + totalGitHubChecks + totalGitLabChecks,
         monitoring_since: oldestCheck ? new Date(oldestCheck).toISOString() : null,
         db_path: getResolvedDbPath()
       });

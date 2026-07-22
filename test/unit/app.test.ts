@@ -9,6 +9,10 @@ import {
   resetGitHubActionsRuntimeForTests,
   setGitHubActionsRuntimeForTests
 } from '../../src/github-actions.js';
+import {
+  resetGitLabPipelineRuntimeForTests,
+  setGitLabPipelineRuntimeForTests
+} from '../../src/gitlab-pipelines.js';
 import { registerServer as registerServerRecord } from '../../src/registry.js';
 import type { SetAlertInput } from '../../src/types.js';
 
@@ -66,16 +70,20 @@ describe('app tool registration', () => {
     resetDbForTests();
     resetCheckerRuntimeForTests();
     resetGitHubActionsRuntimeForTests();
+    resetGitLabPipelineRuntimeForTests();
+    delete process.env.HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST;
   });
 
   afterAll(() => {
     resetDbForTests();
     resetCheckerRuntimeForTests();
     resetGitHubActionsRuntimeForTests();
+    resetGitLabPipelineRuntimeForTests();
     delete process.env.HEALTH_MONITOR_DB;
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
     delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
+    delete process.env.HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST;
   });
 
   it('registers only the supported MCP health monitoring tools', async () => {
@@ -85,20 +93,24 @@ describe('app tool registration', () => {
     expect(names).toEqual([
       'check_all',
       'check_github_actions',
+      'check_gitlab_pipeline',
       'check_server',
       'get_dashboard',
       'get_monitor_stats',
       'get_report',
       'get_uptime',
       'list_github_actions',
+      'list_gitlab_pipelines',
       'list_servers',
       'register_github_actions',
+      'register_gitlab_pipeline',
       'register_server',
       'set_alert',
       'unregister_github_actions',
+      'unregister_gitlab_pipeline',
       'unregister_server'
     ]);
-    expect(names.some((name) => name.includes('azure') || name.includes('pipeline'))).toBe(false);
+    expect(names.some((name) => name.includes('azure'))).toBe(false);
 
     const setAlert = getTool(tools, 'set_alert');
 
@@ -488,6 +500,134 @@ describe('app tool registration', () => {
       expect.objectContaining({
         ok: false,
         error: expect.objectContaining({ code: 'GITHUB_ACTIONS_TARGET_NOT_FOUND' })
+      })
+    );
+  });
+
+  it('manages GitLab pipeline targets and integrates them with batch and reports', async () => {
+    const tools = createToolMap();
+    const registerGitLab = getTool(tools, 'register_gitlab_pipeline');
+    const checkGitLab = getTool(tools, 'check_gitlab_pipeline');
+    const listGitLab = getTool(tools, 'list_gitlab_pipelines');
+    const unregisterGitLab = getTool(tools, 'unregister_gitlab_pipeline');
+    const checkAll = getTool(tools, 'check_all');
+    const getDashboard = getTool(tools, 'get_dashboard');
+    const getReport = getTool(tools, 'get_report');
+    const getMonitorStats = getTool(tools, 'get_monitor_stats');
+    const fetchMock = jest.fn(
+      async () =>
+        new Response(
+          JSON.stringify([
+            {
+              id: 900,
+              iid: 45,
+              status: 'success',
+              source: 'push',
+              ref: 'main',
+              sha: 'abc123',
+              web_url: 'https://gitlab.com/group/project/-/pipelines/900',
+              created_at: '2026-07-22T10:00:00Z',
+              updated_at: '2026-07-22T10:05:00Z'
+            }
+          ]),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+    ) as unknown as typeof fetch;
+    setGitLabPipelineRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
+
+    const rejectedSelfHosted = parseJson(
+      await registerGitLab.handler({
+        name: 'private-ci',
+        base_url: 'https://gitlab.internal.example',
+        project: 'group/project',
+        token_env: 'GITLAB_TOKEN',
+        tags: [],
+        check_interval_minutes: 5
+      })
+    );
+    expect(rejectedSelfHosted).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'GITLAB_BASE_URL_NOT_ALLOWED',
+          remediation: expect.stringContaining('HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST')
+        })
+      })
+    );
+
+    const registration = parseJson(
+      await registerGitLab.handler({
+        name: 'gitlab-ci',
+        base_url: 'https://gitlab.com',
+        project: 'group/project',
+        ref: 'main',
+        token_env: 'GITLAB_TOKEN',
+        tags: ['ops'],
+        check_interval_minutes: 5
+      })
+    );
+    const listed = parseJson(await listGitLab.handler({ tags: ['ops'] }));
+    const checked = parseJson(await checkGitLab.handler({ name: 'gitlab-ci', timeout_ms: 5_000 }));
+    const batch = parseJson(await checkAll.handler({ tags: ['ops'], timeout_ms: 5_000 }));
+    const dashboard = parseJson(
+      await getDashboard.handler({ hours: 24, include_tool_stats: true })
+    );
+    const report = await getReport.handler({ hours: 24 });
+    const stats = parseJson(await getMonitorStats.handler({}));
+
+    expect(registration).toEqual(expect.objectContaining({ registered: true, name: 'gitlab-ci' }));
+    expect(listed).toEqual(
+      expect.objectContaining({
+        count: 1,
+        targets: [expect.objectContaining({ name: 'gitlab-ci', token_env: 'GITLAB_TOKEN' })]
+      })
+    );
+    expect(checked).toEqual(
+      expect.objectContaining({
+        name: 'gitlab-ci',
+        status: 'up',
+        pipeline: expect.objectContaining({ id: 900, commit_sha: 'abc123' })
+      })
+    );
+    expect(batch).toEqual(
+      expect.objectContaining({
+        summary: '1/1 targets UP, 0 DOWN',
+        results: [
+          expect.objectContaining({ kind: 'gitlab_pipeline', name: 'gitlab-ci', status: 'up' })
+        ]
+      })
+    );
+    expect(dashboard).toEqual(
+      expect.objectContaining({
+        summary: expect.objectContaining({
+          total_targets: 1,
+          gitlab_pipeline_targets: 1,
+          gitlab_pipelines_up: 1,
+          gitlab_pipelines_down: 0
+        }),
+        gitlab_pipelines: [
+          expect.objectContaining({ name: 'gitlab-ci', latest_pipeline_status: 'success' })
+        ]
+      })
+    );
+    expect(report.content[0]?.text).toContain('## GitLab Pipelines');
+    expect(report.content[0]?.text).toContain('gitlab-ci');
+    expect(stats).toEqual(
+      expect.objectContaining({
+        total_gitlab_pipeline_targets: 1,
+        total_gitlab_pipeline_checks: 2,
+        total_targets_registered: 1,
+        total_checks_all_providers: 2
+      })
+    );
+
+    expect(parseJson(await unregisterGitLab.handler({ name: 'gitlab-ci' }))).toEqual(
+      expect.objectContaining({ unregistered: true, name: 'gitlab-ci' })
+    );
+    expect(parseJson(await checkGitLab.handler({ name: 'gitlab-ci', timeout_ms: 5_000 }))).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ code: 'GITLAB_PIPELINE_TARGET_NOT_FOUND' })
       })
     );
   });
