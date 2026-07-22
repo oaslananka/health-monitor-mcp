@@ -15,7 +15,10 @@ const MAX_TRACE_RESPONSE_BYTES = 65_536;
 const TRACE_RANGE_BYTES = 16_384;
 const TRACE_EXCERPT_CHARACTERS = 8_192;
 const MAX_FAILED_JOBS = 20;
-const ANSI_ESCAPE_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, 'g');
+const ANSI_ESCAPE_PATTERN = new RegExp(
+  String.raw`${String.fromCodePoint(27)}\[[0-?]*[ -/]*[@-~]`,
+  'g'
+);
 
 const successfulStatuses = new Set(['success', 'skipped']);
 const failedStatuses = new Set(['failed', 'canceled']);
@@ -315,7 +318,7 @@ function resolvePipelineHealth(status: string): GitLabPipelineCheckResult['statu
 function sanitizeTrace(value: string): string {
   const withoutAnsi = value.replace(ANSI_ESCAPE_PATTERN, '');
   const withoutSections = withoutAnsi.replace(/section_(?:start|end):[^\r\n]*\r?/g, '');
-  const normalized = withoutSections.replace(/\r/g, '').trim();
+  const normalized = withoutSections.replaceAll('\r', '').trim();
   return normalized.slice(-TRACE_EXCERPT_CHARACTERS);
 }
 
