@@ -133,17 +133,28 @@ describe('packaged MCP smoke tests', () => {
     expect(mcpMetadata.tools).toEqual([
       'register_server',
       'check_server',
+      'register_github_actions',
+      'check_github_actions',
       'check_all',
       'get_uptime',
       'get_dashboard',
       'get_report',
       'list_servers',
+      'list_github_actions',
       'unregister_server',
+      'unregister_github_actions',
       'set_alert',
       'get_monitor_stats'
     ]);
-    expect(JSON.stringify(mcpMetadata)).not.toMatch(/azure|pat_token|pipeline/i);
-    expect(serverMetadata).not.toMatch(/azure|pat_token|pipeline/i);
+    expect(mcpMetadata.env).toEqual(
+      expect.objectContaining({
+        GITHUB_TOKEN: expect.objectContaining({ required: false })
+      })
+    );
+    expect(JSON.stringify(mcpMetadata)).not.toMatch(/azure|pat_token/i);
+    expect(serverMetadata).toContain('"GITHUB_TOKEN"');
+    expect(serverMetadata).toContain('"isSecret": true');
+    expect(serverMetadata).not.toMatch(/azure|pat_token/i);
 
     const shebang = fs.readFileSync(path.join(repoRoot, 'dist', 'mcp.js'), 'utf8').split('\n')[0];
     expect(shebang).toBe('#!/usr/bin/env node');

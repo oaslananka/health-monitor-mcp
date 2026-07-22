@@ -18,7 +18,7 @@ Target: 2026-08-31
 Target: 2026-10-15
 [Milestone](https://github.com/oaslananka/health-monitor-mcp/milestone/3)
 
-- GitHub Actions monitoring.
+- GitHub Actions monitoring — complete; released through the v1.2.0 feature line.
 - GitLab CI/CD monitoring.
 - Generic HTTP, TLS-expiry, and response-assertion monitoring.
 - Provider contracts that reuse bounded concurrency without reintroducing provider-specific credentials into the core server registry.

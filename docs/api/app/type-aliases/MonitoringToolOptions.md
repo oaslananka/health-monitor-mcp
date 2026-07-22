@@ -8,6 +8,6 @@
 
 > **MonitoringToolOptions** = [`RuntimePolicyOptions`](../../policy/interfaces/RuntimePolicyOptions.md)
 
-Defined in: [app.ts:85](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L85)
+Defined in: [app.ts:95](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L95)
 
 Runtime policy options accepted by the monitor tool registration helpers.

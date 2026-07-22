@@ -6,7 +6,7 @@
 
 # Interface: AlertConfigRecord
 
-Defined in: [types.ts:219](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L219)
+Defined in: [types.ts:368](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L368)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:219](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **server\_name**: `string`
 
-Defined in: [types.ts:220](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L220)
+Defined in: [types.ts:369](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L369)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:220](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **max\_response\_time\_ms**: `number` \| `null`
 
-Defined in: [types.ts:221](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L221)
+Defined in: [types.ts:370](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L370)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:221](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **min\_uptime\_percent**: `number` \| `null`
 
-Defined in: [types.ts:222](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L222)
+Defined in: [types.ts:371](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L371)
 
 ***
 
@@ -38,4 +38,4 @@ Defined in: [types.ts:222](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **consecutive\_failures\_before\_alert**: `number`
 
-Defined in: [types.ts:223](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L223)
+Defined in: [types.ts:372](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L372)

@@ -378,4 +378,55 @@ describe('quality gate regression checks', () => {
     expect(runtimeStage).toContain('/usr/local/bin/npm');
     expect(runtimeStage).toContain('/usr/local/bin/npx');
   });
+
+  it('documents and publishes the GitHub Actions provider without persisting secrets', () => {
+    const mcpMetadata = readProjectJson<{
+      description: string;
+      tools: string[];
+      env: Record<string, { description: string; required: boolean }>;
+    }>('mcp.json');
+    const serverMetadata = readProjectJson<{
+      description: string;
+      packages: Array<{
+        environmentVariables: Array<{
+          name: string;
+          description: string;
+          isRequired: boolean;
+          isSecret: boolean;
+        }>;
+      }>;
+    }>('server.json');
+    const readme = readProjectText('README.md');
+    const usage = readProjectText('docs/usage.md');
+    const architecture = readProjectText('docs/architecture.md');
+    const operations = readProjectText('docs/operations.md');
+    const security = readProjectText('docs/security-tooling.md');
+    const roadmap = readProjectText('ROADMAP.md');
+
+    expect(mcpMetadata.tools).toEqual(
+      expect.arrayContaining([
+        'register_github_actions',
+        'check_github_actions',
+        'list_github_actions',
+        'unregister_github_actions'
+      ])
+    );
+    expect(mcpMetadata.env.GITHUB_TOKEN).toEqual(
+      expect.objectContaining({ required: false, description: expect.stringContaining('Actions') })
+    );
+    expect(serverMetadata.packages[0]?.environmentVariables).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'GITHUB_TOKEN', isRequired: false, isSecret: true })
+      ])
+    );
+    expect(readme).toContain('register_github_actions');
+    expect(usage).toContain('token_env="GITHUB_TOKEN"');
+    expect(architecture).toContain('github_actions_targets');
+    expect(operations).toContain('Actions read');
+    expect(security).toContain('Only the environment-variable name');
+    expect(roadmap).toContain('GitHub Actions monitoring — complete');
+    expect([readme, usage, architecture, operations, security].join('\n')).not.toContain(
+      'github_pat_'
+    );
+  });
 });

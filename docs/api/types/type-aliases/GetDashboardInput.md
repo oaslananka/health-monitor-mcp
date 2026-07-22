@@ -8,4 +8,4 @@
 
 > **GetDashboardInput** = `z.infer`\<*typeof* [`GetDashboardSchema`](../variables/GetDashboardSchema.md)\>
 
-Defined in: [types.ts:160](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L160)
+Defined in: [types.ts:224](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L224)

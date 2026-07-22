@@ -1,8 +1,14 @@
 process.env.HEALTH_MONITOR_DB = ':memory:';
 
+import { jest } from '@jest/globals';
+
 import { createMonitorServer, registerMonitoringTools } from '../../src/app.js';
 import { resetCheckerRuntimeForTests, setCheckerRuntimeForTests } from '../../src/checker.js';
 import { getDb, resetDbForTests } from '../../src/db.js';
+import {
+  resetGitHubActionsRuntimeForTests,
+  setGitHubActionsRuntimeForTests
+} from '../../src/github-actions.js';
 import { registerServer as registerServerRecord } from '../../src/registry.js';
 import type { SetAlertInput } from '../../src/types.js';
 
@@ -59,11 +65,13 @@ describe('app tool registration', () => {
     delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
     resetDbForTests();
     resetCheckerRuntimeForTests();
+    resetGitHubActionsRuntimeForTests();
   });
 
   afterAll(() => {
     resetDbForTests();
     resetCheckerRuntimeForTests();
+    resetGitHubActionsRuntimeForTests();
     delete process.env.HEALTH_MONITOR_DB;
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
@@ -76,14 +84,18 @@ describe('app tool registration', () => {
 
     expect(names).toEqual([
       'check_all',
+      'check_github_actions',
       'check_server',
       'get_dashboard',
       'get_monitor_stats',
       'get_report',
       'get_uptime',
+      'list_github_actions',
       'list_servers',
+      'register_github_actions',
       'register_server',
       'set_alert',
+      'unregister_github_actions',
       'unregister_server'
     ]);
     expect(names.some((name) => name.includes('azure') || name.includes('pipeline'))).toBe(false);
@@ -361,6 +373,121 @@ describe('app tool registration', () => {
           code: 'SERVER_NOT_FOUND',
           remediation: expect.stringContaining('register_server')
         })
+      })
+    );
+  });
+
+  it('manages GitHub Actions targets and integrates them with batch and reports', async () => {
+    const tools = createToolMap();
+    const registerGitHubActions = getTool(tools, 'register_github_actions');
+    const checkGitHubActions = getTool(tools, 'check_github_actions');
+    const listGitHubActions = getTool(tools, 'list_github_actions');
+    const unregisterGitHubActions = getTool(tools, 'unregister_github_actions');
+    const checkAll = getTool(tools, 'check_all');
+    const getDashboard = getTool(tools, 'get_dashboard');
+    const getReport = getTool(tools, 'get_report');
+    const getMonitorStats = getTool(tools, 'get_monitor_stats');
+    const fetchMock = jest.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 123,
+                name: 'CI',
+                run_number: 45,
+                run_attempt: 1,
+                status: 'completed',
+                conclusion: 'success',
+                event: 'push',
+                head_branch: 'main',
+                head_sha: 'abc123',
+                html_url: 'https://github.com/oaslananka/health-monitor-mcp/actions/runs/123',
+                created_at: '2026-07-22T10:00:00Z',
+                updated_at: '2026-07-22T10:05:00Z'
+              }
+            ]
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+    ) as unknown as typeof fetch;
+    setGitHubActionsRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
+
+    const registration = parseJson(
+      await registerGitHubActions.handler({
+        name: 'repo-ci',
+        owner: 'oaslananka',
+        repository: 'health-monitor-mcp',
+        workflow: 'ci.yml',
+        branch: 'main',
+        token_env: 'GITHUB_TOKEN',
+        tags: ['ops'],
+        check_interval_minutes: 5
+      })
+    );
+    const listed = parseJson(await listGitHubActions.handler({ tags: ['ops'] }));
+    const checked = parseJson(
+      await checkGitHubActions.handler({ name: 'repo-ci', timeout_ms: 5_000 })
+    );
+    const batch = parseJson(await checkAll.handler({ tags: ['ops'], timeout_ms: 5_000 }));
+    const dashboard = parseJson(
+      await getDashboard.handler({ hours: 24, include_tool_stats: true })
+    );
+    const report = await getReport.handler({ hours: 24 });
+    const stats = parseJson(await getMonitorStats.handler({}));
+
+    expect(registration).toEqual(expect.objectContaining({ registered: true, name: 'repo-ci' }));
+    expect(listed).toEqual(
+      expect.objectContaining({
+        count: 1,
+        targets: [expect.objectContaining({ name: 'repo-ci', token_env: 'GITHUB_TOKEN' })]
+      })
+    );
+    expect(checked).toEqual(
+      expect.objectContaining({
+        name: 'repo-ci',
+        status: 'up',
+        run: expect.objectContaining({ workflow_name: 'CI', commit_sha: 'abc123' })
+      })
+    );
+    expect(batch).toEqual(
+      expect.objectContaining({
+        summary: '1/1 targets UP, 0 DOWN',
+        results: [
+          expect.objectContaining({ kind: 'github_actions', name: 'repo-ci', status: 'up' })
+        ]
+      })
+    );
+    expect(dashboard).toEqual(
+      expect.objectContaining({
+        summary: expect.objectContaining({
+          total_targets: 1,
+          github_actions_targets: 1,
+          github_actions_up: 1,
+          github_actions_down: 0
+        }),
+        github_actions: [expect.objectContaining({ name: 'repo-ci', latest_conclusion: 'success' })]
+      })
+    );
+    expect(report.content[0]?.text).toContain('## GitHub Actions');
+    expect(report.content[0]?.text).toContain('repo-ci');
+    expect(stats).toEqual(
+      expect.objectContaining({
+        total_github_actions_targets: 1,
+        total_github_actions_checks: 2
+      })
+    );
+
+    expect(parseJson(await unregisterGitHubActions.handler({ name: 'repo-ci' }))).toEqual(
+      expect.objectContaining({ unregistered: true, name: 'repo-ci' })
+    );
+    expect(
+      parseJson(await checkGitHubActions.handler({ name: 'repo-ci', timeout_ms: 5_000 }))
+    ).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ code: 'GITHUB_ACTIONS_TARGET_NOT_FOUND' })
       })
     );
   });

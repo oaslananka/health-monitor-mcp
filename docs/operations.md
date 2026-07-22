@@ -27,7 +27,7 @@ HOST=0.0.0.0
 ## Retention and Concurrency
 
 - `HEALTH_MONITOR_RETENTION_DAYS` defaults to `30`.
-- `HEALTH_MONITOR_MAX_CONCURRENCY` defaults to `5` and applies to both scheduled checks and interactive `check_all` calls.
+- `HEALTH_MONITOR_MAX_CONCURRENCY` defaults to `5` and applies to MCP and GitHub Actions checks in scheduled and interactive `check_all` calls.
 - `HEALTH_MONITOR_HTTP_TIMEOUT_MS` defaults to `10000` for outbound MCP checks.
 - `HEALTH_MONITOR_HTTP_MAX_BODY_BYTES` defaults to `1048576` for inbound `POST /mcp` bodies.
 - `HEALTH_MONITOR_HTTP_BODY_TIMEOUT_MS` defaults to `15000` for reading an inbound body.
@@ -89,9 +89,21 @@ HEALTH_MONITOR_STDIO_ALLOWLIST=node,npx
 
 Use one executable in `command`; put flags and package names in `args`. Remote-safe profiles block stdio even when the environment variable is set.
 
+## GitHub Actions Provider
+
+Public GitHub repositories can be monitored without authentication. Private repositories and higher API rate limits require a fine-grained token, GitHub App token, or equivalent credential with Actions read permission:
+
+```bash
+export GITHUB_TOKEN=your-runtime-secret
+```
+
+Registration stores `token_env="GITHUB_TOKEN"`, not the value. Keep the token in the process environment or deployment secret manager. A `401` indicates invalid authentication; `403` without remaining quota indicates insufficient Actions read access; rate-limit diagnostics include the reset epoch without returning response bodies or credentials.
+
+The provider uses `https://api.github.com`, requests the latest workflow run, and fetches at most 100 latest-attempt jobs only when failure diagnostics are needed.
+
 ## Database Upgrades
 
-Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Back up the database before upgrading when historical retention outside the supported product is required.
+Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Migration v5 creates `github_actions_targets` and `github_actions_checks`; it stores only token environment-variable names. Back up the database before upgrading when historical retention outside the supported product is required.
 
 ## Codecov Operations
 

@@ -86,6 +86,12 @@ pre-commit run sonar-secrets --hook-stage pre-push --all-files
 Sonar Secrets is early-access software. The hook is pinned to an exact release and is installed only
 for maintainers who opt in to the authenticated pre-push stage.
 
+## GitHub Actions Provider Credentials
+
+GitHub provider registrations persist only `token_env`, such as `GITHUB_TOKEN`. Only the environment-variable name is written to SQLite. Token values remain in the runtime environment and must be supplied by the operator or deployment secret manager. The provider fixes its API origin to `https://api.github.com`, uses Actions read access only, bounds response sizes and timeouts, and redacts authentication response bodies from diagnostics.
+
+Public repositories may be checked without a token at GitHub's unauthenticated rate limit. Private repositories require a token with repository Actions read permission. Do not place token values in tool arguments, tags, names, URLs, documentation examples, or checked-in environment files.
+
 ## Semgrep
 
 Repository-local, high-confidence rules live in `.semgrep.yml`. Run them directly with the pinned

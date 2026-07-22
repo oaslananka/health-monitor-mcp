@@ -28,6 +28,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- Added GitHub Actions workflow registration, checks, failed job and step diagnostics, scheduling, dashboards, and reports.
+- Added environment-only GitHub authentication: only `token_env` is persisted, while token values remain in runtime environment variables.
+
 ### Fixed
 
 - Bundled the patched MCP SDK dependency graph so downstream npm consumers no longer resolve the vulnerable Hono Node adapter.

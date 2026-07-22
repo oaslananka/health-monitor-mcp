@@ -148,6 +148,70 @@ export const ListServersSchema = z.object({
   status: ListableStatusSchema.optional()
 });
 
+const GitHubSlugSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(
+    /^[A-Za-z0-9_.-]+$/,
+    'GitHub owner and repository names may use letters, numbers, dot, underscore, and hyphen only'
+  );
+
+const GitHubWorkflowSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .refine(
+    (value) => /^\d+$/.test(value) || /^[A-Za-z0-9_.-]+\.ya?ml$/.test(value),
+    'Workflow must be a numeric ID or a .yml/.yaml filename'
+  );
+
+const GitHubBranchSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .refine((value) => !hasControlCharacter(value), 'Control characters are not allowed');
+
+const TokenEnvironmentSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(
+    /^[A-Z_][A-Z0-9_]*$/,
+    'Token environment variable must use uppercase shell variable syntax'
+  );
+
+export const RegisterGitHubActionsSchema = z.object({
+  name: SafeNameSchema.describe('Unique local name for this GitHub Actions target'),
+  owner: GitHubSlugSchema.describe('GitHub user or organization'),
+  repository: GitHubSlugSchema.describe('GitHub repository name'),
+  workflow: GitHubWorkflowSchema.describe('Workflow numeric ID or .yml/.yaml filename'),
+  branch: GitHubBranchSchema.optional().describe('Optional branch filter for workflow runs'),
+  token_env: TokenEnvironmentSchema.default('GITHUB_TOKEN').describe(
+    'Environment variable containing a GitHub token; the token value is never persisted'
+  ),
+  tags: z.array(SafeTagSchema).max(20).default([]).describe('Tags for grouping'),
+  check_interval_minutes: z.number().int().min(1).max(60).default(5)
+});
+
+export const CheckGitHubActionsSchema = z.object({
+  name: SafeNameSchema.describe('GitHub Actions target name to check'),
+  timeout_ms: z.number().int().min(1000).max(30000).default(5000)
+});
+
+export const ListGitHubActionsSchema = z.object({
+  tags: z.array(SafeTagSchema).max(20).optional(),
+  status: ListableStatusSchema.optional()
+});
+
+export const UnregisterGitHubActionsSchema = z.object({
+  name: SafeNameSchema
+});
+
 export const EmptySchema = z.object({});
 
 export type McpServerType = z.infer<typeof McpServerTypeSchema>;
@@ -161,7 +225,92 @@ export type GetDashboardInput = z.infer<typeof GetDashboardSchema>;
 export type GetReportInput = z.infer<typeof GetReportSchema>;
 export type UnregisterInput = z.infer<typeof UnregisterSchema>;
 export type ListServersInput = z.infer<typeof ListServersSchema>;
+export type RegisterGitHubActionsInput = z.infer<typeof RegisterGitHubActionsSchema>;
+export type CheckGitHubActionsInput = z.infer<typeof CheckGitHubActionsSchema>;
+export type ListGitHubActionsInput = z.infer<typeof ListGitHubActionsSchema>;
+export type UnregisterGitHubActionsInput = z.infer<typeof UnregisterGitHubActionsSchema>;
 export type AlertFindingType = z.infer<typeof AlertFindingTypeSchema>;
+
+export interface GitHubActionsStepDiagnostic {
+  number: number;
+  name: string;
+  status: string;
+  conclusion: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface GitHubActionsJobDiagnostic {
+  name: string;
+  url: string;
+  status: string;
+  conclusion: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  failed_steps: GitHubActionsStepDiagnostic[];
+}
+
+export interface GitHubActionsRunDetails {
+  id: number;
+  workflow_name: string;
+  run_number: number;
+  run_attempt: number;
+  status: string;
+  conclusion: string | null;
+  event: string;
+  branch: string | null;
+  commit_sha: string;
+  url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitHubActionsCheckResult {
+  status: HealthStatus;
+  response_time_ms: number | null;
+  error_message: string | null;
+  run: GitHubActionsRunDetails | null;
+  failed_jobs: GitHubActionsJobDiagnostic[];
+}
+
+export interface RegisteredGitHubActionsTarget {
+  name: string;
+  owner: string;
+  repository: string;
+  workflow: string;
+  branch: string | null;
+  token_env: string;
+  tags: string[];
+  check_interval_minutes: number;
+  created_at: number;
+  last_checked: number | null;
+  last_status: HealthStatus | 'unknown';
+  last_response_time_ms: number | null;
+  last_run_id: number | null;
+  last_conclusion: string | null;
+  last_run_url: string | null;
+  consecutive_failures: number;
+}
+
+export interface GitHubActionsCheckRecord {
+  id: number;
+  target_name: string;
+  timestamp: number;
+  status: HealthStatus;
+  response_time_ms: number | null;
+  run_id: number | null;
+  workflow_name: string | null;
+  run_number: number | null;
+  run_attempt: number | null;
+  run_status: string | null;
+  conclusion: string | null;
+  event: string | null;
+  branch: string | null;
+  commit_sha: string | null;
+  run_url: string | null;
+  error_message: string | null;
+  failed_jobs: string | null;
+}
 
 export interface HealthRecord {
   id: number;

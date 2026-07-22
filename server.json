@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.oaslananka/health-monitor-mcp",
   "title": "MCP Health Monitor",
-  "description": "Monitor MCP server health, uptime, response times, alerts, and operational reports",
+  "description": "Monitor MCP servers and GitHub Actions workflows with health history, diagnostics, alerts, and operational reports",
   "repository": {
     "url": "https://github.com/oaslananka/health-monitor-mcp",
     "source": "github"
@@ -44,6 +44,13 @@
           "isRequired": false,
           "format": "string",
           "isSecret": false
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "description": "Optional GitHub token with Actions read access for private repositories and higher API rate limits",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
         }
       ]
     }
