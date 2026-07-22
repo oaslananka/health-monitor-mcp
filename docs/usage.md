@@ -53,6 +53,33 @@ unregister_github_actions name="repo-ci"
 
 Only `token_env` is persisted. The environment-variable value is resolved for each check and is never stored or returned.
 
+## Register a GitLab Pipeline
+
+GitLab.com public projects can be queried without a token. Private projects use an environment-only token:
+
+```bash
+export GITLAB_TOKEN=your-runtime-secret
+```
+
+```text
+register_gitlab_pipeline name="gitlab-ci" project="group/project" ref="main" token_env="GITLAB_TOKEN" tags=["production","ci"]
+check_gitlab_pipeline name="gitlab-ci" timeout_ms=5000
+list_gitlab_pipelines tags=["production"]
+unregister_gitlab_pipeline name="gitlab-ci"
+```
+
+For self-hosted GitLab, allow the exact HTTPS origin before registration:
+
+```bash
+export HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST=https://gitlab.internal.example
+```
+
+```text
+register_gitlab_pipeline name="private-ci" base_url="https://gitlab.internal.example" project="platform/service" token_env="GITLAB_TOKEN"
+```
+
+Only the token environment-variable name is persisted. Failed job trace excerpts are sanitized and bounded; complete traces and token values are not stored.
+
 ## Run Health Checks
 
 Check one server:
@@ -61,7 +88,7 @@ Check one server:
 check_server name="inventory-mcp" timeout_ms=5000
 ```
 
-Check all MCP and GitHub Actions targets with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
+Check all MCP, GitHub Actions, and GitLab targets with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
 interactive batches and the background scheduler, and result order remains deterministic:
 
 ```text
@@ -73,7 +100,6 @@ Filter by tag:
 ```text
 check_all timeout_ms=5000 tags=["production"]
 ```
-
 
 ## Agent Error Envelopes
 
@@ -94,7 +120,8 @@ should inspect `error.code`, apply `error.remediation`, and retry only when `err
 ```
 
 Current expected codes are `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`,
-`NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
+`GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`,
+`STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
 ## Inspect Uptime
 
@@ -116,6 +143,7 @@ The dashboard includes:
 - consecutive failures
 - current alert findings
 - GitHub Actions latest conclusion and run URL
+- GitLab latest pipeline status, URL, uptime, and failed-job diagnostics
 - cross-provider target counts
 
 ## Configure Alerts
@@ -151,6 +179,7 @@ This reports:
 - total registered servers
 - total MCP health checks performed
 - total GitHub Actions targets and checks
+- total GitLab pipeline targets and checks
 - cross-provider totals
 - monitoring start time
 - resolved database path

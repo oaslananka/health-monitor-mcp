@@ -1,4 +1,8 @@
-import { RegisterGitHubActionsSchema, RegisterServerSchema } from '../../src/types.js';
+import {
+  RegisterGitHubActionsSchema,
+  RegisterGitLabPipelineSchema,
+  RegisterServerSchema
+} from '../../src/types.js';
 
 describe('input schemas', () => {
   it('requires URLs for http and sse servers', () => {
@@ -143,6 +147,64 @@ describe('input schemas', () => {
           repository: 'health-monitor-mcp',
           workflow: 'ci.yml',
           token_env: 'GITHUB_TOKEN',
+          tags: [],
+          check_interval_minutes: 5,
+          ...invalid
+        }).success
+      ).toBe(false);
+    }
+  });
+
+  it('validates GitLab pipeline registration and normalizes GitLab.com defaults', () => {
+    expect(
+      RegisterGitLabPipelineSchema.parse({
+        name: 'gitlab-ci',
+        project: 'group/subgroup/project',
+        ref: 'main',
+        tags: ['production']
+      })
+    ).toEqual(
+      expect.objectContaining({
+        base_url: 'https://gitlab.com',
+        project: 'group/subgroup/project',
+        ref: 'main',
+        token_env: 'GITLAB_TOKEN',
+        check_interval_minutes: 5
+      })
+    );
+
+    expect(
+      RegisterGitLabPipelineSchema.parse({
+        name: 'self-hosted',
+        base_url: 'https://gitlab.example.com/',
+        project: '123',
+        tags: []
+      }).base_url
+    ).toBe('https://gitlab.example.com');
+
+    for (const invalid of [
+      { base_url: 'http://gitlab.example.com' },
+      { base_url: 'https://user:pass@gitlab.example.com' },
+      { base_url: 'https://gitlab.example.com/api/v4' },
+      { base_url: 'https://gitlab.example.com?x=1' },
+      { base_url: 'https://gitlab.example.com/#fragment' },
+      { project: '../project' },
+      { project: 'group//project' },
+      { project: 'group project' },
+      {
+        ref: `bad
+ref`
+      },
+      { token_env: 'gitlab-token' },
+      { check_interval_minutes: 0 },
+      { check_interval_minutes: 61 }
+    ]) {
+      expect(
+        RegisterGitLabPipelineSchema.safeParse({
+          name: 'gitlab-ci',
+          base_url: 'https://gitlab.com',
+          project: 'group/project',
+          token_env: 'GITLAB_TOKEN',
           tags: [],
           check_interval_minutes: 5,
           ...invalid

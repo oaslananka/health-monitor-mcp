@@ -8,4 +8,4 @@
 
 > `const` **UnregisterGitHubActionsSchema**: `ZodObject`\<\{ `name`: `ZodEffects`\<`ZodEffects`\<`ZodString`, `string`, `string`\>, `string`, `string`\>; \}, `"strip"`, `ZodTypeAny`, \{ `name`: `string`; \}, \{ `name`: `string`; \}\>
 
-Defined in: [types.ts:211](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L211)
+Defined in: [types.ts:213](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L213)

@@ -8,4 +8,4 @@
 
 > `const` **GetReportSchema**: `ZodObject`\<\{ `hours`: `ZodDefault`\<`ZodNumber`\>; \}, `"strip"`, `ZodTypeAny`, \{ `hours`: `number`; \}, \{ `hours?`: `number`; \}\>
 
-Defined in: [types.ts:138](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L138)
+Defined in: [types.ts:140](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L140)

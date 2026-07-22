@@ -8,4 +8,4 @@
 
 > `const` **AlertFindingTypeSchema**: `ZodEnum`\<\[`"down"`, `"response_time"`, `"uptime"`, `"consecutive_failures"`\]\>
 
-Defined in: [types.ts:6](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L6)
+Defined in: [types.ts:8](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L8)

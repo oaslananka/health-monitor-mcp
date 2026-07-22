@@ -8,4 +8,4 @@
 
 > `const` **CheckGitHubActionsSchema**: `ZodObject`\<\{ `name`: `ZodEffects`\<`ZodEffects`\<`ZodString`, `string`, `string`\>, `string`, `string`\>; `timeout_ms`: `ZodDefault`\<`ZodNumber`\>; \}, `"strip"`, `ZodTypeAny`, \{ `name`: `string`; `timeout_ms`: `number`; \}, \{ `name`: `string`; `timeout_ms?`: `number`; \}\>
 
-Defined in: [types.ts:201](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L201)
+Defined in: [types.ts:203](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L203)

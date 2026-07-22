@@ -2,13 +2,10 @@
   "name": "health-monitor-mcp",
   "version": "1.2.1",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
-  "description": "Monitor MCP servers and GitHub Actions workflows with health history, diagnostics, and reports",
+  "description": "Monitor MCP servers, GitHub Actions, and GitLab pipelines with health history and diagnostics",
   "transport": "stdio",
   "command": "npx",
-  "args": [
-    "-y",
-    "health-monitor-mcp"
-  ],
+  "args": ["-y", "health-monitor-mcp"],
   "env": {
     "HEALTH_MONITOR_DB": {
       "description": "Custom path for the SQLite database (optional)",
@@ -33,6 +30,14 @@
     "GITHUB_TOKEN": {
       "description": "Optional GitHub token with Actions read access for private repositories and higher API rate limits",
       "required": false
+    },
+    "GITLAB_TOKEN": {
+      "description": "Optional GitLab token with read access to private projects, pipelines, jobs, and traces",
+      "required": false
+    },
+    "HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST": {
+      "description": "Comma-separated self-hosted GitLab HTTPS origins allowed for monitoring",
+      "required": false
     }
   },
   "tools": [
@@ -40,14 +45,18 @@
     "check_server",
     "register_github_actions",
     "check_github_actions",
+    "register_gitlab_pipeline",
+    "check_gitlab_pipeline",
     "check_all",
     "get_uptime",
     "get_dashboard",
     "get_report",
     "list_servers",
     "list_github_actions",
+    "list_gitlab_pipelines",
     "unregister_server",
     "unregister_github_actions",
+    "unregister_gitlab_pipeline",
     "set_alert",
     "get_monitor_stats"
   ]

@@ -1,7 +1,7 @@
 {
   "name": "health-monitor-mcp",
   "version": "1.2.1",
-  "description": "MCP server for monitoring other MCP servers — track health, uptime, tool errors, response times, alerts, and reports",
+  "description": "Monitor MCP servers, GitHub Actions workflows, and GitLab CI/CD pipelines with health history and diagnostics",
   "type": "module",
   "packageManager": "pnpm@11.14.0",
   "main": "./dist/mcp.js",

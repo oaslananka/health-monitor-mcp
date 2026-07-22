@@ -8,4 +8,4 @@
 
 > **McpServerType** = `z.infer`\<*typeof* [`McpServerTypeSchema`](../variables/McpServerTypeSchema.md)\>
 
-Defined in: [types.ts:217](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L217)
+Defined in: [types.ts:285](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L285)

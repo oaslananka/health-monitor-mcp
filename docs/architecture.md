@@ -13,6 +13,10 @@ src/
 ├── github-actions.ts # bounded GitHub REST workflow and job diagnostics
 ├── github-actions-registry.ts # GitHub target/history persistence and analytics
 ├── github-actions-tools.ts # GitHub provider MCP lifecycle tools
+├── gitlab-origin.ts # self-hosted GitLab HTTPS-origin allowlist policy
+├── gitlab-pipelines.ts # bounded GitLab pipeline/job/trace API client
+├── gitlab-pipeline-registry.ts # GitLab target/history persistence and analytics
+├── gitlab-pipeline-tools.ts # GitLab provider MCP lifecycle tools
 ├── concurrency.ts    # ordered bounded-concurrency primitive
 ├── registry.ts       # SQLite access for servers, checks, dashboards, and alerts
 ├── db.ts             # SQLite connection bootstrap
@@ -31,14 +35,14 @@ src/
 User or agent request
   -> MCP tool handler (app.ts)
   -> runtime policy and schema validation
-  -> checker.ts or github-actions.ts performs the provider check
-  -> registry.ts or github-actions-registry.ts stores health evidence
+  -> checker.ts, github-actions.ts, or gitlab-pipelines.ts performs the provider check
+  -> the matching provider registry stores health evidence
   -> alerts.ts evaluates thresholds
   -> tool-errors.ts formats expected remediation failures
   -> JSON or Markdown response returns to the client
 ```
 
-`check_all` and the background scheduler share `mapWithConcurrency()` across MCP and GitHub Actions targets. The helper caps active workers, preserves input ordering, and captures individual failures without cancelling queued targets.
+`check_all` and the background scheduler share `mapWithConcurrency()` across MCP, GitHub Actions, and GitLab targets. The helper caps active workers, preserves input ordering, and captures individual failures without cancelling queued targets.
 
 ## Runtime Modes
 
@@ -55,6 +59,8 @@ User or agent request
 - Health history in `health_checks`.
 - GitHub Actions registrations in `github_actions_targets`.
 - GitHub workflow observations and failed-job diagnostics in `github_actions_checks`.
+- GitLab registrations in `gitlab_pipeline_targets`.
+- GitLab pipeline observations and bounded failed-job trace diagnostics in `gitlab_pipeline_checks`.
 - Alert thresholds in `alerts`.
 - Retired Azure pipeline tables are removed by migration v4, including previously stored credentials and run history.
 
@@ -65,7 +71,8 @@ User or agent request
 - Local stdio is disabled by default and supports an executable allowlist.
 - Tool input names, tags, arguments, URLs, and commands are schema constrained.
 - Expected user-correctable failures return stable codes without exposing secrets or internal stack traces.
-- GitHub token values remain environment-only; SQLite stores only the configured `token_env` name.
+- GitHub and GitLab token values remain environment-only; SQLite stores only each configured `token_env` name.
+- GitLab.com is allowed by default; self-hosted GitLab requires an exact HTTPS origin in `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST`.
 
 ## Decision Records
 

@@ -8,4 +8,4 @@
 
 > `const` **HealthStatusSchema**: `ZodEnum`\<\[`"up"`, `"down"`, `"timeout"`, `"error"`\]\>
 
-Defined in: [types.ts:4](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L4)
+Defined in: [types.ts:6](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L6)

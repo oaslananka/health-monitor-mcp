@@ -379,7 +379,7 @@ describe('quality gate regression checks', () => {
     expect(runtimeStage).toContain('/usr/local/bin/npx');
   });
 
-  it('documents and publishes the GitHub Actions provider without persisting secrets', () => {
+  it('documents and publishes CI providers without persisting secrets', () => {
     const mcpMetadata = readProjectJson<{
       description: string;
       tools: string[];
@@ -408,15 +408,34 @@ describe('quality gate regression checks', () => {
         'register_github_actions',
         'check_github_actions',
         'list_github_actions',
-        'unregister_github_actions'
+        'unregister_github_actions',
+        'register_gitlab_pipeline',
+        'check_gitlab_pipeline',
+        'list_gitlab_pipelines',
+        'unregister_gitlab_pipeline'
       ])
     );
     expect(mcpMetadata.env.GITHUB_TOKEN).toEqual(
       expect.objectContaining({ required: false, description: expect.stringContaining('Actions') })
     );
+    expect(mcpMetadata.env.GITLAB_TOKEN).toEqual(
+      expect.objectContaining({ required: false, description: expect.stringContaining('GitLab') })
+    );
+    expect(mcpMetadata.env.HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST).toEqual(
+      expect.objectContaining({
+        required: false,
+        description: expect.stringContaining('self-hosted')
+      })
+    );
     expect(serverMetadata.packages[0]?.environmentVariables).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: 'GITHUB_TOKEN', isRequired: false, isSecret: true })
+        expect.objectContaining({ name: 'GITHUB_TOKEN', isRequired: false, isSecret: true }),
+        expect.objectContaining({ name: 'GITLAB_TOKEN', isRequired: false, isSecret: true }),
+        expect.objectContaining({
+          name: 'HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST',
+          isRequired: false,
+          isSecret: false
+        })
       ])
     );
     expect(mcpMetadata.description.length).toBeLessThanOrEqual(100);
@@ -424,13 +443,20 @@ describe('quality gate regression checks', () => {
     const registryWorkflow = readProjectText('.github/workflows/publish-mcp-registry.yml');
     expect(registryWorkflow).toContain('server.description.length > 100');
     expect(readme).toContain('register_github_actions');
+    expect(readme).toContain('register_gitlab_pipeline');
     expect(usage).toContain('token_env="GITHUB_TOKEN"');
+    expect(usage).toContain('token_env="GITLAB_TOKEN"');
     expect(architecture).toContain('github_actions_targets');
+    expect(architecture).toContain('gitlab_pipeline_targets');
     expect(operations).toContain('Actions read');
+    expect(operations).toContain('HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST');
     expect(security).toContain('Only the environment-variable name');
+    expect(security).toContain('GitLab token value');
     expect(roadmap).toContain('GitHub Actions monitoring — complete');
+    expect(roadmap).toContain('GitLab CI/CD monitoring — complete');
     expect([readme, usage, architecture, operations, security].join('\n')).not.toContain(
       'github_pat_'
     );
+    expect([readme, usage, architecture, operations, security].join('\n')).not.toContain('glpat-');
   });
 });

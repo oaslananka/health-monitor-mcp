@@ -34,4 +34,21 @@ describe('toolError', () => {
       ).error.code
     ).toBe('GITHUB_ACTIONS_TARGET_NOT_FOUND');
   });
+
+  it('supports stable GitLab target and base URL policy codes', () => {
+    expect(
+      toolError(
+        'GITLAB_PIPELINE_TARGET_NOT_FOUND',
+        'GitLab pipeline target is not registered: missing',
+        'Run register_gitlab_pipeline first, then retry the operation.'
+      ).error.code
+    ).toBe('GITLAB_PIPELINE_TARGET_NOT_FOUND');
+    expect(
+      toolError(
+        'GITLAB_BASE_URL_NOT_ALLOWED',
+        'GitLab origin is not allowed',
+        'Add it to HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST.'
+      ).error.code
+    ).toBe('GITLAB_BASE_URL_NOT_ALLOWED');
+  });
 });

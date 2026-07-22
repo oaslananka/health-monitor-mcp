@@ -9,7 +9,9 @@ import {
 } from '../../src/scheduler.js';
 import type {
   GitHubActionsCheckResult,
+  GitLabPipelineCheckResult,
   RegisteredGitHubActionsTarget,
+  RegisteredGitLabPipelineTarget,
   RegisteredServer
 } from '../../src/types.js';
 
@@ -80,10 +82,59 @@ function githubResult(status: GitHubActionsCheckResult['status'] = 'up'): GitHub
   };
 }
 
+function createGitLabTarget(
+  name: string,
+  overrides: Partial<RegisteredGitLabPipelineTarget> = {}
+): RegisteredGitLabPipelineTarget {
+  return {
+    name,
+    base_url: 'https://gitlab.com',
+    project: 'group/project',
+    ref: 'main',
+    token_env: 'GITLAB_TOKEN',
+    tags: [],
+    check_interval_minutes: 5,
+    created_at: 0,
+    last_checked: null,
+    last_status: 'unknown',
+    last_response_time_ms: null,
+    last_pipeline_id: null,
+    last_pipeline_status: null,
+    last_pipeline_url: null,
+    consecutive_failures: 0,
+    ...overrides
+  };
+}
+
+function gitlabResult(
+  status: GitLabPipelineCheckResult['status'] = 'up'
+): GitLabPipelineCheckResult {
+  return {
+    status,
+    response_time_ms: 30,
+    error_message: status === 'up' ? null : 'failed',
+    pipeline: {
+      id: 900,
+      iid: 45,
+      status: status === 'up' ? 'success' : 'failed',
+      ref: 'main',
+      commit_sha: 'abc123',
+      source: 'push',
+      url: 'https://gitlab.com/group/project/-/pipelines/900',
+      created_at: '2026-07-22T10:00:00Z',
+      updated_at: '2026-07-22T10:05:00Z'
+    },
+    failed_jobs: []
+  };
+}
+
 describe('scheduler', () => {
   beforeEach(() => {
     resetSchedulerRuntimeForTests();
-    setSchedulerRuntimeForTests({ listGitHubActionsTargets: () => [] });
+    setSchedulerRuntimeForTests({
+      listGitHubActionsTargets: () => [],
+      listGitLabPipelineTargets: () => []
+    });
     delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
   });
 
@@ -271,7 +322,7 @@ describe('scheduler', () => {
     );
   });
 
-  it('checks due MCP and GitHub targets and records provider-specific results', async () => {
+  it('checks due MCP, GitHub, and GitLab targets and records provider-specific results', async () => {
     const checkServer = jest.fn(async () => ({
       status: 'up' as const,
       response_time_ms: 50,
@@ -280,8 +331,10 @@ describe('scheduler', () => {
       tools: ['health']
     }));
     const checkGitHubActionsTarget = jest.fn(async () => githubResult());
+    const checkGitLabPipelineTarget = jest.fn(async () => gitlabResult());
     const recordHealthCheck = jest.fn();
     const recordGitHubActionsCheck = jest.fn();
+    const recordGitLabPipelineCheck = jest.fn();
     const logMock = jest.fn() as unknown as typeof console.log;
 
     setSchedulerRuntimeForTests({
@@ -293,10 +346,16 @@ describe('scheduler', () => {
         createGitHubTarget('github-due'),
         createGitHubTarget('github-fresh', { last_checked: 9_000 })
       ],
+      listGitLabPipelineTargets: () => [
+        createGitLabTarget('gitlab-due'),
+        createGitLabTarget('gitlab-fresh', { last_checked: 9_000 })
+      ],
       checkServer,
       checkGitHubActionsTarget,
+      checkGitLabPipelineTarget,
       recordHealthCheck,
       recordGitHubActionsCheck,
+      recordGitLabPipelineCheck,
       now: () => 10_000,
       log: logMock
     });
@@ -305,6 +364,7 @@ describe('scheduler', () => {
 
     expect(checkServer).toHaveBeenCalledTimes(1);
     expect(checkGitHubActionsTarget).toHaveBeenCalledTimes(1);
+    expect(checkGitLabPipelineTarget).toHaveBeenCalledTimes(1);
     expect(recordHealthCheck).toHaveBeenCalledWith(
       'mcp-due',
       expect.objectContaining({ status: 'up' })
@@ -313,14 +373,23 @@ describe('scheduler', () => {
       'github-due',
       expect.objectContaining({ status: 'up' })
     );
+    expect(recordGitLabPipelineCheck).toHaveBeenCalledWith(
+      'gitlab-due',
+      expect.objectContaining({ status: 'up' })
+    );
     expect(logMock).toHaveBeenCalledWith(
       'info',
       'Scheduled check complete',
       expect.objectContaining({ kind: 'github_actions', name: 'github-due', status: 'up' })
     );
+    expect(logMock).toHaveBeenCalledWith(
+      'info',
+      'Scheduled check complete',
+      expect.objectContaining({ kind: 'gitlab_pipeline', name: 'gitlab-due', status: 'up' })
+    );
   });
 
-  it('shares one concurrency limit across MCP and GitHub targets', async () => {
+  it('shares one concurrency limit across MCP, GitHub, and GitLab targets', async () => {
     process.env.HEALTH_MONITOR_MAX_CONCURRENCY = '2';
     let active = 0;
     let maxActive = 0;
@@ -348,6 +417,10 @@ describe('scheduler', () => {
       await enter();
       return githubResult();
     });
+    const checkGitLabPipelineTarget = jest.fn(async () => {
+      await enter();
+      return gitlabResult();
+    });
 
     setSchedulerRuntimeForTests({
       listRegisteredServers: () => [createServer('mcp-1'), createServer('mcp-2')],
@@ -355,10 +428,16 @@ describe('scheduler', () => {
         createGitHubTarget('github-1'),
         createGitHubTarget('github-2')
       ],
+      listGitLabPipelineTargets: () => [
+        createGitLabTarget('gitlab-1'),
+        createGitLabTarget('gitlab-2')
+      ],
       checkServer,
       checkGitHubActionsTarget,
+      checkGitLabPipelineTarget,
       recordHealthCheck: jest.fn(),
       recordGitHubActionsCheck: jest.fn(),
+      recordGitLabPipelineCheck: jest.fn(),
       now: () => 0,
       log: jest.fn() as unknown as typeof console.log
     });
@@ -367,7 +446,11 @@ describe('scheduler', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(checkServer.mock.calls.length + checkGitHubActionsTarget.mock.calls.length).toBe(2);
+    expect(
+      checkServer.mock.calls.length +
+        checkGitHubActionsTarget.mock.calls.length +
+        checkGitLabPipelineTarget.mock.calls.length
+    ).toBe(2);
     expect(maxActive).toBe(2);
 
     releaseChecks();
@@ -375,6 +458,7 @@ describe('scheduler', () => {
 
     expect(checkServer).toHaveBeenCalledTimes(2);
     expect(checkGitHubActionsTarget).toHaveBeenCalledTimes(2);
+    expect(checkGitLabPipelineTarget).toHaveBeenCalledTimes(2);
     expect(maxActive).toBe(2);
   });
 });

@@ -6,7 +6,7 @@
 
 # Interface: CheckResult
 
-Defined in: [types.ts:387](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L387)
+Defined in: [types.ts:528](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L528)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:387](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **status**: `"up"` \| `"down"` \| `"timeout"` \| `"error"`
 
-Defined in: [types.ts:388](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L388)
+Defined in: [types.ts:529](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L529)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:388](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **response\_time\_ms**: `number` \| `null`
 
-Defined in: [types.ts:389](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L389)
+Defined in: [types.ts:530](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L530)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:389](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **tool\_count**: `number` \| `null`
 
-Defined in: [types.ts:390](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L390)
+Defined in: [types.ts:531](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L531)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.ts:390](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **error\_message**: `string` \| `null`
 
-Defined in: [types.ts:391](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L391)
+Defined in: [types.ts:532](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L532)
 
 ***
 
@@ -46,4 +46,4 @@ Defined in: [types.ts:391](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **tools**: `string`[] \| `null`
 
-Defined in: [types.ts:392](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L392)
+Defined in: [types.ts:533](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L533)
