@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.2.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.3...health-monitor-mcp-v1.2.0) (2026-07-22)
+
+
+### Features
+
+* add GitHub Actions workflow monitoring ([#101](https://github.com/oaslananka/health-monitor-mcp/issues/101)) ([eea54d9](https://github.com/oaslananka/health-monitor-mcp/commit/eea54d9b8e4a63981b50e2b5d546c0f732db1672))
+
 ## [1.1.3](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.1.2...health-monitor-mcp-v1.1.3) (2026-07-22)
 
 
