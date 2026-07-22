@@ -1,11 +1,14 @@
 {
   "name": "health-monitor-mcp",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor MCP servers, GitHub Actions, and GitLab pipelines with health history and diagnostics",
   "transport": "stdio",
   "command": "npx",
-  "args": ["-y", "health-monitor-mcp"],
+  "args": [
+    "-y",
+    "health-monitor-mcp"
+  ],
   "env": {
     "HEALTH_MONITOR_DB": {
       "description": "Custom path for the SQLite database (optional)",

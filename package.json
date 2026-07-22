@@ -1,6 +1,6 @@
 {
   "name": "health-monitor-mcp",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Monitor MCP servers, GitHub Actions workflows, and GitLab CI/CD pipelines with health history and diagnostics",
   "type": "module",
   "packageManager": "pnpm@11.14.0",
