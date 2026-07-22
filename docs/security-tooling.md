@@ -98,6 +98,12 @@ GitLab registrations also persist only `token_env`, such as `GITLAB_TOKEN`. The 
 
 GitLab.com is the only default origin. Every self-hosted origin must be HTTPS and exactly listed in `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST`. The API client rejects credentials, paths, queries, fragments, HTTP origins, and unlisted hosts. Pipeline/job JSON and trace bodies have independent byte limits; trace excerpts remove ANSI and GitLab section markers before returning a bounded tail.
 
+## Generic HTTP SSRF and Data Boundaries
+
+Generic HTTP monitoring is public-network only by default. Private origins require exact `HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST` membership and the `full` profile; remote-safe profiles never honor the override. The checker rejects URL credentials and fragments, local hostname suffixes, loopback, private, link-local, carrier-grade NAT, metadata, documentation, benchmark, multicast, reserved, and mixed public/private DNS answers.
+
+Validated DNS is pinned to the outbound connection, and every redirect repeats URL, DNS, address, and profile policy validation. Redirects are capped at three and response bodies at 262144 bytes. Full response bodies are never stored or returned; only configured assertion diagnostics, response metadata, and bounded TLS summaries enter SQLite or reports.
+
 ## Semgrep
 
 Repository-local, high-confidence rules live in `.semgrep.yml`. Run them directly with the pinned

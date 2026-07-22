@@ -280,6 +280,108 @@ export const UnregisterGitLabPipelineSchema = z.object({
   name: SafeNameSchema
 });
 
+const HttpTargetUrlSchema = z
+  .string()
+  .trim()
+  .url()
+  .max(2048)
+  .refine((value) => !hasControlCharacter(value), 'Control characters are not allowed')
+  .refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return (
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+        parsed.hostname.length > 0 &&
+        parsed.username === '' &&
+        parsed.password === '' &&
+        parsed.hash === ''
+      );
+    } catch {
+      return false;
+    }
+  }, 'HTTP target URL must use http or https without credentials or fragment');
+
+const HttpHeaderNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/, 'Invalid HTTP header name')
+  .transform((value) => value.toLowerCase());
+
+const HttpAssertionValueSchema = z.union([
+  z.string().max(2048),
+  z.number().finite(),
+  z.boolean(),
+  z.null()
+]);
+
+const HttpJsonPathSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(256)
+  .regex(/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/, 'JSON path must use dot-separated keys')
+  .refine(
+    (value) =>
+      value
+        .split('.')
+        .every((segment) => !['__proto__', 'prototype', 'constructor'].includes(segment)),
+    'JSON path contains a forbidden prototype segment'
+  );
+
+export const RegisterHttpTargetSchema = z
+  .object({
+    name: SafeNameSchema.describe('Unique local name for this HTTP target'),
+    url: HttpTargetUrlSchema.describe('HTTP or HTTPS endpoint URL'),
+    expected_statuses: z.array(z.number().int().min(100).max(599)).min(1).max(20).default([200]),
+    header_assertions: z
+      .array(
+        z.object({
+          name: HttpHeaderNameSchema,
+          equals: z.string().max(2048)
+        })
+      )
+      .max(10)
+      .default([]),
+    body_contains: z.array(z.string().min(1).max(512)).max(5).default([]),
+    json_assertions: z
+      .array(
+        z.object({
+          path: HttpJsonPathSchema,
+          equals: HttpAssertionValueSchema
+        })
+      )
+      .max(10)
+      .default([]),
+    tls_expiry_days: z.number().int().min(1).max(3650).optional(),
+    tags: z.array(SafeTagSchema).max(20).default([]),
+    check_interval_minutes: z.number().int().min(1).max(60).default(5)
+  })
+  .superRefine((value, context) => {
+    if (value.tls_expiry_days !== undefined && new URL(value.url).protocol !== 'https:') {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['tls_expiry_days'],
+        message: 'TLS expiry monitoring requires an HTTPS URL'
+      });
+    }
+  });
+
+export const CheckHttpTargetSchema = z.object({
+  name: SafeNameSchema.describe('HTTP target name to check'),
+  timeout_ms: z.number().int().min(1000).max(30000).default(5000)
+});
+
+export const ListHttpTargetsSchema = z.object({
+  tags: z.array(SafeTagSchema).max(20).optional(),
+  status: ListableStatusSchema.optional()
+});
+
+export const UnregisterHttpTargetSchema = z.object({
+  name: SafeNameSchema
+});
+
 export const EmptySchema = z.object({});
 
 export type McpServerType = z.infer<typeof McpServerTypeSchema>;
@@ -301,6 +403,11 @@ export type RegisterGitLabPipelineInput = z.infer<typeof RegisterGitLabPipelineS
 export type CheckGitLabPipelineInput = z.infer<typeof CheckGitLabPipelineSchema>;
 export type ListGitLabPipelinesInput = z.infer<typeof ListGitLabPipelinesSchema>;
 export type UnregisterGitLabPipelineInput = z.infer<typeof UnregisterGitLabPipelineSchema>;
+
+export type RegisterHttpTargetInput = z.infer<typeof RegisterHttpTargetSchema>;
+export type CheckHttpTargetInput = z.infer<typeof CheckHttpTargetSchema>;
+export type ListHttpTargetsInput = z.infer<typeof ListHttpTargetsSchema>;
+export type UnregisterHttpTargetInput = z.infer<typeof UnregisterHttpTargetSchema>;
 export type AlertFindingType = z.infer<typeof AlertFindingTypeSchema>;
 
 export interface GitHubActionsStepDiagnostic {
@@ -451,6 +558,93 @@ export interface GitLabPipelineCheckRecord {
   pipeline_url: string | null;
   error_message: string | null;
   failed_jobs: string | null;
+}
+
+export interface HttpHeaderAssertion {
+  name: string;
+  equals: string;
+}
+
+export type HttpAssertionValue = string | number | boolean | null;
+
+export interface HttpJsonAssertion {
+  path: string;
+  equals: HttpAssertionValue;
+}
+
+export interface HttpAssertionDiagnostic {
+  type: 'status' | 'header' | 'body_contains' | 'json_equals' | 'tls_expiry';
+  passed: boolean;
+  path: string | null;
+  expected: HttpAssertionValue;
+  actual: HttpAssertionValue;
+  message: string;
+}
+
+export interface HttpTlsDetails {
+  subject_cn: string | null;
+  issuer_cn: string | null;
+  valid_from: string;
+  valid_to: string;
+  days_remaining: number;
+}
+
+export interface HttpResponseDetails {
+  status_code: number;
+  final_url: string;
+  redirect_count: number;
+  content_type: string | null;
+  content_length: number | null;
+  tls: HttpTlsDetails | null;
+}
+
+export interface HttpCheckResult {
+  status: HealthStatus;
+  response_time_ms: number | null;
+  error_message: string | null;
+  response: HttpResponseDetails | null;
+  assertions: HttpAssertionDiagnostic[];
+}
+
+export interface RegisteredHttpTarget {
+  name: string;
+  url: string;
+  expected_statuses: number[];
+  header_assertions: HttpHeaderAssertion[];
+  body_contains: string[];
+  json_assertions: HttpJsonAssertion[];
+  tls_expiry_days: number | null;
+  tags: string[];
+  check_interval_minutes: number;
+  created_at: number;
+  last_checked: number | null;
+  last_status: HealthStatus | 'unknown';
+  last_response_time_ms: number | null;
+  last_status_code: number | null;
+  last_final_url: string | null;
+  last_tls_days_remaining: number | null;
+  last_failed_assertion_count: number;
+  consecutive_failures: number;
+}
+
+export interface HttpCheckRecord {
+  id: number;
+  target_name: string;
+  timestamp: number;
+  status: HealthStatus;
+  response_time_ms: number | null;
+  status_code: number | null;
+  final_url: string | null;
+  redirect_count: number | null;
+  content_type: string | null;
+  content_length: number | null;
+  tls_subject_cn: string | null;
+  tls_issuer_cn: string | null;
+  tls_valid_from: string | null;
+  tls_valid_to: string | null;
+  tls_days_remaining: number | null;
+  error_message: string | null;
+  assertions: string | null;
 }
 
 export interface HealthRecord {

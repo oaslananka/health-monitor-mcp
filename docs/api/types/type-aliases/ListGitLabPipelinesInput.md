@@ -8,4 +8,4 @@
 
 > **ListGitLabPipelinesInput** = `z.infer`\<*typeof* [`ListGitLabPipelinesSchema`](../variables/ListGitLabPipelinesSchema.md)\>
 
-Defined in: [types.ts:302](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L302)
+Defined in: [types.ts:404](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L404)

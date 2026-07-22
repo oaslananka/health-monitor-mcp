@@ -13,6 +13,14 @@ import {
   resetGitLabPipelineRuntimeForTests,
   setGitLabPipelineRuntimeForTests
 } from '../../src/gitlab-pipelines.js';
+import {
+  resetHttpTargetPolicyRuntimeForTests,
+  setHttpTargetPolicyRuntimeForTests
+} from '../../src/http-target-policy.js';
+import {
+  resetHttpTargetRuntimeForTests,
+  setHttpTargetRuntimeForTests
+} from '../../src/http-targets.js';
 import { registerServer as registerServerRecord } from '../../src/registry.js';
 import type { SetAlertInput } from '../../src/types.js';
 
@@ -71,7 +79,10 @@ describe('app tool registration', () => {
     resetCheckerRuntimeForTests();
     resetGitHubActionsRuntimeForTests();
     resetGitLabPipelineRuntimeForTests();
+    resetHttpTargetPolicyRuntimeForTests();
+    resetHttpTargetRuntimeForTests();
     delete process.env.HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST;
+    delete process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST;
   });
 
   afterAll(() => {
@@ -79,11 +90,14 @@ describe('app tool registration', () => {
     resetCheckerRuntimeForTests();
     resetGitHubActionsRuntimeForTests();
     resetGitLabPipelineRuntimeForTests();
+    resetHttpTargetPolicyRuntimeForTests();
+    resetHttpTargetRuntimeForTests();
     delete process.env.HEALTH_MONITOR_DB;
     delete process.env.HEALTH_MONITOR_ALLOW_STDIO;
     delete process.env.HEALTH_MONITOR_STDIO_ALLOWLIST;
     delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
     delete process.env.HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST;
+    delete process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST;
   });
 
   it('registers only the supported MCP health monitoring tools', async () => {
@@ -94,6 +108,7 @@ describe('app tool registration', () => {
       'check_all',
       'check_github_actions',
       'check_gitlab_pipeline',
+      'check_http_target',
       'check_server',
       'get_dashboard',
       'get_monitor_stats',
@@ -101,13 +116,16 @@ describe('app tool registration', () => {
       'get_uptime',
       'list_github_actions',
       'list_gitlab_pipelines',
+      'list_http_targets',
       'list_servers',
       'register_github_actions',
       'register_gitlab_pipeline',
+      'register_http_target',
       'register_server',
       'set_alert',
       'unregister_github_actions',
       'unregister_gitlab_pipeline',
+      'unregister_http_target',
       'unregister_server'
     ]);
     expect(names.some((name) => name.includes('azure'))).toBe(false);
@@ -628,6 +646,187 @@ describe('app tool registration', () => {
       expect.objectContaining({
         ok: false,
         error: expect.objectContaining({ code: 'GITLAB_PIPELINE_TARGET_NOT_FOUND' })
+      })
+    );
+  });
+
+  it('manages HTTP targets with SSRF policy and cross-provider reports', async () => {
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = 'https://status.internal.example';
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => [{ address: '10.20.30.40', family: 4 }]
+    });
+    setHttpTargetRuntimeForTests({
+      request: async () => ({
+        status_code: 200,
+        headers: { 'content-type': 'application/json', 'x-ready': 'yes' },
+        body: Buffer.from(JSON.stringify({ status: 'ready' })),
+        tls: {
+          subject_cn: 'status.internal.example',
+          issuer_cn: 'Internal CA',
+          valid_from: '2026-07-01T00:00:00.000Z',
+          valid_to: '2026-10-01T00:00:00.000Z',
+          days_remaining: 60
+        }
+      })
+    });
+
+    const remoteSafeTools = createToolMap({ profile: 'remote-safe' });
+    const remoteSafeRegistration = parseJson(
+      await getTool(remoteSafeTools, 'register_http_target').handler({
+        name: 'internal-health',
+        url: 'https://status.internal.example/health',
+        expected_statuses: [200],
+        header_assertions: [],
+        body_contains: [],
+        json_assertions: [],
+        tls_expiry_days: 30,
+        tags: ['ops'],
+        check_interval_minutes: 5
+      })
+    );
+    expect(remoteSafeRegistration).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({
+          code: 'HTTP_TARGET_URL_NOT_ALLOWED',
+          remediation: expect.stringContaining('HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST')
+        })
+      })
+    );
+
+    const tools = createToolMap({ profile: 'full' });
+    const registerHttp = getTool(tools, 'register_http_target');
+    const checkHttp = getTool(tools, 'check_http_target');
+    const listHttp = getTool(tools, 'list_http_targets');
+    const unregisterHttp = getTool(tools, 'unregister_http_target');
+    const checkAll = getTool(tools, 'check_all');
+    const getDashboard = getTool(tools, 'get_dashboard');
+    const getReport = getTool(tools, 'get_report');
+    const getMonitorStats = getTool(tools, 'get_monitor_stats');
+
+    const registration = parseJson(
+      await registerHttp.handler({
+        name: 'internal-health',
+        url: 'https://status.internal.example/health',
+        expected_statuses: [200],
+        header_assertions: [{ name: 'x-ready', equals: 'yes' }],
+        body_contains: [],
+        json_assertions: [{ path: 'status', equals: 'ready' }],
+        tls_expiry_days: 30,
+        tags: ['ops'],
+        check_interval_minutes: 5
+      })
+    );
+    const checked = parseJson(
+      await checkHttp.handler({ name: 'internal-health', timeout_ms: 5_000 })
+    );
+    const listed = parseJson(await listHttp.handler({ tags: ['ops'] }));
+    const batch = parseJson(await checkAll.handler({ tags: ['ops'], timeout_ms: 5_000 }));
+    const dashboard = parseJson(
+      await getDashboard.handler({ hours: 24, include_tool_stats: true })
+    );
+    const report = await getReport.handler({ hours: 24 });
+    const stats = parseJson(await getMonitorStats.handler({}));
+
+    expect(registration).toEqual(
+      expect.objectContaining({ registered: true, name: 'internal-health' })
+    );
+    expect(checked).toEqual(
+      expect.objectContaining({
+        name: 'internal-health',
+        status: 'up',
+        response: expect.objectContaining({ status_code: 200, tls: expect.any(Object) })
+      })
+    );
+    expect(listed).toEqual(
+      expect.objectContaining({
+        count: 1,
+        targets: [expect.objectContaining({ name: 'internal-health', last_status: 'up' })]
+      })
+    );
+    expect(batch).toEqual(
+      expect.objectContaining({
+        summary: '1/1 targets UP, 0 DOWN',
+        results: [
+          expect.objectContaining({ kind: 'http_target', name: 'internal-health', status: 'up' })
+        ]
+      })
+    );
+    expect(dashboard).toEqual(
+      expect.objectContaining({
+        summary: expect.objectContaining({
+          total_targets: 1,
+          http_targets: 1,
+          http_targets_up: 1,
+          http_targets_down: 0
+        }),
+        http_targets: [
+          expect.objectContaining({ name: 'internal-health', latest_status_code: 200 })
+        ]
+      })
+    );
+    expect(report.content[0]?.text).toContain('## HTTP Targets');
+    expect(report.content[0]?.text).toContain('internal-health');
+    expect(stats).toEqual(
+      expect.objectContaining({
+        total_http_targets: 1,
+        total_http_checks: 2,
+        total_targets_registered: 1,
+        total_checks_all_providers: 2
+      })
+    );
+
+    expect(parseJson(await unregisterHttp.handler({ name: 'internal-health' }))).toEqual(
+      expect.objectContaining({ unregistered: true, name: 'internal-health' })
+    );
+    expect(
+      parseJson(await checkHttp.handler({ name: 'internal-health', timeout_ms: 5_000 }))
+    ).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: expect.objectContaining({ code: 'HTTP_TARGET_NOT_FOUND' })
+      })
+    );
+  });
+
+  it('isolates an unexpected HTTP batch checker rejection', async () => {
+    process.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST = 'https://status.internal.example';
+    setHttpTargetPolicyRuntimeForTests({
+      lookup: async () => [{ address: '10.20.30.40', family: 4 }]
+    });
+    const tools = createToolMap({ profile: 'full' });
+    const registerHttp = getTool(tools, 'register_http_target');
+    const checkAll = getTool(tools, 'check_all');
+
+    await registerHttp.handler({
+      name: 'rejected-http',
+      url: 'https://status.internal.example/health',
+      expected_statuses: [200],
+      header_assertions: [],
+      body_contains: [],
+      json_assertions: [],
+      tags: ['rejection'],
+      check_interval_minutes: 5
+    });
+    setHttpTargetRuntimeForTests({
+      now: () => {
+        throw 'clock rejected';
+      }
+    });
+
+    const batch = parseJson(await checkAll.handler({ tags: ['rejection'], timeout_ms: 5_000 }));
+
+    expect(batch).toEqual(
+      expect.objectContaining({
+        summary: '0/1 targets UP, 1 DOWN',
+        results: [
+          expect.objectContaining({
+            kind: 'http_target',
+            name: 'rejected-http',
+            status: 'error',
+            error_message: 'Unknown HTTP target error'
+          })
+        ]
       })
     );
   });

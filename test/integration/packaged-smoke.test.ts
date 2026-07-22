@@ -137,6 +137,8 @@ describe('packaged MCP smoke tests', () => {
       'check_github_actions',
       'register_gitlab_pipeline',
       'check_gitlab_pipeline',
+      'register_http_target',
+      'check_http_target',
       'check_all',
       'get_uptime',
       'get_dashboard',
@@ -144,9 +146,11 @@ describe('packaged MCP smoke tests', () => {
       'list_servers',
       'list_github_actions',
       'list_gitlab_pipelines',
+      'list_http_targets',
       'unregister_server',
       'unregister_github_actions',
       'unregister_gitlab_pipeline',
+      'unregister_http_target',
       'set_alert',
       'get_monitor_stats'
     ]);
@@ -154,13 +158,15 @@ describe('packaged MCP smoke tests', () => {
       expect.objectContaining({
         GITHUB_TOKEN: expect.objectContaining({ required: false }),
         GITLAB_TOKEN: expect.objectContaining({ required: false }),
-        HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST: expect.objectContaining({ required: false })
+        HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST: expect.objectContaining({ required: false }),
+        HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST: expect.objectContaining({ required: false })
       })
     );
     expect(JSON.stringify(mcpMetadata)).not.toMatch(/azure|pat_token/i);
     expect(serverMetadata).toContain('"GITHUB_TOKEN"');
     expect(serverMetadata).toContain('"GITLAB_TOKEN"');
     expect(serverMetadata).toContain('"HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST"');
+    expect(serverMetadata).toContain('"HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST"');
     expect(serverMetadata).toContain('"isSecret": true');
     expect(serverMetadata).not.toMatch(/azure|pat_token/i);
 

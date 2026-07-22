@@ -80,6 +80,25 @@ register_gitlab_pipeline name="private-ci" base_url="https://gitlab.internal.exa
 
 Only the token environment-variable name is persisted. Failed job trace excerpts are sanitized and bounded; complete traces and token values are not stored.
 
+## Register a Generic HTTP Target
+
+Register a public GET-only endpoint with bounded assertions:
+
+```text
+register_http_target name="service-health" url="https://status.example.com/health" expected_statuses=[200] header_assertions=[{"name":"x-ready","equals":"yes"}] body_contains=["ready"] json_assertions=[{"path":"status","equals":"ready"}] tls_expiry_days=30 tags=["production","http"]
+check_http_target name="service-health" timeout_ms=5000
+list_http_targets tags=["production"]
+unregister_http_target name="service-health"
+```
+
+Public addresses are allowed by default. A trusted private origin requires the `full` profile and exact origin membership:
+
+```bash
+export HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST=https://status.internal.example:8443
+```
+
+Every DNS answer and redirect is checked against SSRF policy. Response bodies are limited to 262144 bytes and are used only in memory for configured assertions; they are never stored or returned.
+
 ## Run Health Checks
 
 Check one server:
@@ -88,7 +107,7 @@ Check one server:
 check_server name="inventory-mcp" timeout_ms=5000
 ```
 
-Check all MCP, GitHub Actions, and GitLab targets with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
+Check all MCP, GitHub Actions, GitLab, and HTTP targets with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
 interactive batches and the background scheduler, and result order remains deterministic:
 
 ```text
@@ -120,7 +139,7 @@ should inspect `error.code`, apply `error.remediation`, and retry only when `err
 ```
 
 Current expected codes are `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`,
-`GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`,
+`GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `HTTP_TARGET_NOT_FOUND`, `HTTP_TARGET_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`,
 `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
 ## Inspect Uptime
@@ -144,6 +163,7 @@ The dashboard includes:
 - current alert findings
 - GitHub Actions latest conclusion and run URL
 - GitLab latest pipeline status, URL, uptime, and failed-job diagnostics
+- HTTP status code, final URL, failed assertions, TLS days remaining, and uptime
 - cross-provider target counts
 
 ## Configure Alerts
@@ -180,6 +200,7 @@ This reports:
 - total MCP health checks performed
 - total GitHub Actions targets and checks
 - total GitLab pipeline targets and checks
+- total generic HTTP targets and checks
 - cross-provider totals
 - monitoring start time
 - resolved database path

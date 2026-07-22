@@ -10,8 +10,10 @@ import {
 import type {
   GitHubActionsCheckResult,
   GitLabPipelineCheckResult,
+  HttpCheckResult,
   RegisteredGitHubActionsTarget,
   RegisteredGitLabPipelineTarget,
+  RegisteredHttpTarget,
   RegisteredServer
 } from '../../src/types.js';
 
@@ -128,12 +130,57 @@ function gitlabResult(
   };
 }
 
+function createHttpTarget(
+  name: string,
+  overrides: Partial<RegisteredHttpTarget> = {}
+): RegisteredHttpTarget {
+  return {
+    name,
+    url: 'https://example.com/health',
+    expected_statuses: [200],
+    header_assertions: [],
+    body_contains: [],
+    json_assertions: [],
+    tls_expiry_days: null,
+    tags: [],
+    check_interval_minutes: 5,
+    created_at: 0,
+    last_checked: null,
+    last_status: 'unknown',
+    last_response_time_ms: null,
+    last_status_code: null,
+    last_final_url: null,
+    last_tls_days_remaining: null,
+    last_failed_assertion_count: 0,
+    consecutive_failures: 0,
+    ...overrides
+  };
+}
+
+function httpResult(status: HttpCheckResult['status'] = 'up'): HttpCheckResult {
+  return {
+    status,
+    response_time_ms: 35,
+    error_message: status === 'up' ? null : 'failed',
+    response: {
+      status_code: status === 'up' ? 200 : 503,
+      final_url: 'https://example.com/health',
+      redirect_count: 0,
+      content_type: 'application/json',
+      content_length: 18,
+      tls: null
+    },
+    assertions: []
+  };
+}
+
 describe('scheduler', () => {
   beforeEach(() => {
     resetSchedulerRuntimeForTests();
     setSchedulerRuntimeForTests({
       listGitHubActionsTargets: () => [],
-      listGitLabPipelineTargets: () => []
+      listGitLabPipelineTargets: () => [],
+      listHttpTargets: () => []
     });
     delete process.env.HEALTH_MONITOR_MAX_CONCURRENCY;
   });
@@ -295,6 +342,33 @@ describe('scheduler', () => {
     );
   });
 
+  it('isolates an HTTP scheduler rejection without recording a check', async () => {
+    const recordHttpCheck = jest.fn();
+    const logMock = jest.fn() as unknown as typeof console.log;
+
+    setSchedulerRuntimeForTests({
+      listRegisteredServers: () => [],
+      listGitHubActionsTargets: () => [],
+      listGitLabPipelineTargets: () => [],
+      listHttpTargets: () => [createHttpTarget('broken-http')],
+      checkHttpTarget: jest.fn(async () => {
+        throw new Error('http boom');
+      }),
+      recordHttpCheck,
+      now: () => 0,
+      log: logMock
+    });
+
+    await runSchedulerCycle();
+
+    expect(recordHttpCheck).not.toHaveBeenCalled();
+    expect(logMock).toHaveBeenCalledWith(
+      'error',
+      'Scheduled check failed',
+      expect.objectContaining({ kind: 'http_target', name: 'broken-http', error: 'http boom' })
+    );
+  });
+
   it('passes scheduler stdio policy into scheduled checks', async () => {
     const checkServer = jest.fn(async () => ({
       status: 'up' as const,
@@ -322,7 +396,7 @@ describe('scheduler', () => {
     );
   });
 
-  it('checks due MCP, GitHub, and GitLab targets and records provider-specific results', async () => {
+  it('checks due MCP, GitHub, GitLab, and HTTP targets and records provider-specific results', async () => {
     const checkServer = jest.fn(async () => ({
       status: 'up' as const,
       response_time_ms: 50,
@@ -332,9 +406,11 @@ describe('scheduler', () => {
     }));
     const checkGitHubActionsTarget = jest.fn(async () => githubResult());
     const checkGitLabPipelineTarget = jest.fn(async () => gitlabResult());
+    const checkHttpTarget = jest.fn(async () => httpResult());
     const recordHealthCheck = jest.fn();
     const recordGitHubActionsCheck = jest.fn();
     const recordGitLabPipelineCheck = jest.fn();
+    const recordHttpCheck = jest.fn();
     const logMock = jest.fn() as unknown as typeof console.log;
 
     setSchedulerRuntimeForTests({
@@ -350,12 +426,18 @@ describe('scheduler', () => {
         createGitLabTarget('gitlab-due'),
         createGitLabTarget('gitlab-fresh', { last_checked: 9_000 })
       ],
+      listHttpTargets: () => [
+        createHttpTarget('http-due'),
+        createHttpTarget('http-fresh', { last_checked: 9_000 })
+      ],
       checkServer,
       checkGitHubActionsTarget,
       checkGitLabPipelineTarget,
+      checkHttpTarget,
       recordHealthCheck,
       recordGitHubActionsCheck,
       recordGitLabPipelineCheck,
+      recordHttpCheck,
       now: () => 10_000,
       log: logMock
     });
@@ -365,6 +447,12 @@ describe('scheduler', () => {
     expect(checkServer).toHaveBeenCalledTimes(1);
     expect(checkGitHubActionsTarget).toHaveBeenCalledTimes(1);
     expect(checkGitLabPipelineTarget).toHaveBeenCalledTimes(1);
+    expect(checkHttpTarget).toHaveBeenCalledTimes(1);
+    expect(checkHttpTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'http-due' }),
+      8_000,
+      { profile: 'full' }
+    );
     expect(recordHealthCheck).toHaveBeenCalledWith(
       'mcp-due',
       expect.objectContaining({ status: 'up' })
@@ -377,6 +465,10 @@ describe('scheduler', () => {
       'gitlab-due',
       expect.objectContaining({ status: 'up' })
     );
+    expect(recordHttpCheck).toHaveBeenCalledWith(
+      'http-due',
+      expect.objectContaining({ status: 'up' })
+    );
     expect(logMock).toHaveBeenCalledWith(
       'info',
       'Scheduled check complete',
@@ -387,9 +479,14 @@ describe('scheduler', () => {
       'Scheduled check complete',
       expect.objectContaining({ kind: 'gitlab_pipeline', name: 'gitlab-due', status: 'up' })
     );
+    expect(logMock).toHaveBeenCalledWith(
+      'info',
+      'Scheduled check complete',
+      expect.objectContaining({ kind: 'http_target', name: 'http-due', status: 'up' })
+    );
   });
 
-  it('shares one concurrency limit across MCP, GitHub, and GitLab targets', async () => {
+  it('shares one concurrency limit across MCP, GitHub, GitLab, and HTTP targets', async () => {
     process.env.HEALTH_MONITOR_MAX_CONCURRENCY = '2';
     let active = 0;
     let maxActive = 0;
@@ -421,6 +518,10 @@ describe('scheduler', () => {
       await enter();
       return gitlabResult();
     });
+    const checkHttpTarget = jest.fn(async () => {
+      await enter();
+      return httpResult();
+    });
 
     setSchedulerRuntimeForTests({
       listRegisteredServers: () => [createServer('mcp-1'), createServer('mcp-2')],
@@ -432,12 +533,15 @@ describe('scheduler', () => {
         createGitLabTarget('gitlab-1'),
         createGitLabTarget('gitlab-2')
       ],
+      listHttpTargets: () => [createHttpTarget('http-1'), createHttpTarget('http-2')],
       checkServer,
       checkGitHubActionsTarget,
       checkGitLabPipelineTarget,
+      checkHttpTarget,
       recordHealthCheck: jest.fn(),
       recordGitHubActionsCheck: jest.fn(),
       recordGitLabPipelineCheck: jest.fn(),
+      recordHttpCheck: jest.fn(),
       now: () => 0,
       log: jest.fn() as unknown as typeof console.log
     });
@@ -449,7 +553,8 @@ describe('scheduler', () => {
     expect(
       checkServer.mock.calls.length +
         checkGitHubActionsTarget.mock.calls.length +
-        checkGitLabPipelineTarget.mock.calls.length
+        checkGitLabPipelineTarget.mock.calls.length +
+        checkHttpTarget.mock.calls.length
     ).toBe(2);
     expect(maxActive).toBe(2);
 
@@ -459,6 +564,7 @@ describe('scheduler', () => {
     expect(checkServer).toHaveBeenCalledTimes(2);
     expect(checkGitHubActionsTarget).toHaveBeenCalledTimes(2);
     expect(checkGitLabPipelineTarget).toHaveBeenCalledTimes(2);
+    expect(checkHttpTarget).toHaveBeenCalledTimes(2);
     expect(maxActive).toBe(2);
   });
 });

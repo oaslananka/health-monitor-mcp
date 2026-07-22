@@ -8,4 +8,4 @@
 
 > **UnregisterGitHubActionsInput** = `z.infer`\<*typeof* [`UnregisterGitHubActionsSchema`](../variables/UnregisterGitHubActionsSchema.md)\>
 
-Defined in: [types.ts:299](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L299)
+Defined in: [types.ts:401](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L401)

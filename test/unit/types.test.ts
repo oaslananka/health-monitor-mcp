@@ -1,6 +1,7 @@
 import {
   RegisterGitHubActionsSchema,
   RegisterGitLabPipelineSchema,
+  RegisterHttpTargetSchema,
   RegisterServerSchema
 } from '../../src/types.js';
 
@@ -207,6 +208,57 @@ ref`
           token_env: 'GITLAB_TOKEN',
           tags: [],
           check_interval_minutes: 5,
+          ...invalid
+        }).success
+      ).toBe(false);
+    }
+  });
+
+  it('validates generic HTTP targets and bounded assertions', () => {
+    expect(
+      RegisterHttpTargetSchema.parse({
+        name: 'public-health',
+        url: 'https://example.com/health'
+      })
+    ).toEqual(
+      expect.objectContaining({
+        url: 'https://example.com/health',
+        expected_statuses: [200],
+        header_assertions: [],
+        body_contains: [],
+        json_assertions: [],
+        check_interval_minutes: 5
+      })
+    );
+
+    expect(
+      RegisterHttpTargetSchema.safeParse({
+        name: 'tls-http',
+        url: 'http://example.com/health',
+        tls_expiry_days: 30
+      }).success
+    ).toBe(false);
+
+    for (const invalid of [
+      { url: 'file:///etc/passwd' },
+      { url: 'https://user:pass@example.com/health' },
+      { url: 'https://example.com/health#fragment' },
+      { expected_statuses: Array.from({ length: 21 }, (_, index) => 200 + index) },
+      {
+        header_assertions: Array.from({ length: 11 }, (_, index) => ({
+          name: `x-header-${index}`,
+          equals: 'ok'
+        }))
+      },
+      { body_contains: Array.from({ length: 6 }, (_, index) => `value-${index}`) },
+      { body_contains: ['x'.repeat(513)] },
+      { json_assertions: [{ path: '__proto__.polluted', equals: true }] },
+      { json_assertions: [{ path: 'constructor.prototype', equals: true }] }
+    ]) {
+      expect(
+        RegisterHttpTargetSchema.safeParse({
+          name: 'public-health',
+          url: 'https://example.com/health',
           ...invalid
         }).success
       ).toBe(false);

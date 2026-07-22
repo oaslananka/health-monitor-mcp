@@ -8,4 +8,4 @@
 
 > **RegisterGitLabPipelineInput** = `z.infer`\<*typeof* [`RegisterGitLabPipelineSchema`](../variables/RegisterGitLabPipelineSchema.md)\>
 
-Defined in: [types.ts:300](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L300)
+Defined in: [types.ts:402](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L402)

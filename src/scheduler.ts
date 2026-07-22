@@ -1,4 +1,4 @@
-import { getMaxConcurrency } from './config.js';
+import { getMaxConcurrency, getRuntimeProfile, type RuntimeProfile } from './config.js';
 import { mapWithConcurrency } from './concurrency.js';
 import { checkServer } from './checker.js';
 import { checkGitHubActionsTarget } from './github-actions.js';
@@ -8,14 +8,18 @@ import {
   listGitLabPipelineTargets,
   recordGitLabPipelineCheck
 } from './gitlab-pipeline-registry.js';
+import { listHttpTargets, recordHttpCheck } from './http-target-registry.js';
+import { checkHttpTarget } from './http-targets.js';
 import { log } from './logging.js';
 import { listRegisteredServers, recordHealthCheck } from './registry.js';
 import type {
   CheckResult,
   GitHubActionsCheckResult,
   GitLabPipelineCheckResult,
+  HttpCheckResult,
   RegisteredGitHubActionsTarget,
   RegisteredGitLabPipelineTarget,
+  RegisteredHttpTarget,
   RegisteredServer
 } from './types.js';
 
@@ -23,6 +27,7 @@ interface SchedulerRuntime {
   listRegisteredServers: () => RegisteredServer[];
   listGitHubActionsTargets: () => RegisteredGitHubActionsTarget[];
   listGitLabPipelineTargets: () => RegisteredGitLabPipelineTarget[];
+  listHttpTargets: () => RegisteredHttpTarget[];
   checkServer: (
     server: RegisteredServer,
     timeoutMs: number,
@@ -36,9 +41,15 @@ interface SchedulerRuntime {
     target: RegisteredGitLabPipelineTarget,
     timeoutMs: number
   ) => Promise<GitLabPipelineCheckResult>;
+  checkHttpTarget: (
+    target: RegisteredHttpTarget,
+    timeoutMs: number,
+    options: { profile: RuntimeProfile }
+  ) => Promise<HttpCheckResult>;
   recordHealthCheck: (serverName: string, result: CheckResult) => void;
   recordGitHubActionsCheck: (targetName: string, result: GitHubActionsCheckResult) => void;
   recordGitLabPipelineCheck: (targetName: string, result: GitLabPipelineCheckResult) => void;
+  recordHttpCheck: (targetName: string, result: HttpCheckResult) => void;
   log: typeof log;
   now: () => number;
 }
@@ -46,7 +57,8 @@ interface SchedulerRuntime {
 type ScheduledTarget =
   | { kind: 'mcp_server'; name: string; target: RegisteredServer }
   | { kind: 'github_actions'; name: string; target: RegisteredGitHubActionsTarget }
-  | { kind: 'gitlab_pipeline'; name: string; target: RegisteredGitLabPipelineTarget };
+  | { kind: 'gitlab_pipeline'; name: string; target: RegisteredGitLabPipelineTarget }
+  | { kind: 'http_target'; name: string; target: RegisteredHttpTarget };
 
 const DEFAULT_INTERVAL_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -55,12 +67,15 @@ const createDefaultRuntime = (): SchedulerRuntime => ({
   listRegisteredServers,
   listGitHubActionsTargets: () => listGitHubActionsTargets(),
   listGitLabPipelineTargets: () => listGitLabPipelineTargets(),
+  listHttpTargets: () => listHttpTargets(),
   checkServer,
   checkGitHubActionsTarget,
   checkGitLabPipelineTarget,
+  checkHttpTarget,
   recordHealthCheck,
   recordGitHubActionsCheck,
   recordGitLabPipelineCheck,
+  recordHttpCheck,
   log,
   now: () => Date.now()
 });
@@ -69,10 +84,14 @@ let schedulerRuntime: SchedulerRuntime = createDefaultRuntime();
 let schedulerTimer: NodeJS.Timeout | null = null;
 let schedulerRunning = false;
 let schedulerAllowStdio: boolean | undefined;
+let schedulerProfile: RuntimeProfile = getRuntimeProfile();
 
 function isTargetDue(
   target: Pick<
-    RegisteredServer | RegisteredGitHubActionsTarget | RegisteredGitLabPipelineTarget,
+    | RegisteredServer
+    | RegisteredGitHubActionsTarget
+    | RegisteredGitLabPipelineTarget
+    | RegisteredHttpTarget,
     'last_checked' | 'check_interval_minutes'
   >,
   now: number
@@ -105,7 +124,11 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
       ...schedulerRuntime
         .listGitLabPipelineTargets()
         .filter((target) => isTargetDue(target, now))
-        .map((target) => ({ kind: 'gitlab_pipeline' as const, name: target.name, target }))
+        .map((target) => ({ kind: 'gitlab_pipeline' as const, name: target.name, target })),
+      ...schedulerRuntime
+        .listHttpTargets()
+        .filter((target) => isTargetDue(target, now))
+        .map((target) => ({ kind: 'http_target' as const, name: target.name, target }))
     ];
 
     if (dueTargets.length === 0) {
@@ -141,11 +164,24 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
           return;
         }
 
-        const result = await schedulerRuntime.checkGitLabPipelineTarget(
-          scheduledTarget.target,
-          timeoutMs
-        );
-        schedulerRuntime.recordGitLabPipelineCheck(scheduledTarget.name, result);
+        if (scheduledTarget.kind === 'gitlab_pipeline') {
+          const result = await schedulerRuntime.checkGitLabPipelineTarget(
+            scheduledTarget.target,
+            timeoutMs
+          );
+          schedulerRuntime.recordGitLabPipelineCheck(scheduledTarget.name, result);
+          schedulerRuntime.log('info', 'Scheduled check complete', {
+            kind: scheduledTarget.kind,
+            name: scheduledTarget.name,
+            status: result.status
+          });
+          return;
+        }
+
+        const result = await schedulerRuntime.checkHttpTarget(scheduledTarget.target, timeoutMs, {
+          profile: schedulerProfile
+        });
+        schedulerRuntime.recordHttpCheck(scheduledTarget.name, result);
         schedulerRuntime.log('info', 'Scheduled check complete', {
           kind: scheduledTarget.kind,
           name: scheduledTarget.name,
@@ -166,13 +202,14 @@ export async function runSchedulerCycle(timeoutMs = DEFAULT_TIMEOUT_MS): Promise
 
 export function startScheduler(
   intervalMs = DEFAULT_INTERVAL_MS,
-  options: { allowStdio?: boolean } = {}
+  options: { allowStdio?: boolean; profile?: RuntimeProfile } = {}
 ): void {
   if (schedulerTimer) {
     return;
   }
 
   schedulerAllowStdio = options.allowStdio;
+  schedulerProfile = options.profile ?? getRuntimeProfile();
   schedulerTimer = setInterval(() => {
     void runSchedulerCycle();
   }, intervalMs);
@@ -189,6 +226,7 @@ export function stopScheduler(): void {
   clearInterval(schedulerTimer);
   schedulerTimer = null;
   schedulerAllowStdio = undefined;
+  schedulerProfile = getRuntimeProfile();
   schedulerRuntime.log('info', 'Scheduler stopped');
 }
 
@@ -203,4 +241,5 @@ export function resetSchedulerRuntimeForTests(): void {
   schedulerRuntime = createDefaultRuntime();
   schedulerRunning = false;
   schedulerAllowStdio = undefined;
+  schedulerProfile = getRuntimeProfile();
 }

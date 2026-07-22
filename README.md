@@ -1,6 +1,6 @@
 # health-monitor-mcp
 
-> MCP server, GitHub Actions, and GitLab CI/CD monitoring with health history, diagnostics, alert evaluation, and operational reports through natural-language tools.
+> MCP server, CI workflow, and generic HTTP endpoint monitoring with health history, TLS expiry, assertions, diagnostics, and operational reports.
 
 [![CI](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/oaslananka/health-monitor-mcp/graph/badge.svg)](https://codecov.io/gh/oaslananka/health-monitor-mcp)
@@ -11,7 +11,7 @@
 
 ## What This Does
 
-`health-monitor-mcp` keeps local registries of MCP servers, GitHub Actions workflows, and GitLab pipelines, performs live checks, records history in SQLite, evaluates MCP alert thresholds, and returns JSON or Markdown evidence suitable for agents and operators.
+`health-monitor-mcp` keeps local registries of MCP servers, GitHub Actions workflows, GitLab pipelines, and generic HTTP endpoints. It performs live checks, records bounded evidence in SQLite, evaluates MCP alert thresholds, and returns JSON or Markdown diagnostics suitable for agents and operators.
 
 Supported target transports:
 
@@ -20,8 +20,9 @@ Supported target transports:
 - **stdio** for trusted local executables after explicit opt-in.
 - **GitHub Actions** workflow runs, failed jobs, and failed steps for public or private repositories.
 - **GitLab CI/CD** pipelines, failed jobs, stages, refs, commits, URLs, and bounded trace excerpts for GitLab.com or allowlisted self-hosted instances.
+- **Generic HTTP/HTTPS** endpoints with status, header, body-substring, JSON-value, redirect, latency, and TLS-expiry checks.
 
-Azure DevOps monitoring was retired in v1.1.0. GitHub Actions shipped in v1.2.0; GitLab CI/CD is the next provider in the multi-provider roadmap.
+Azure DevOps monitoring was retired in v1.1.0. GitHub Actions shipped in v1.2.0 and GitLab CI/CD in v1.3.0; generic HTTP/TLS monitoring completes the current multi-provider feature line.
 
 ## Quick Start
 
@@ -54,6 +55,8 @@ Example MCP client configuration:
 | `check_github_actions`       | Check latest GitHub run and failed job/step diagnostics | `Check repo-ci now`                     |
 | `register_gitlab_pipeline`   | Register a GitLab project pipeline                      | `Monitor group/project on GitLab`       |
 | `check_gitlab_pipeline`      | Check latest pipeline and bounded failed-job traces     | `Check gitlab-ci now`                   |
+| `register_http_target`       | Register a GET-only HTTP/HTTPS endpoint                 | `Monitor the public health endpoint`    |
+| `check_http_target`          | Check response assertions and TLS expiry                | `Check service-health now`              |
 | `check_all`                  | Check all target kinds with bounded concurrency         | `Check all production targets`          |
 | `get_uptime`                 | Return MCP uptime and latency history                   | `Show 24h uptime for inventory-prod`    |
 | `get_dashboard`              | Return a cross-provider JSON dashboard                  | `Give me a 24h dashboard`               |
@@ -61,13 +64,15 @@ Example MCP client configuration:
 | `list_servers`               | List registered MCP targets                             | `List monitored MCP servers`            |
 | `list_github_actions`        | List registered GitHub workflow targets                 | `List monitored workflows`              |
 | `list_gitlab_pipelines`      | List registered GitLab pipeline targets                 | `List monitored GitLab pipelines`       |
+| `list_http_targets`          | List registered HTTP targets                            | `List monitored HTTP endpoints`         |
 | `unregister_server`          | Remove an MCP target                                    | `Stop monitoring local-debugger`        |
 | `unregister_github_actions`  | Remove a GitHub target and its history                  | `Stop monitoring repo-ci`               |
 | `unregister_gitlab_pipeline` | Remove a GitLab target and its history                  | `Stop monitoring gitlab-ci`             |
+| `unregister_http_target`     | Remove an HTTP target and its history                   | `Stop monitoring service-health`        |
 | `set_alert`                  | Configure MCP health thresholds                         | `Alert if inventory-prod exceeds 500ms` |
 | `get_monitor_stats`          | Inspect cross-provider monitor activity                 | `How many checks are stored?`           |
 
-Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
+Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `HTTP_TARGET_NOT_FOUND`, `HTTP_TARGET_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
 ## Register Targets
 
@@ -136,6 +141,23 @@ register_gitlab_pipeline name="private-gitlab" base_url="https://gitlab.internal
 
 Only `token_env` is persisted. Token values, response bodies, and full traces are never stored or returned. Failed-job trace excerpts are range-requested, sanitized, and bounded.
 
+## Register HTTP Targets
+
+Public HTTP and HTTPS endpoints are allowed by default. The provider sends GET requests only and supports bounded status, header, body-substring, JSON scalar, and TLS-expiry assertions:
+
+```text
+register_http_target name="service-health" url="https://status.example.com/health" expected_statuses=[200] header_assertions=[{"name":"x-ready","equals":"yes"}] body_contains=["ready"] json_assertions=[{"path":"status","equals":"ready"}] tls_expiry_days=30 tags=["production","http"]
+check_http_target name="service-health" timeout_ms=5000
+```
+
+Private, loopback, link-local, and other non-public addresses are blocked. A trusted private origin is available only in the `full` runtime profile and must be explicitly listed:
+
+```bash
+export HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST=https://status.internal.example:8443
+```
+
+Every DNS answer and every redirect destination is revalidated. Responses are capped at 262144 bytes; full response bodies and certificate chains are never stored or returned.
+
 ## Health Checks and Reports
 
 ```text
@@ -146,7 +168,7 @@ get_dashboard hours=24 include_tool_stats=true
 get_report hours=24
 ```
 
-`HEALTH_MONITOR_MAX_CONCURRENCY` limits MCP, GitHub Actions, and GitLab checks through one shared scheduled and interactive queue. Results preserve MCP-then-GitHub-then-GitLab registration order even when checks complete out of order.
+`HEALTH_MONITOR_MAX_CONCURRENCY` limits MCP, GitHub Actions, GitLab, and HTTP checks through one shared scheduled and interactive queue. Results preserve MCP-then-GitHub-then-GitLab-then-HTTP registration order even when checks complete out of order.
 
 ## Alerts
 
@@ -167,6 +189,7 @@ Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`
 | `GITHUB_TOKEN`                             | unset                             | Optional GitHub Actions read token              |
 | `GITLAB_TOKEN`                             | unset                             | Optional GitLab project/pipeline/job read token |
 | `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST` | unset                             | Allowed self-hosted GitLab HTTPS origins        |
+| `HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST`     | unset                             | Private HTTP(S) origins allowed in full profile |
 | `HEALTH_MONITOR_ALLOW_STDIO`               | `0`                               | Allow trusted local stdio checks                |
 | `HEALTH_MONITOR_STDIO_ALLOWLIST`           | unset                             | Optional comma-separated executable allowlist   |
 | `HEALTH_MONITOR_HTTP_TOKEN`                | unset                             | Bearer token for `POST /mcp`                    |

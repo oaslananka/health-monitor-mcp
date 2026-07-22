@@ -17,6 +17,10 @@ src/
 ├── gitlab-pipelines.ts # bounded GitLab pipeline/job/trace API client
 ├── gitlab-pipeline-registry.ts # GitLab target/history persistence and analytics
 ├── gitlab-pipeline-tools.ts # GitLab provider MCP lifecycle tools
+├── http-target-policy.ts # URL, DNS, IP, allowlist, and SSRF policy
+├── http-targets.ts # DNS-pinned bounded HTTP/HTTPS checker and assertions
+├── http-target-registry.ts # HTTP target/history persistence and analytics
+├── http-target-tools.ts # HTTP provider MCP lifecycle tools
 ├── concurrency.ts    # ordered bounded-concurrency primitive
 ├── registry.ts       # SQLite access for servers, checks, dashboards, and alerts
 ├── db.ts             # SQLite connection bootstrap
@@ -35,14 +39,14 @@ src/
 User or agent request
   -> MCP tool handler (app.ts)
   -> runtime policy and schema validation
-  -> checker.ts, github-actions.ts, or gitlab-pipelines.ts performs the provider check
+  -> checker.ts, github-actions.ts, gitlab-pipelines.ts, or http-targets.ts performs the provider check
   -> the matching provider registry stores health evidence
   -> alerts.ts evaluates thresholds
   -> tool-errors.ts formats expected remediation failures
   -> JSON or Markdown response returns to the client
 ```
 
-`check_all` and the background scheduler share `mapWithConcurrency()` across MCP, GitHub Actions, and GitLab targets. The helper caps active workers, preserves input ordering, and captures individual failures without cancelling queued targets.
+`check_all` and the background scheduler share `mapWithConcurrency()` across MCP, GitHub Actions, GitLab, and HTTP targets. The helper caps active workers, preserves input ordering, and captures individual failures without cancelling queued targets.
 
 ## Runtime Modes
 
@@ -61,6 +65,8 @@ User or agent request
 - GitHub workflow observations and failed-job diagnostics in `github_actions_checks`.
 - GitLab registrations in `gitlab_pipeline_targets`.
 - GitLab pipeline observations and bounded failed-job trace diagnostics in `gitlab_pipeline_checks`.
+- Generic endpoint registrations in `http_targets`.
+- HTTP response, TLS summary, and assertion diagnostics in `http_checks`; response bodies are never stored.
 - Alert thresholds in `alerts`.
 - Retired Azure pipeline tables are removed by migration v4, including previously stored credentials and run history.
 
@@ -73,6 +79,8 @@ User or agent request
 - Expected user-correctable failures return stable codes without exposing secrets or internal stack traces.
 - GitHub and GitLab token values remain environment-only; SQLite stores only each configured `token_env` name.
 - GitLab.com is allowed by default; self-hosted GitLab requires an exact HTTPS origin in `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST`.
+- HTTP targets are public-network only by default. Private origins require the full profile and exact `HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST` membership; remote-safe profiles never permit the override.
+- DNS is pinned after validation, mixed public/private answers are rejected, and every redirect repeats URL, DNS, and IP policy checks.
 
 ## Decision Records
 
