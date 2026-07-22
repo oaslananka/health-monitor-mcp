@@ -36,6 +36,23 @@ must be a single executable path or binary name; put all flags and package names
 runtime explicitly enables it. Optional `HEALTH_MONITOR_STDIO_ALLOWLIST` entries must match the
 command exactly, and remote-safe profiles always block stdio.
 
+## Register a GitHub Actions Workflow
+
+Public repositories can be queried without a token. For private repositories or higher rate limits, expose a token with Actions read permission through an environment variable:
+
+```bash
+export GITHUB_TOKEN=your-runtime-secret
+```
+
+```text
+register_github_actions name="repo-ci" owner="oaslananka" repository="health-monitor-mcp" workflow="ci.yml" branch="main" token_env="GITHUB_TOKEN" tags=["production","ci"]
+check_github_actions name="repo-ci" timeout_ms=5000
+list_github_actions tags=["production"]
+unregister_github_actions name="repo-ci"
+```
+
+Only `token_env` is persisted. The environment-variable value is resolved for each check and is never stored or returned.
+
 ## Run Health Checks
 
 Check one server:
@@ -44,7 +61,7 @@ Check one server:
 check_server name="inventory-mcp" timeout_ms=5000
 ```
 
-Check all servers with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
+Check all MCP and GitHub Actions targets with bounded concurrency. `HEALTH_MONITOR_MAX_CONCURRENCY` applies to both
 interactive batches and the background scheduler, and result order remains deterministic:
 
 ```text
@@ -76,8 +93,8 @@ should inspect `error.code`, apply `error.remediation`, and retry only when `err
 }
 ```
 
-Current expected codes are `SERVER_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and
-`STDIO_COMMAND_REJECTED`.
+Current expected codes are `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`,
+`NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
 ## Inspect Uptime
 
@@ -98,6 +115,8 @@ The dashboard includes:
 - average response time
 - consecutive failures
 - current alert findings
+- GitHub Actions latest conclusion and run URL
+- cross-provider target counts
 
 ## Configure Alerts
 
@@ -130,7 +149,9 @@ get_monitor_stats
 This reports:
 
 - total registered servers
-- total health checks performed
+- total MCP health checks performed
+- total GitHub Actions targets and checks
+- cross-provider totals
 - monitoring start time
 - resolved database path
 

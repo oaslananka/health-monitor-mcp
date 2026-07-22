@@ -1,6 +1,6 @@
 # health-monitor-mcp
 
-> MCP server health monitoring, uptime history, latency tracking, alert evaluation, and operational reports through natural-language tools.
+> MCP server and GitHub Actions monitoring, uptime history, diagnostics, alert evaluation, and operational reports through natural-language tools.
 
 [![CI](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/oaslananka/health-monitor-mcp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/oaslananka/health-monitor-mcp/graph/badge.svg)](https://codecov.io/gh/oaslananka/health-monitor-mcp)
@@ -11,15 +11,16 @@
 
 ## What This Does
 
-`health-monitor-mcp` keeps a local registry of MCP servers, performs real MCP handshakes, records health history in SQLite, evaluates alert thresholds, and returns JSON or Markdown evidence suitable for agents and operators.
+`health-monitor-mcp` keeps local registries of MCP servers and GitHub Actions workflows, performs live checks, records history in SQLite, evaluates MCP alert thresholds, and returns JSON or Markdown evidence suitable for agents and operators.
 
 Supported target transports:
 
 - **Streamable HTTP** for current remote MCP servers.
 - **SSE** for legacy MCP servers.
 - **stdio** for trusted local executables after explicit opt-in.
+- **GitHub Actions** workflow runs, failed jobs, and failed steps for public or private repositories.
 
-Azure DevOps monitoring was retired in v1.1.0. CI-provider integrations are tracked as independent future work.
+Azure DevOps monitoring was retired in v1.1.0. GitHub Actions is the first provider added by the v1.2.0 multi-provider roadmap.
 
 ## Quick Start
 
@@ -44,20 +45,24 @@ Example MCP client configuration:
 
 ## Tools
 
-| Tool                | Purpose                                             | Typical prompt                                                 |
-| ------------------- | --------------------------------------------------- | -------------------------------------------------------------- |
-| `register_server`   | Register an MCP target                              | `Register https://inventory.example.com/mcp as inventory-prod` |
-| `check_server`      | Run one live health check                           | `Check inventory-prod now`                                     |
-| `check_all`         | Check all matching targets with bounded concurrency | `Check all production MCP servers`                             |
-| `get_uptime`        | Return uptime and latency history                   | `Show 24h uptime for inventory-prod`                           |
-| `get_dashboard`     | Return a JSON dashboard                             | `Give me a 24h dashboard`                                      |
-| `get_report`        | Return a Markdown report                            | `Generate a 24h health report`                                 |
-| `list_servers`      | List registered targets                             | `List monitored servers`                                       |
-| `unregister_server` | Remove a target                                     | `Stop monitoring local-debugger`                               |
-| `set_alert`         | Configure thresholds                                | `Alert if inventory-prod exceeds 500ms`                        |
-| `get_monitor_stats` | Inspect monitor-level activity                      | `How many checks are stored?`                                  |
+| Tool                         | Purpose                                                   | Typical prompt                                      |
+| ---------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
+| `register_server`            | Register an MCP target                                    | `Register inventory-prod`                           |
+| `check_server`               | Run one MCP health check                                  | `Check inventory-prod now`                          |
+| `register_github_actions`    | Register a GitHub workflow                                | `Monitor ci.yml in owner/repo`                      |
+| `check_github_actions`       | Check latest run and failed job/step diagnostics          | `Check repo-ci now`                                 |
+| `check_all`                  | Check all matching target kinds with bounded concurrency  | `Check all production targets`                      |
+| `get_uptime`                 | Return MCP uptime and latency history                     | `Show 24h uptime for inventory-prod`                |
+| `get_dashboard`              | Return a cross-provider JSON dashboard                    | `Give me a 24h dashboard`                           |
+| `get_report`                 | Return a cross-provider Markdown report                   | `Generate a 24h health report`                      |
+| `list_servers`               | List registered MCP targets                               | `List monitored MCP servers`                        |
+| `list_github_actions`        | List registered GitHub workflow targets                   | `List monitored workflows`                          |
+| `unregister_server`          | Remove an MCP target                                      | `Stop monitoring local-debugger`                    |
+| `unregister_github_actions`  | Remove a GitHub workflow target and its history            | `Stop monitoring repo-ci`                           |
+| `set_alert`                  | Configure MCP health thresholds                           | `Alert if inventory-prod exceeds 500ms`             |
+| `get_monitor_stats`          | Inspect cross-provider monitor activity                   | `How many checks are stored?`                       |
 
-Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
+Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
 
 ## Register Targets
 
@@ -86,6 +91,21 @@ register_server name="local-debugger" type="stdio" command="npx" args=["-y","mcp
 
 The `command` field must contain one executable only. Put package names and flags in `args`. Remote-safe runtime profiles always disable stdio.
 
+## Register GitHub Actions
+
+Public repositories can be checked without authentication. Private repositories and higher API rate limits require a token with Actions read access:
+
+```bash
+export GITHUB_TOKEN=your-runtime-secret
+```
+
+```text
+register_github_actions name="repo-ci" owner="oaslananka" repository="health-monitor-mcp" workflow="ci.yml" branch="main" token_env="GITHUB_TOKEN" tags=["production","ci"]
+check_github_actions name="repo-ci" timeout_ms=5000
+```
+
+Only the environment-variable name in `token_env` is stored. The token value is read at check time and is never written to SQLite, logs, reports, or tool responses.
+
 ## Health Checks and Reports
 
 ```text
@@ -96,7 +116,7 @@ get_dashboard hours=24 include_tool_stats=true
 get_report hours=24
 ```
 
-`HEALTH_MONITOR_MAX_CONCURRENCY` limits both scheduled and interactive batch checks. Results preserve registration order even when checks complete out of order.
+`HEALTH_MONITOR_MAX_CONCURRENCY` limits MCP and GitHub Actions checks through one shared scheduled and interactive queue. Results preserve MCP-then-GitHub registration order even when checks complete out of order.
 
 ## Alerts
 
@@ -114,6 +134,7 @@ Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`
 | `HEALTH_MONITOR_AUTO_CHECK`             | `0`                               | Enable scheduled checks with `1`              |
 | `HEALTH_MONITOR_RETENTION_DAYS`         | `30`                              | Health-history retention                      |
 | `HEALTH_MONITOR_MAX_CONCURRENCY`        | `5`                               | Scheduled and interactive check concurrency   |
+| `GITHUB_TOKEN`                         | unset                             | Optional token with GitHub Actions read access     |
 | `HEALTH_MONITOR_ALLOW_STDIO`            | `0`                               | Allow trusted local stdio checks              |
 | `HEALTH_MONITOR_STDIO_ALLOWLIST`        | unset                             | Optional comma-separated executable allowlist |
 | `HEALTH_MONITOR_HTTP_TOKEN`             | unset                             | Bearer token for `POST /mcp`                  |
@@ -152,7 +173,7 @@ docker run --rm \
   -e HEALTH_MONITOR_PROFILE=remote-safe \
   -e HEALTH_MONITOR_HTTP_TOKEN=change-me \
   -e HEALTH_MONITOR_HTTP_ORIGIN_ALLOWLIST=https://client.example \
-  ghcr.io/oaslananka/health-monitor-mcp:1.1.0
+  ghcr.io/oaslananka/health-monitor-mcp:latest
 ```
 
 ## Development

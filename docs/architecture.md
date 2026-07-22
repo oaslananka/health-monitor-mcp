@@ -10,6 +10,9 @@ src/
 ├── app.ts            # MCP tool registration and response formatting
 ├── tool-errors.ts    # stable agent-facing error and remediation envelopes
 ├── checker.ts        # live MCP probes with retry/backoff
+├── github-actions.ts # bounded GitHub REST workflow and job diagnostics
+├── github-actions-registry.ts # GitHub target/history persistence and analytics
+├── github-actions-tools.ts # GitHub provider MCP lifecycle tools
 ├── concurrency.ts    # ordered bounded-concurrency primitive
 ├── registry.ts       # SQLite access for servers, checks, dashboards, and alerts
 ├── db.ts             # SQLite connection bootstrap
@@ -28,14 +31,14 @@ src/
 User or agent request
   -> MCP tool handler (app.ts)
   -> runtime policy and schema validation
-  -> checker.ts performs the configured MCP transport probe
-  -> registry.ts stores health evidence
+  -> checker.ts or github-actions.ts performs the provider check
+  -> registry.ts or github-actions-registry.ts stores health evidence
   -> alerts.ts evaluates thresholds
   -> tool-errors.ts formats expected remediation failures
   -> JSON or Markdown response returns to the client
 ```
 
-`check_all` and the background scheduler share `mapWithConcurrency()`. The helper caps active workers, preserves input ordering, and captures individual failures without cancelling queued targets.
+`check_all` and the background scheduler share `mapWithConcurrency()` across MCP and GitHub Actions targets. The helper caps active workers, preserves input ordering, and captures individual failures without cancelling queued targets.
 
 ## Runtime Modes
 
@@ -50,6 +53,8 @@ User or agent request
 - Automatic append-only migrations recorded in `schema_migrations`.
 - Server registrations in `servers`.
 - Health history in `health_checks`.
+- GitHub Actions registrations in `github_actions_targets`.
+- GitHub workflow observations and failed-job diagnostics in `github_actions_checks`.
 - Alert thresholds in `alerts`.
 - Retired Azure pipeline tables are removed by migration v4, including previously stored credentials and run history.
 
@@ -60,6 +65,7 @@ User or agent request
 - Local stdio is disabled by default and supports an executable allowlist.
 - Tool input names, tags, arguments, URLs, and commands are schema constrained.
 - Expected user-correctable failures return stable codes without exposing secrets or internal stack traces.
+- GitHub token values remain environment-only; SQLite stores only the configured `token_env` name.
 
 ## Decision Records
 
