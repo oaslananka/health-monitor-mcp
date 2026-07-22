@@ -6,10 +6,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [1.3.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.1...health-monitor-mcp-v1.3.0) (2026-07-22)
 
-
 ### Features
 
-* add GitLab CI/CD pipeline monitoring ([#106](https://github.com/oaslananka/health-monitor-mcp/issues/106)) ([62e6dab](https://github.com/oaslananka/health-monitor-mcp/commit/62e6dabed966bcf80fa8f0c245430a5a67a857a4)), closes [#41](https://github.com/oaslananka/health-monitor-mcp/issues/41)
+- add GitLab CI/CD pipeline monitoring ([#106](https://github.com/oaslananka/health-monitor-mcp/issues/106)) ([62e6dab](https://github.com/oaslananka/health-monitor-mcp/commit/62e6dabed966bcf80fa8f0c245430a5a67a857a4)), closes [#41](https://github.com/oaslananka/health-monitor-mcp/issues/41)
 
 ## [1.2.1](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.0...health-monitor-mcp-v1.2.1) (2026-07-22)
 
@@ -55,6 +54,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Added GitLab.com and allowlisted self-hosted GitLab pipeline monitoring with failed job, stage, ref, commit, URL, and bounded trace diagnostics.
 - Added environment-only GitLab authentication and explicit `HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST` enforcement.
 - Extended bounded `check_all`, scheduler, dashboards, reports, statistics, and retention across MCP, GitHub Actions, and GitLab targets.
+- Added generic GET-only HTTP/HTTPS target monitoring with status, header, body-substring, JSON scalar, redirect, latency, and TLS-expiry diagnostics.
+- Added public-network-only SSRF defaults, DNS pinning, redirect revalidation, a 262144-byte response cap, and full-profile exact-origin `HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST` overrides.
+- Extended bounded `check_all`, scheduler, dashboards, reports, statistics, and retention across generic HTTP targets without persisting response bodies.
 
 ### Fixed
 

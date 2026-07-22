@@ -8,4 +8,4 @@
 
 > **GetReportInput** = `z.infer`\<*typeof* [`GetReportSchema`](../variables/GetReportSchema.md)\>
 
-Defined in: [types.ts:293](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L293)
+Defined in: [types.ts:395](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L395)

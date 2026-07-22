@@ -2,13 +2,10 @@
   "name": "health-monitor-mcp",
   "version": "1.3.0",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
-  "description": "Monitor MCP servers, GitHub Actions, and GitLab pipelines with health history and diagnostics",
+  "description": "Monitor MCP, CI, and HTTP targets with health history, TLS expiry, assertions, and diagnostics",
   "transport": "stdio",
   "command": "npx",
-  "args": [
-    "-y",
-    "health-monitor-mcp"
-  ],
+  "args": ["-y", "health-monitor-mcp"],
   "env": {
     "HEALTH_MONITOR_DB": {
       "description": "Custom path for the SQLite database (optional)",
@@ -41,6 +38,10 @@
     "HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST": {
       "description": "Comma-separated self-hosted GitLab HTTPS origins allowed for monitoring",
       "required": false
+    },
+    "HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST": {
+      "description": "Comma-separated private HTTP(S) origins allowed only in the full runtime profile",
+      "required": false
     }
   },
   "tools": [
@@ -50,6 +51,8 @@
     "check_github_actions",
     "register_gitlab_pipeline",
     "check_gitlab_pipeline",
+    "register_http_target",
+    "check_http_target",
     "check_all",
     "get_uptime",
     "get_dashboard",
@@ -57,9 +60,11 @@
     "list_servers",
     "list_github_actions",
     "list_gitlab_pipelines",
+    "list_http_targets",
     "unregister_server",
     "unregister_github_actions",
     "unregister_gitlab_pipeline",
+    "unregister_http_target",
     "set_alert",
     "get_monitor_stats"
   ]

@@ -412,7 +412,11 @@ describe('quality gate regression checks', () => {
         'register_gitlab_pipeline',
         'check_gitlab_pipeline',
         'list_gitlab_pipelines',
-        'unregister_gitlab_pipeline'
+        'unregister_gitlab_pipeline',
+        'register_http_target',
+        'check_http_target',
+        'list_http_targets',
+        'unregister_http_target'
       ])
     );
     expect(mcpMetadata.env.GITHUB_TOKEN).toEqual(
@@ -427,12 +431,23 @@ describe('quality gate regression checks', () => {
         description: expect.stringContaining('self-hosted')
       })
     );
+    expect(mcpMetadata.env.HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST).toEqual(
+      expect.objectContaining({
+        required: false,
+        description: expect.stringContaining('private')
+      })
+    );
     expect(serverMetadata.packages[0]?.environmentVariables).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: 'GITHUB_TOKEN', isRequired: false, isSecret: true }),
         expect.objectContaining({ name: 'GITLAB_TOKEN', isRequired: false, isSecret: true }),
         expect.objectContaining({
           name: 'HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST',
+          isRequired: false,
+          isSecret: false
+        }),
+        expect.objectContaining({
+          name: 'HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST',
           isRequired: false,
           isSecret: false
         })
@@ -444,16 +459,26 @@ describe('quality gate regression checks', () => {
     expect(registryWorkflow).toContain('server.description.length > 100');
     expect(readme).toContain('register_github_actions');
     expect(readme).toContain('register_gitlab_pipeline');
+    expect(readme).toContain('register_http_target');
     expect(usage).toContain('token_env="GITHUB_TOKEN"');
     expect(usage).toContain('token_env="GITLAB_TOKEN"');
+    expect(usage).toContain('body_contains=["ready"]');
     expect(architecture).toContain('github_actions_targets');
     expect(architecture).toContain('gitlab_pipeline_targets');
+    expect(architecture).toContain('http_targets');
     expect(operations).toContain('Actions read');
     expect(operations).toContain('HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST');
+    expect(operations).toContain('HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST');
+    expect(operations).toContain('262144');
     expect(security).toContain('Only the environment-variable name');
     expect(security).toContain('GitLab token value');
+    expect(security).toContain('every redirect');
+    expect(security).toContain('response bodies are never stored');
     expect(roadmap).toContain('GitHub Actions monitoring — complete');
     expect(roadmap).toContain('GitLab CI/CD monitoring — complete');
+    expect(roadmap).toContain(
+      'Generic HTTP, TLS-expiry, and response-assertion monitoring — complete'
+    );
     expect([readme, usage, architecture, operations, security].join('\n')).not.toContain(
       'github_pat_'
     );

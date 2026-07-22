@@ -117,9 +117,22 @@ export HEALTH_MONITOR_GITLAB_BASE_URL_ALLOWLIST=https://gitlab.internal.example
 
 Only exact origins are accepted; credentials, paths, queries, fragments, HTTP origins, and unlisted hosts are rejected. The provider requests one latest pipeline, at most 100 jobs, at most 20 failure diagnostics, and only a bounded tail of each failed job trace.
 
+## Generic HTTP Provider
+
+Public HTTP(S) endpoints are accepted by default. Private, loopback, link-local, metadata, reserved, and mixed public/private DNS destinations are rejected. A trusted private origin can be enabled only with the `full` profile and exact origin membership:
+
+```bash
+HEALTH_MONITOR_PROFILE=full
+HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST=https://status.internal.example:8443
+```
+
+Remote-safe, ChatGPT, and Claude profiles ignore this private-network override. DNS answers are validated and pinned to the connection. Every redirect is manually followed, limited to three, and revalidated before the next connection. GET response bodies are capped at `262144` bytes and used only in memory for configured assertions. Full response bodies, cookies, certificate chains, and arbitrary request headers are never stored.
+
+HTTPS checks retain normal certificate-chain and hostname verification. The monitor records only certificate subject/issuer common names, validity dates, and whole days remaining.
+
 ## Database Upgrades
 
-Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Migration v5 creates `github_actions_targets` and `github_actions_checks`. Migration v6 creates `gitlab_pipeline_targets` and `gitlab_pipeline_checks`. Both providers store only token environment-variable names. Back up the database before upgrading when historical retention outside the supported product is required.
+Migrations run automatically at startup and are recorded in `schema_migrations`. Migration v4 removes retired Azure pipeline tables, credentials, indexes, and run history. Migration v5 creates `github_actions_targets` and `github_actions_checks`. Migration v6 creates `gitlab_pipeline_targets` and `gitlab_pipeline_checks`. Migration v7 creates `http_targets` and `http_checks` without response-body columns. CI providers store only token environment-variable names. Back up the database before upgrading when historical retention outside the supported product is required.
 
 ## Codecov Operations
 

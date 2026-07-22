@@ -8,4 +8,4 @@
 
 > **SetAlertInput** = `z.infer`\<*typeof* [`SetAlertSchema`](../variables/SetAlertSchema.md)\>
 
-Defined in: [types.ts:291](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L291)
+Defined in: [types.ts:393](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L393)

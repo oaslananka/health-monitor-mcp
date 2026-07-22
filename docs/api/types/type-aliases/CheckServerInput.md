@@ -8,4 +8,4 @@
 
 > **CheckServerInput** = `z.infer`\<*typeof* [`CheckServerSchema`](../variables/CheckServerSchema.md)\>
 
-Defined in: [types.ts:288](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L288)
+Defined in: [types.ts:390](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L390)

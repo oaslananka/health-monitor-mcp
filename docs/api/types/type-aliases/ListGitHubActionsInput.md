@@ -8,4 +8,4 @@
 
 > **ListGitHubActionsInput** = `z.infer`\<*typeof* [`ListGitHubActionsSchema`](../variables/ListGitHubActionsSchema.md)\>
 
-Defined in: [types.ts:298](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L298)
+Defined in: [types.ts:400](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L400)

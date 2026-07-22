@@ -13,17 +13,17 @@ Target: 2026-08-31
 - Improve agent-facing errors, remediation hints, packaging, documentation, and release integrity.
 - Continue alert incident and webhook delivery work as independently reviewable issues.
 
-## v1.3.0 — Multi-Provider Monitoring
+## v1.4.0 — Multi-Provider Monitoring
 
 Target: 2026-10-15
 [Milestone](https://github.com/oaslananka/health-monitor-mcp/milestone/3)
 
 - GitHub Actions monitoring — complete; released through the v1.2.0 feature line.
 - GitLab CI/CD monitoring — complete.
-- Generic HTTP, TLS-expiry, and response-assertion monitoring.
+- Generic HTTP, TLS-expiry, and response-assertion monitoring — complete.
 - Provider contracts that reuse bounded concurrency without reintroducing provider-specific credentials into the core server registry.
 
-## v1.4.0 — Observability and Operations
+## v1.5.0 — Observability and Operations
 
 Target: 2026-11-15
 [Milestone](https://github.com/oaslananka/health-monitor-mcp/milestone/4)

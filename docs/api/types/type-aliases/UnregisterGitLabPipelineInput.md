@@ -8,4 +8,4 @@
 
 > **UnregisterGitLabPipelineInput** = `z.infer`\<*typeof* [`UnregisterGitLabPipelineSchema`](../variables/UnregisterGitLabPipelineSchema.md)\>
 
-Defined in: [types.ts:303](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L303)
+Defined in: [types.ts:405](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L405)

@@ -8,4 +8,4 @@
 
 > **HealthStatus** = `z.infer`\<*typeof* [`HealthStatusSchema`](../variables/HealthStatusSchema.md)\>
 
-Defined in: [types.ts:286](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L286)
+Defined in: [types.ts:388](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L388)
