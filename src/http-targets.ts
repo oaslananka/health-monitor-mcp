@@ -89,10 +89,19 @@ function requestOnce(
       callback(null, resolved.selected_address, resolved.selected_family);
     }) as LookupFunction;
     let settled = false;
+    let deadlineTimer: NodeJS.Timeout | null = null;
+
+    const clearDeadline = (): void => {
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer);
+        deadlineTimer = null;
+      }
+    };
 
     const fail = (error: Error): void => {
       if (settled) return;
       settled = true;
+      clearDeadline();
       reject(error);
     };
 
@@ -149,6 +158,7 @@ function requestOnce(
           }
 
           settled = true;
+          clearDeadline();
           resolve({
             status_code: statusCode,
             headers: normalizeHeaders(response.headers),
@@ -159,11 +169,11 @@ function requestOnce(
       }
     );
 
-    request.setTimeout(timeoutMs, () => {
+    deadlineTimer = setTimeout(() => {
       request.destroy(
         new RequestTimeoutError(`HTTP target request timed out after ${timeoutMs}ms.`)
       );
-    });
+    }, timeoutMs);
     request.on('error', (error) => fail(error));
     request.end();
   });
