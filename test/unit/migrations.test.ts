@@ -21,7 +21,8 @@ describe('migrations', () => {
       { version: 3, description: 'dedupe pipeline runs by stable build key' },
       { version: 4, description: 'remove retired Azure DevOps monitoring data' },
       { version: 5, description: 'add GitHub Actions monitoring provider' },
-      { version: 6, description: 'add GitLab pipeline monitoring provider' }
+      { version: 6, description: 'add GitLab pipeline monitoring provider' },
+      { version: 7, description: 'add generic HTTP monitoring provider' }
     ]);
     expect(columns.map((column) => column.name)).toContain('response_time_updated_at');
 
@@ -64,6 +65,35 @@ describe('migrations', () => {
     expect(gitlabCheckColumns.map((column) => column.name)).toEqual(
       expect.arrayContaining(['target_name', 'pipeline_id', 'commit_sha', 'failed_jobs'])
     );
+
+    const httpTargetColumns = db.prepare('PRAGMA table_info(http_targets)').all() as Array<{
+      name: string;
+    }>;
+    const httpCheckColumns = db.prepare('PRAGMA table_info(http_checks)').all() as Array<{
+      name: string;
+    }>;
+    expect(httpTargetColumns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'name',
+        'url',
+        'expected_statuses',
+        'header_assertions',
+        'body_contains',
+        'json_assertions',
+        'tls_expiry_days',
+        'last_status_code',
+        'last_tls_days_remaining'
+      ])
+    );
+    expect(httpCheckColumns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'target_name',
+        'status_code',
+        'final_url',
+        'tls_days_remaining',
+        'assertions'
+      ])
+    );
     const tables = db
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
       .all() as Array<{ name: string }>;
@@ -84,7 +114,7 @@ describe('migrations', () => {
       }
     ).count;
 
-    expect(count).toBe(6);
+    expect(count).toBe(7);
   });
 
   it('removes retired Azure tables during an upgrade while preserving monitor data', () => {
@@ -151,6 +181,31 @@ describe('migrations', () => {
     db.prepare('DELETE FROM gitlab_pipeline_targets WHERE name = ?').run('gitlab-ci');
 
     const count = db.prepare('SELECT COUNT(*) AS count FROM gitlab_pipeline_checks').get() as {
+      count: number;
+    };
+    expect(count.count).toBe(0);
+  });
+
+  it('cascades HTTP check history when a target is removed', () => {
+    const db = getDb();
+    db.prepare(
+      `
+      INSERT INTO http_targets (
+        name, url, expected_statuses, header_assertions, body_contains,
+        json_assertions, tags, check_interval_minutes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+    ).run('public-health', 'https://example.com/health', '[200]', '[]', '[]', '[]', '[]', 5, 1);
+    db.prepare(
+      `
+      INSERT INTO http_checks (target_name, timestamp, status)
+      VALUES (?, ?, ?)
+    `
+    ).run('public-health', 2, 'up');
+
+    db.prepare('DELETE FROM http_targets WHERE name = ?').run('public-health');
+
+    const count = db.prepare('SELECT COUNT(*) AS count FROM http_checks').get() as {
       count: number;
     };
     expect(count.count).toBe(0);

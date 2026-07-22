@@ -237,6 +237,60 @@ const MIGRATIONS: Migration[] = [
           ON gitlab_pipeline_checks(timestamp DESC);
       `);
     }
+  },
+  {
+    version: 7,
+    description: 'add generic HTTP monitoring provider',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS http_targets (
+          name TEXT PRIMARY KEY,
+          url TEXT NOT NULL,
+          expected_statuses TEXT NOT NULL DEFAULT '[200]',
+          header_assertions TEXT NOT NULL DEFAULT '[]',
+          body_contains TEXT NOT NULL DEFAULT '[]',
+          json_assertions TEXT NOT NULL DEFAULT '[]',
+          tls_expiry_days INTEGER,
+          tags TEXT NOT NULL DEFAULT '[]',
+          check_interval_minutes INTEGER NOT NULL DEFAULT 5,
+          created_at INTEGER NOT NULL,
+          last_checked INTEGER,
+          last_status TEXT NOT NULL DEFAULT 'unknown',
+          last_response_time_ms INTEGER,
+          last_status_code INTEGER,
+          last_final_url TEXT,
+          last_tls_days_remaining INTEGER,
+          last_failed_assertion_count INTEGER NOT NULL DEFAULT 0,
+          consecutive_failures INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS http_checks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          target_name TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          response_time_ms INTEGER,
+          status_code INTEGER,
+          final_url TEXT,
+          redirect_count INTEGER,
+          content_type TEXT,
+          content_length INTEGER,
+          tls_subject_cn TEXT,
+          tls_issuer_cn TEXT,
+          tls_valid_from TEXT,
+          tls_valid_to TEXT,
+          tls_days_remaining INTEGER,
+          error_message TEXT,
+          assertions TEXT,
+          FOREIGN KEY (target_name) REFERENCES http_targets(name) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_http_checks_target_time
+          ON http_checks(target_name, timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_http_checks_timestamp
+          ON http_checks(timestamp DESC);
+      `);
+    }
   }
 ];
 
