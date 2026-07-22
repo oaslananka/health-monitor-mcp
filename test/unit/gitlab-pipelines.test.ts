@@ -233,6 +233,31 @@ describe('GitLab pipeline API checker', () => {
     );
   });
 
+  it('rejects non-HTTP pipeline and job URLs from API responses', async () => {
+    const fetchMock = sequenceFetch(
+      jsonResponse([pipeline({ web_url: 'javascript:alert(1)' })]),
+      jsonResponse([pipeline({ status: 'failed' })]),
+      jsonResponse([job({ web_url: 'data:text/plain,unsafe' })])
+    );
+    setGitLabPipelineRuntimeForTests({ fetchImpl: fetchMock, getEnv: () => undefined });
+
+    const unsafePipeline = await checkGitLabPipelineTarget(createTarget(), 5_000);
+    const unsafeJob = await checkGitLabPipelineTarget(createTarget(), 5_000);
+
+    expect(unsafePipeline).toEqual(
+      expect.objectContaining({
+        status: 'error',
+        error_message: expect.stringContaining('pipeline list response is invalid')
+      })
+    );
+    expect(unsafeJob).toEqual(
+      expect.objectContaining({
+        status: 'error',
+        error_message: expect.stringContaining('pipeline jobs response is invalid')
+      })
+    );
+  });
+
   it('redacts tokens from authentication, authorization, and not-found failures', async () => {
     const secret = 'glpat-super-secret';
     const fetchMock = sequenceFetch(

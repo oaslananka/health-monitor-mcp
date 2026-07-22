@@ -31,6 +31,14 @@ const nonTerminalStatuses = new Set([
   'scheduled'
 ]);
 
+const HttpResponseUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  }, 'URL protocol must be HTTP or HTTPS');
+
 const pipelineSchema = z.object({
   id: z.number().int(),
   iid: z.number().int(),
@@ -38,7 +46,7 @@ const pipelineSchema = z.object({
   source: z.string().min(1),
   ref: z.string().min(1),
   sha: z.string().min(1),
-  web_url: z.string().url(),
+  web_url: HttpResponseUrlSchema,
   created_at: z.string().min(1),
   updated_at: z.string().min(1)
 });
@@ -51,7 +59,7 @@ const jobSchema = z.object({
   stage: z.string().min(1),
   name: z.string().min(1),
   ref: z.string().nullable().optional().default(null),
-  web_url: z.string().url(),
+  web_url: HttpResponseUrlSchema,
   started_at: z.string().nullable().optional().default(null),
   finished_at: z.string().nullable().optional().default(null),
   commit: z.object({ id: z.string().min(1) })
