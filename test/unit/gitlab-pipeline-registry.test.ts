@@ -187,7 +187,7 @@ describe('GitLab pipeline registry', () => {
     process.env.HEALTH_MONITOR_RETENTION_DAYS = '1';
     registerGitLabPipelineTarget(registration());
     registerGitLabPipelineTarget(
-      registration({ name: 'other-ci', project: 'other/project', ref: null })
+      registration({ name: 'other-ci', project: 'other/project', ref: undefined })
     );
 
     const now = 3 * 24 * 60 * 60 * 1000;
