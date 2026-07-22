@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.3.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.1...health-monitor-mcp-v1.3.0) (2026-07-22)
+
+
+### Features
+
+* add GitLab CI/CD pipeline monitoring ([#106](https://github.com/oaslananka/health-monitor-mcp/issues/106)) ([62e6dab](https://github.com/oaslananka/health-monitor-mcp/commit/62e6dabed966bcf80fa8f0c245430a5a67a857a4)), closes [#41](https://github.com/oaslananka/health-monitor-mcp/issues/41)
+
 ## [1.2.1](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.2.0...health-monitor-mcp-v1.2.1) (2026-07-22)
 
 ### Bug Fixes
