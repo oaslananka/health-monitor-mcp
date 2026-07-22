@@ -8,7 +8,7 @@
 
 > **registerMonitoringTools**(`server`, `options?`): `void`
 
-Defined in: [app.ts:350](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L350)
+Defined in: [app.ts:463](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L463)
 
 ## Parameters
 

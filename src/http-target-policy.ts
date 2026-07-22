@@ -26,6 +26,25 @@ type HttpTargetPolicyRuntime = {
 const INVALID_URL_MESSAGE =
   'HTTP target URL must use http or https without credentials or fragment';
 const BLOCKED_HOST_SUFFIXES = ['.localhost', '.local', '.internal', '.home.arpa'];
+const EMBEDDED_IPV4_PATTERN = /^(.*:)(\d+\.\d+\.\d+\.\d+)$/;
+const DOTTED_IPV4_MAPPED_PATTERN = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/;
+const BLOCKED_IPV4_CIDRS: ReadonlyArray<readonly [base: number, prefix: number]> = [
+  [0x00000000, 8], // Current network and unspecified.
+  [0x0a000000, 8], // Private-use class A.
+  [0x64400000, 10], // Carrier-grade NAT.
+  [0x7f000000, 8], // Loopback.
+  [0xa9fe0000, 16], // Link-local and cloud metadata.
+  [0xac100000, 12], // Private-use class B.
+  [0xc0000000, 24], // IETF protocol assignments.
+  [0xc0000200, 24], // Documentation range 1.
+  [0xc0586300, 24], // Deprecated 6to4 relay anycast.
+  [0xc0a80000, 16], // Private-use class C.
+  [0xc6120000, 15], // Benchmarking.
+  [0xc6336400, 24], // Documentation range 2.
+  [0xcb007100, 24], // Documentation range 3.
+  [0xe0000000, 4], // Multicast.
+  [0xf0000000, 4] // Reserved and limited broadcast.
+];
 
 function createDefaultRuntime(): HttpTargetPolicyRuntime {
   return {
@@ -69,35 +88,14 @@ function ipv4InCidr(value: number, base: number, prefix: number): boolean {
 
 function isPublicIpv4(address: string): boolean {
   const value = ipv4ToInteger(address);
-  if (value === null) return false;
-
-  const blocked: Array<[string, number]> = [
-    ['0.0.0.0', 8],
-    ['10.0.0.0', 8],
-    ['100.64.0.0', 10],
-    ['127.0.0.0', 8],
-    ['169.254.0.0', 16],
-    ['172.16.0.0', 12],
-    ['192.0.0.0', 24],
-    ['192.0.2.0', 24],
-    ['192.88.99.0', 24],
-    ['192.168.0.0', 16],
-    ['198.18.0.0', 15],
-    ['198.51.100.0', 24],
-    ['203.0.113.0', 24],
-    ['224.0.0.0', 4],
-    ['240.0.0.0', 4]
-  ];
-
-  return !blocked.some(([base, prefix]) => {
-    const baseValue = ipv4ToInteger(base)!;
-    return ipv4InCidr(value, baseValue, prefix);
-  });
+  return (
+    value !== null && !BLOCKED_IPV4_CIDRS.some(([base, prefix]) => ipv4InCidr(value, base, prefix))
+  );
 }
 
 function expandIpv6(address: string): number[] | null {
   let normalized = address.toLowerCase().split('%')[0] ?? address.toLowerCase();
-  const embeddedIpv4 = normalized.match(/^(.*:)(\d+\.\d+\.\d+\.\d+)$/);
+  const embeddedIpv4 = EMBEDDED_IPV4_PATTERN.exec(normalized);
   if (embeddedIpv4) {
     const value = ipv4ToInteger(embeddedIpv4[2]!);
     if (value === null) return null;
@@ -120,45 +118,72 @@ function expandIpv6(address: string): number[] | null {
     : null;
 }
 
+function embeddedIpv4FromParts(parts: number[]): string {
+  return `${parts[6]! >>> 8}.${parts[6]! & 0xff}.${parts[7]! >>> 8}.${parts[7]! & 0xff}`;
+}
+
+function isIpv6Unspecified(parts: number[]): boolean {
+  return parts.every((part) => part === 0);
+}
+
+function isIpv6Loopback(parts: number[]): boolean {
+  return parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1;
+}
+
+function isIpv4CompatibleIpv6(parts: number[]): boolean {
+  return parts.slice(0, 6).every((part) => part === 0);
+}
+
+function isIpv4MappedIpv6(parts: number[]): boolean {
+  return parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff;
+}
+
+function isWellKnownNat64(parts: number[]): boolean {
+  return (
+    parts[0] === 0x0064 && parts[1] === 0xff9b && parts.slice(2, 6).every((part) => part === 0)
+  );
+}
+
+function isLocalIpv6Range(parts: number[]): boolean {
+  const [first, second, third, fourth] = parts;
+  return (
+    (first === 0x0064 && second === 0xff9b && third === 0x0001) ||
+    (first === 0x0100 && second === 0 && third === 0 && fourth === 0) ||
+    (first! & 0xfe00) === 0xfc00 ||
+    (first! & 0xffc0) === 0xfe80 ||
+    (first! & 0xffc0) === 0xfec0 ||
+    (first! & 0xff00) === 0xff00
+  );
+}
+
+function isProtocolOrDocumentationIpv6Range(parts: number[]): boolean {
+  const [first, second, third] = parts;
+  return (
+    (first === 0x2001 && second === 0x0000) ||
+    (first === 0x2001 && second === 0x0db8) ||
+    (first === 0x2001 && second === 0x0002 && third === 0) ||
+    (first === 0x2001 && (second! & 0xfff0) === 0x0010) ||
+    (first === 0x2001 && (second! & 0xfff0) === 0x0020) ||
+    first === 0x2002 ||
+    (first === 0x3fff && (second! & 0xf000) === 0) ||
+    first === 0x5f00
+  );
+}
+
 function isPublicIpv6(address: string): boolean {
-  const mapped = address.toLowerCase().match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return isPublicIpv4(mapped[1]!);
+  const dottedMapped = DOTTED_IPV4_MAPPED_PATTERN.exec(address.toLowerCase());
+  if (dottedMapped) return isPublicIpv4(dottedMapped[1]!);
 
   const parts = expandIpv6(address);
-  if (!parts) return false;
-  const [first, second, third] = parts;
+  if (!parts || isIpv6Unspecified(parts) || isIpv6Loopback(parts)) return false;
+  if (isIpv4CompatibleIpv6(parts)) return false;
 
-  if (parts.every((part) => part === 0)) return false;
-  if (parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1) return false;
-
-  const embeddedIpv4 = `${parts[6]! >>> 8}.${parts[6]! & 0xff}.${parts[7]! >>> 8}.${parts[7]! & 0xff}`;
-  const ipv4Compatible = parts.slice(0, 6).every((part) => part === 0);
-  if (ipv4Compatible) return false;
-
-  const ipv4Mapped = parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff;
-  if (ipv4Mapped) return isPublicIpv4(embeddedIpv4);
-
-  const wellKnownNat64 =
-    first === 0x0064 && second === 0xff9b && parts.slice(2, 6).every((part) => part === 0);
-  if (wellKnownNat64) return isPublicIpv4(embeddedIpv4);
-
-  if (first === 0x0064 && second === 0xff9b && third === 0x0001) return false;
-  if (first === 0x0100 && second === 0 && third === 0 && parts[3] === 0) {
-    return false;
+  const embeddedIpv4 = embeddedIpv4FromParts(parts);
+  if (isIpv4MappedIpv6(parts) || isWellKnownNat64(parts)) {
+    return isPublicIpv4(embeddedIpv4);
   }
-  if ((first! & 0xfe00) === 0xfc00) return false;
-  if ((first! & 0xffc0) === 0xfe80 || (first! & 0xffc0) === 0xfec0) return false;
-  if ((first! & 0xff00) === 0xff00) return false;
-  if (first === 0x2001 && second === 0x0000) return false;
-  if (first === 0x2001 && second === 0x0db8) return false;
-  if (first === 0x2001 && second === 0x0002 && third === 0) return false;
-  if (first === 0x2001 && (second! & 0xfff0) === 0x0010) return false;
-  if (first === 0x2001 && (second! & 0xfff0) === 0x0020) return false;
-  if (first === 0x2002) return false;
-  if (first === 0x3fff && (second! & 0xf000) === 0) return false;
-  if (first === 0x5f00) return false;
 
-  return true;
+  return !isLocalIpv6Range(parts) && !isProtocolOrDocumentationIpv6Range(parts);
 }
 
 export function isPublicIpAddress(value: string): boolean {

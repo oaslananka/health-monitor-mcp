@@ -62,6 +62,7 @@
 - [ListHttpTargetsInput](type-aliases/ListHttpTargetsInput.md)
 - [UnregisterHttpTargetInput](type-aliases/UnregisterHttpTargetInput.md)
 - [AlertFindingType](type-aliases/AlertFindingType.md)
+- [HttpAssertionValue](type-aliases/HttpAssertionValue.md)
 
 ## Variables
 

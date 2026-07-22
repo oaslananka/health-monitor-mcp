@@ -45,14 +45,14 @@ function normalizeHeaders(headers: http.IncomingHttpHeaders): Record<string, str
 
 function parseTlsDetails(socket: TLSSocket, nowMs: number): HttpTlsDetails {
   const certificate = socket.getPeerCertificate();
-  if (!certificate || !certificate.valid_from || !certificate.valid_to) {
+  if (!certificate?.valid_from || !certificate.valid_to) {
     throw new Error('HTTPS peer certificate details are unavailable.');
   }
 
   const validFrom = new Date(certificate.valid_from);
   const validTo = new Date(certificate.valid_to);
   if (!Number.isFinite(validFrom.getTime()) || !Number.isFinite(validTo.getTime())) {
-    throw new Error('HTTPS peer certificate validity dates are invalid.');
+    throw new TypeError('HTTPS peer certificate validity dates are invalid.');
   }
 
   return {
@@ -236,11 +236,7 @@ function readJsonPath(root: unknown, path: string): { found: boolean; value: unk
       continue;
     }
 
-    if (
-      current === null ||
-      typeof current !== 'object' ||
-      !Object.prototype.hasOwnProperty.call(current, segment)
-    ) {
+    if (current === null || typeof current !== 'object' || !Object.hasOwn(current, segment)) {
       return { found: false, value: undefined };
     }
     current = (current as Record<string, unknown>)[segment];
@@ -248,28 +244,32 @@ function readJsonPath(root: unknown, path: string): { found: boolean; value: unk
   return { found: true, value: current };
 }
 
-function evaluateAssertions(
+function evaluateStatusAssertion(
   target: RegisteredHttpTarget,
   raw: HttpTargetRawResponse
-): HttpAssertionDiagnostic[] {
-  const assertions: HttpAssertionDiagnostic[] = [];
-  const statusPassed = target.expected_statuses.includes(raw.status_code);
-  assertions.push({
+): HttpAssertionDiagnostic {
+  const passed = target.expected_statuses.includes(raw.status_code);
+  return {
     type: 'status',
-    passed: statusPassed,
+    passed,
     path: null,
     expected: target.expected_statuses.join(','),
     actual: raw.status_code,
-    message: statusPassed
+    message: passed
       ? `HTTP status ${raw.status_code} matched the configured status set.`
       : `HTTP status ${raw.status_code} did not match expected statuses ${target.expected_statuses.join(', ')}.`
-  });
+  };
+}
 
-  for (const assertion of target.header_assertions) {
+function evaluateHeaderAssertions(
+  target: RegisteredHttpTarget,
+  raw: HttpTargetRawResponse
+): HttpAssertionDiagnostic[] {
+  return target.header_assertions.map((assertion) => {
     const actual = raw.headers[assertion.name.toLowerCase()] ?? null;
     const passed = actual === assertion.equals;
-    assertions.push({
-      type: 'header',
+    return {
+      type: 'header' as const,
       passed,
       path: assertion.name.toLowerCase(),
       expected: assertion.equals,
@@ -277,14 +277,18 @@ function evaluateAssertions(
       message: passed
         ? `Header ${assertion.name} matched.`
         : `Header ${assertion.name} did not match the configured value.`
-    });
-  }
+    };
+  });
+}
 
-  const bodyText = raw.body.toString('utf8');
-  for (const expected of target.body_contains) {
+function evaluateBodyAssertions(
+  target: RegisteredHttpTarget,
+  bodyText: string
+): HttpAssertionDiagnostic[] {
+  return target.body_contains.map((expected) => {
     const passed = bodyText.includes(expected);
-    assertions.push({
-      type: 'body_contains',
+    return {
+      type: 'body_contains' as const,
       passed,
       path: null,
       expected,
@@ -292,38 +296,52 @@ function evaluateAssertions(
       message: passed
         ? 'Response body contained the configured substring.'
         : 'Response body did not contain the configured substring.'
-    });
+    };
+  });
+}
+
+function parseJsonAssertionBody(bodyText: string): unknown {
+  try {
+    return JSON.parse(bodyText) as unknown;
+  } catch {
+    throw new Error('HTTP response JSON is invalid for configured JSON assertions.');
   }
+}
 
-  if (target.json_assertions.length > 0) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(bodyText) as unknown;
-    } catch {
-      throw new Error('HTTP response JSON is invalid for configured JSON assertions.');
-    }
+function evaluateJsonAssertions(
+  target: RegisteredHttpTarget,
+  bodyText: string
+): HttpAssertionDiagnostic[] {
+  if (target.json_assertions.length === 0) return [];
+  const parsed = parseJsonAssertionBody(bodyText);
 
-    for (const assertion of target.json_assertions) {
-      const result = readJsonPath(parsed, assertion.path);
-      const scalar = scalarValue(result.value);
-      const passed = result.found && scalar.is_scalar && Object.is(scalar.value, assertion.equals);
-      assertions.push({
-        type: 'json_equals',
-        passed,
-        path: assertion.path,
-        expected: assertion.equals,
-        actual: scalar.value,
-        message: passed
-          ? `JSON path ${assertion.path} matched.`
-          : `JSON path ${assertion.path} did not match the configured value.`
-      });
-    }
-  }
+  return target.json_assertions.map((assertion) => {
+    const result = readJsonPath(parsed, assertion.path);
+    const scalar = scalarValue(result.value);
+    const passed = result.found && scalar.is_scalar && Object.is(scalar.value, assertion.equals);
+    return {
+      type: 'json_equals' as const,
+      passed,
+      path: assertion.path,
+      expected: assertion.equals,
+      actual: scalar.value,
+      message: passed
+        ? `JSON path ${assertion.path} matched.`
+        : `JSON path ${assertion.path} did not match the configured value.`
+    };
+  });
+}
 
-  if (target.tls_expiry_days !== null) {
-    if (!raw.tls) throw new Error('TLS expiry monitoring requires an HTTPS response.');
-    const passed = raw.tls.days_remaining >= target.tls_expiry_days;
-    assertions.push({
+function evaluateTlsAssertions(
+  target: RegisteredHttpTarget,
+  raw: HttpTargetRawResponse
+): HttpAssertionDiagnostic[] {
+  if (target.tls_expiry_days === null) return [];
+  if (!raw.tls) throw new Error('TLS expiry monitoring requires an HTTPS response.');
+
+  const passed = raw.tls.days_remaining >= target.tls_expiry_days;
+  return [
+    {
       type: 'tls_expiry',
       passed,
       path: null,
@@ -332,10 +350,22 @@ function evaluateAssertions(
       message: passed
         ? `TLS certificate remains valid for ${raw.tls.days_remaining} days.`
         : `TLS certificate has ${raw.tls.days_remaining} days remaining, below the ${target.tls_expiry_days}-day threshold.`
-    });
-  }
+    }
+  ];
+}
 
-  return assertions;
+function evaluateAssertions(
+  target: RegisteredHttpTarget,
+  raw: HttpTargetRawResponse
+): HttpAssertionDiagnostic[] {
+  const bodyText = raw.body.toString('utf8');
+  return [
+    evaluateStatusAssertion(target, raw),
+    ...evaluateHeaderAssertions(target, raw),
+    ...evaluateBodyAssertions(target, bodyText),
+    ...evaluateJsonAssertions(target, bodyText),
+    ...evaluateTlsAssertions(target, raw)
+  ];
 }
 
 function errorResult(

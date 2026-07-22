@@ -265,6 +265,119 @@ async function checkServerWithPolicy(
   return checkServer(server, timeoutMs, { allowStdio: policy.allowStdio });
 }
 
+type BatchTarget = {
+  kind: 'mcp_server' | 'github_actions' | 'gitlab_pipeline' | 'http_target';
+  name: string;
+};
+
+async function checkMcpBatchTarget(name: string, timeoutMs: number, policy: RuntimePolicy) {
+  const serverConfig = getServer(name);
+  if (!serverConfig) {
+    return {
+      kind: 'mcp_server' as const,
+      name,
+      ...buildErrorResult(new Error(`Server not found: ${name}`)),
+      alerts: { has_alerts: false, findings: [] }
+    };
+  }
+
+  try {
+    const result = await checkServerWithPolicy(serverConfig, timeoutMs, policy);
+    recordHealthCheck(name, result);
+    return {
+      kind: 'mcp_server' as const,
+      name,
+      ...result,
+      alerts: enrichWithAlerts(name, result)
+    };
+  } catch (error) {
+    const result = buildErrorResult(error);
+    recordHealthCheck(name, result);
+    return {
+      kind: 'mcp_server' as const,
+      name,
+      ...result,
+      alerts: enrichWithAlerts(name, result)
+    };
+  }
+}
+
+async function checkGitHubBatchTarget(name: string, timeoutMs: number) {
+  const target = getGitHubActionsTarget(name);
+  if (!target) {
+    return {
+      kind: 'github_actions' as const,
+      name,
+      ...buildGitHubActionsErrorResult(new Error(`GitHub Actions target not found: ${name}`))
+    };
+  }
+
+  try {
+    const result = await checkGitHubActionsTarget(target, timeoutMs);
+    recordGitHubActionsCheck(name, result);
+    return { kind: 'github_actions' as const, name, ...result };
+  } catch (error) {
+    const result = buildGitHubActionsErrorResult(error);
+    recordGitHubActionsCheck(name, result);
+    return { kind: 'github_actions' as const, name, ...result };
+  }
+}
+
+async function checkGitLabBatchTarget(name: string, timeoutMs: number) {
+  const target = getGitLabPipelineTarget(name);
+  if (!target) {
+    return {
+      kind: 'gitlab_pipeline' as const,
+      name,
+      ...buildGitLabPipelineErrorResult(new Error(`GitLab pipeline target not found: ${name}`))
+    };
+  }
+
+  try {
+    const result = await checkGitLabPipelineTarget(target, timeoutMs);
+    recordGitLabPipelineCheck(name, result);
+    return { kind: 'gitlab_pipeline' as const, name, ...result };
+  } catch (error) {
+    const result = buildGitLabPipelineErrorResult(error);
+    recordGitLabPipelineCheck(name, result);
+    return { kind: 'gitlab_pipeline' as const, name, ...result };
+  }
+}
+
+async function checkHttpBatchTarget(name: string, timeoutMs: number, policy: RuntimePolicy) {
+  const target = getHttpTarget(name);
+  if (!target) {
+    return {
+      kind: 'http_target' as const,
+      name,
+      ...buildHttpTargetErrorResult(new Error(`HTTP target not found: ${name}`))
+    };
+  }
+
+  try {
+    const result = await checkHttpTarget(target, timeoutMs, { profile: policy.profile });
+    recordHttpCheck(name, result);
+    return { kind: 'http_target' as const, name, ...result };
+  } catch (error) {
+    const result = buildHttpTargetErrorResult(error);
+    recordHttpCheck(name, result);
+    return { kind: 'http_target' as const, name, ...result };
+  }
+}
+
+async function checkBatchTarget(target: BatchTarget, timeoutMs: number, policy: RuntimePolicy) {
+  switch (target.kind) {
+    case 'mcp_server':
+      return checkMcpBatchTarget(target.name, timeoutMs, policy);
+    case 'github_actions':
+      return checkGitHubBatchTarget(target.name, timeoutMs);
+    case 'gitlab_pipeline':
+      return checkGitLabBatchTarget(target.name, timeoutMs);
+    case 'http_target':
+      return checkHttpBatchTarget(target.name, timeoutMs, policy);
+  }
+}
+
 function formatMarkdownReport(input: GetReportInput): string {
   const report = getDashboardReport(input.hours);
   const githubReport = getGitHubActionsDashboardReport(input.hours);
@@ -463,7 +576,7 @@ export function registerMonitoringTools(
       const githubTargets = listGitHubActionsTargets({ tags: input.tags });
       const gitlabTargets = listGitLabPipelineTargets({ tags: input.tags });
       const httpTargets = listHttpTargets({ tags: input.tags });
-      const targets = [
+      const targets: BatchTarget[] = [
         ...servers.map((server) => ({ kind: 'mcp_server' as const, name: server.name })),
         ...githubTargets.map((target) => ({ kind: 'github_actions' as const, name: target.name })),
         ...gitlabTargets.map((target) => ({ kind: 'gitlab_pipeline' as const, name: target.name })),
@@ -483,106 +596,9 @@ export function registerMonitoringTools(
       }
 
       const maxConcurrency = getMaxConcurrency();
-      const results = await mapWithConcurrency(targets, maxConcurrency, async (target) => {
-        if (target.kind === 'mcp_server') {
-          const serverConfig = getServer(target.name);
-          if (!serverConfig) {
-            return {
-              kind: target.kind,
-              name: target.name,
-              ...buildErrorResult(new Error(`Server not found: ${target.name}`)),
-              alerts: { has_alerts: false, findings: [] }
-            };
-          }
-
-          try {
-            const result = await checkServerWithPolicy(serverConfig, input.timeout_ms, policy);
-            recordHealthCheck(target.name, result);
-            return {
-              kind: target.kind,
-              name: target.name,
-              ...result,
-              alerts: enrichWithAlerts(target.name, result)
-            };
-          } catch (error) {
-            const result = buildErrorResult(error);
-            recordHealthCheck(target.name, result);
-            return {
-              kind: target.kind,
-              name: target.name,
-              ...result,
-              alerts: enrichWithAlerts(target.name, result)
-            };
-          }
-        }
-
-        if (target.kind === 'github_actions') {
-          const githubConfig = getGitHubActionsTarget(target.name);
-          if (!githubConfig) {
-            return {
-              kind: target.kind,
-              name: target.name,
-              ...buildGitHubActionsErrorResult(
-                new Error(`GitHub Actions target not found: ${target.name}`)
-              )
-            };
-          }
-
-          try {
-            const result = await checkGitHubActionsTarget(githubConfig, input.timeout_ms);
-            recordGitHubActionsCheck(target.name, result);
-            return { kind: target.kind, name: target.name, ...result };
-          } catch (error) {
-            const result = buildGitHubActionsErrorResult(error);
-            recordGitHubActionsCheck(target.name, result);
-            return { kind: target.kind, name: target.name, ...result };
-          }
-        }
-
-        if (target.kind === 'gitlab_pipeline') {
-          const gitlabConfig = getGitLabPipelineTarget(target.name);
-          if (!gitlabConfig) {
-            return {
-              kind: target.kind,
-              name: target.name,
-              ...buildGitLabPipelineErrorResult(
-                new Error(`GitLab pipeline target not found: ${target.name}`)
-              )
-            };
-          }
-
-          try {
-            const result = await checkGitLabPipelineTarget(gitlabConfig, input.timeout_ms);
-            recordGitLabPipelineCheck(target.name, result);
-            return { kind: target.kind, name: target.name, ...result };
-          } catch (error) {
-            const result = buildGitLabPipelineErrorResult(error);
-            recordGitLabPipelineCheck(target.name, result);
-            return { kind: target.kind, name: target.name, ...result };
-          }
-        }
-
-        const httpConfig = getHttpTarget(target.name);
-        if (!httpConfig) {
-          return {
-            kind: target.kind,
-            name: target.name,
-            ...buildHttpTargetErrorResult(new Error(`HTTP target not found: ${target.name}`))
-          };
-        }
-
-        try {
-          const result = await checkHttpTarget(httpConfig, input.timeout_ms, {
-            profile: policy.profile
-          });
-          recordHttpCheck(target.name, result);
-          return { kind: target.kind, name: target.name, ...result };
-        } catch (error) {
-          const result = buildHttpTargetErrorResult(error);
-          recordHttpCheck(target.name, result);
-          return { kind: target.kind, name: target.name, ...result };
-        }
-      });
+      const results = await mapWithConcurrency(targets, maxConcurrency, (target) =>
+        checkBatchTarget(target, input.timeout_ms, policy)
+      );
 
       const checks = results.map((result, index) => {
         if (result.status === 'fulfilled') return result.value;

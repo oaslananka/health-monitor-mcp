@@ -6,7 +6,7 @@
 
 # Interface: HttpAssertionDiagnostic
 
-Defined in: [types.ts:573](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L573)
+Defined in: [types.ts:575](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L575)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:573](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **type**: `"status"` \| `"body_contains"` \| `"header"` \| `"json_equals"` \| `"tls_expiry"`
 
-Defined in: [types.ts:574](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L574)
+Defined in: [types.ts:576](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L576)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:574](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **passed**: `boolean`
 
-Defined in: [types.ts:575](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L575)
+Defined in: [types.ts:577](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L577)
 
 ***
 
@@ -30,23 +30,23 @@ Defined in: [types.ts:575](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **path**: `string` \| `null`
 
-Defined in: [types.ts:576](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L576)
+Defined in: [types.ts:578](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L578)
 
 ***
 
 ### expected
 
-> **expected**: `string` \| `number` \| `boolean` \| `null`
+> **expected**: [`HttpAssertionValue`](../type-aliases/HttpAssertionValue.md)
 
-Defined in: [types.ts:577](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L577)
+Defined in: [types.ts:579](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L579)
 
 ***
 
 ### actual
 
-> **actual**: `string` \| `number` \| `boolean` \| `null`
+> **actual**: [`HttpAssertionValue`](../type-aliases/HttpAssertionValue.md)
 
-Defined in: [types.ts:578](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L578)
+Defined in: [types.ts:580](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L580)
 
 ***
 
@@ -54,4 +54,4 @@ Defined in: [types.ts:578](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **message**: `string`
 
-Defined in: [types.ts:579](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L579)
+Defined in: [types.ts:581](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L581)

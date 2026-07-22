@@ -6,7 +6,7 @@
 
 # Interface: HttpJsonAssertion
 
-Defined in: [types.ts:568](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L568)
+Defined in: [types.ts:570](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L570)
 
 ## Properties
 
@@ -14,12 +14,12 @@ Defined in: [types.ts:568](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **path**: `string`
 
-Defined in: [types.ts:569](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L569)
+Defined in: [types.ts:571](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L571)
 
 ***
 
 ### equals
 
-> **equals**: `string` \| `number` \| `boolean` \| `null`
+> **equals**: [`HttpAssertionValue`](../type-aliases/HttpAssertionValue.md)
 
-Defined in: [types.ts:570](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L570)
+Defined in: [types.ts:572](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L572)

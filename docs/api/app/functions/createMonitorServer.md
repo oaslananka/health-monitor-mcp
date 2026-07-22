@@ -8,7 +8,7 @@
 
 > **createMonitorServer**(`options?`): `McpServer`
 
-Defined in: [app.ts:920](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L920)
+Defined in: [app.ts:936](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/app.ts#L936)
 
 ## Parameters
 

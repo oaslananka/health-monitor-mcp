@@ -565,17 +565,19 @@ export interface HttpHeaderAssertion {
   equals: string;
 }
 
+export type HttpAssertionValue = string | number | boolean | null;
+
 export interface HttpJsonAssertion {
   path: string;
-  equals: string | number | boolean | null;
+  equals: HttpAssertionValue;
 }
 
 export interface HttpAssertionDiagnostic {
   type: 'status' | 'header' | 'body_contains' | 'json_equals' | 'tls_expiry';
   passed: boolean;
   path: string | null;
-  expected: string | number | boolean | null;
-  actual: string | number | boolean | null;
+  expected: HttpAssertionValue;
+  actual: HttpAssertionValue;
   message: string;
 }
 

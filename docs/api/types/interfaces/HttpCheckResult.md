@@ -6,7 +6,7 @@
 
 # Interface: HttpCheckResult
 
-Defined in: [types.ts:599](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L599)
+Defined in: [types.ts:601](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L601)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:599](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **status**: `"up"` \| `"down"` \| `"timeout"` \| `"error"`
 
-Defined in: [types.ts:600](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L600)
+Defined in: [types.ts:602](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L602)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:600](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **response\_time\_ms**: `number` \| `null`
 
-Defined in: [types.ts:601](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L601)
+Defined in: [types.ts:603](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L603)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:601](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **error\_message**: `string` \| `null`
 
-Defined in: [types.ts:602](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L602)
+Defined in: [types.ts:604](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L604)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.ts:602](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **response**: [`HttpResponseDetails`](HttpResponseDetails.md) \| `null`
 
-Defined in: [types.ts:603](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L603)
+Defined in: [types.ts:605](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L605)
 
 ***
 
@@ -46,4 +46,4 @@ Defined in: [types.ts:603](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **assertions**: [`HttpAssertionDiagnostic`](HttpAssertionDiagnostic.md)[]
 
-Defined in: [types.ts:604](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L604)
+Defined in: [types.ts:606](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L606)
