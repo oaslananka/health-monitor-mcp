@@ -37,7 +37,7 @@ export function decryptSecret(encrypted: string, masterKey: string): string {
 
   const key = deriveKey(masterKey, salt);
 
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
   decipher.setAuthTag(authTag);
   const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 

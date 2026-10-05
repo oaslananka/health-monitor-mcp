@@ -77,7 +77,7 @@ export function registerWebhookTools(server: ToolRegistrar): void {
         openWorldHint: true
       }
     },
-    async (input: RegisterWebhookInput) => {
+    (input: RegisterWebhookInput) => {
       if (input.secret && !hasWebhookEncryptionKey()) {
         return formatResponse(
           toolError(
@@ -157,7 +157,7 @@ export function registerWebhookTools(server: ToolRegistrar): void {
         openWorldHint: false
       }
     },
-    async (input: ListWebhooksInput) => {
+    (input: ListWebhooksInput) => {
       const targets = listWebhooks(input);
       const redactedTargets = targets.map(redactSecret);
       return formatResponse({ count: redactedTargets.length, targets: redactedTargets });
@@ -176,6 +176,6 @@ export function registerWebhookTools(server: ToolRegistrar): void {
         openWorldHint: false
       }
     },
-    async (input: UnregisterWebhookInput) => formatResponse(unregisterWebhook(input.name))
+    (input: UnregisterWebhookInput) => formatResponse(unregisterWebhook(input.name))
   );
 }
