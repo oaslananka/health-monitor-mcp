@@ -79,27 +79,43 @@ export async function testWebhook(target: RegisteredWebhookTarget): Promise<Webh
     target: target.name
   };
 
+  let response: Response | null = null;
+
   try {
-    await sendWebhook(
+    response = await fetchWithTimeout(
+      getFetchImpl(),
+      target.url,
       {
-        url: target.url,
-        secret: target.secret ?? undefined,
-        events: target.events
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(target.secret
+            ? {
+                'X-MCP-Signature-256': `sha256=${createHmac('sha256', target.secret).update(JSON.stringify(testPayload)).digest('hex')}`
+              }
+            : {})
+        },
+        body: JSON.stringify(testPayload)
       },
-      testPayload
+      getWebhookTimeoutMs(),
+      'Webhook request timed out'
     );
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+    }
 
     return {
       status: 'delivered',
       latency_ms: Date.now() - start,
-      status_code: 200,
+      status_code: response.status,
       error_message: null
     };
   } catch (error) {
     return {
       status: 'failed',
       latency_ms: Date.now() - start,
-      status_code: null,
+      status_code: response?.status ?? null,
       error_message: error instanceof Error ? error.message : 'Unknown error'
     };
   }

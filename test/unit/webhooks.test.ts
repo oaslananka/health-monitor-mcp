@@ -457,7 +457,7 @@ describe('webhook test delivery', () => {
 
     expect(result.status).toBe('failed');
     expect(result.latency_ms).toBeGreaterThanOrEqual(0);
-    expect(result.status_code).toBeNull();
+    expect(result.status_code).toBe(500);
     expect(result.error_message).toContain('Webhook failed: 500');
   });
 
@@ -491,7 +491,7 @@ describe('webhook test delivery', () => {
       .get('record-webhook') as Record<string, unknown>;
     expect(delivery.status).toBe('delivered');
     expect(delivery.latency_ms).toBe(result.latency_ms);
-    expect(delivery.status_code).toBe(200);
+    expect(delivery.status_code).toBe(202);
   });
 });
 

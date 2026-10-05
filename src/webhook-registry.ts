@@ -1,5 +1,5 @@
 import { getDb } from './db.js';
-import { getWebhookEncryptionKey } from './config.js';
+import { getWebhookEncryptionKey, getRetentionDays } from './config.js';
 import { encryptSecret, decryptSecret } from './crypto.js';
 import type {
   RegisteredWebhookTarget,
@@ -32,18 +32,16 @@ function mapTarget(row: TargetRow | undefined): RegisteredWebhookTarget | null {
   if (row.secret_encrypted) {
     const masterKey = getWebhookEncryptionKey();
     if (masterKey) {
-      try {
-        secret = decryptSecret(row.secret_encrypted, masterKey);
-      } catch {
-        secret = '[decryption-failed]';
-      }
+      secret = decryptSecret(row.secret_encrypted, masterKey);
     } else {
       secret = '[encrypted]';
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { secret_encrypted: _secretEncrypted, ...rest } = row;
   return {
-    ...row,
+    ...rest,
     events: parseArray<'down' | 'up' | 'alert'>(row.events),
     tags: parseArray<string>(row.tags),
     secret
@@ -53,8 +51,9 @@ function mapTarget(row: TargetRow | undefined): RegisteredWebhookTarget | null {
 function listableStatus(
   status: RegisteredWebhookTarget['last_test_status']
 ): 'up' | 'down' | 'unknown' {
-  if (status === 'delivered' || status === 'failed' || status === null) return 'unknown';
-  return status;
+  if (status === 'delivered') return 'up';
+  if (status === 'failed') return 'down';
+  return 'unknown';
 }
 
 export function registerWebhook(input: RegisterWebhookInput): { registered: true; name: string } {
@@ -178,17 +177,14 @@ export function getLatestWebhookDelivery(targetName: string): WebhookDeliveryRec
 }
 
 export function pruneWebhookDeliveries(now = Date.now()): number {
+  const retentionDays = getRetentionDays();
+  const cutoff = now - retentionDays * 24 * 60 * 60 * 1000;
   return getDb()
     .prepare(
       `
         DELETE FROM webhook_deliveries
-        WHERE id IN (
-          SELECT id
-          FROM webhook_deliveries
-          ORDER BY timestamp ASC, id ASC
-          LIMIT 1000
-        )
+        WHERE timestamp < ?
       `
     )
-    .run(now).changes;
+    .run(cutoff).changes;
 }

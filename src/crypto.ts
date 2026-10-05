@@ -1,13 +1,12 @@
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
-const KEY_LENGTH = 32;
 const TAG_LENGTH = 16;
 
 function deriveKey(masterKey: string, salt: Buffer): Buffer {
-  return scryptSync(masterKey, salt, KEY_LENGTH);
+  return createHmac('sha256', masterKey).update(salt).digest();
 }
 
 export function encryptSecret(plaintext: string, masterKey: string): string {
