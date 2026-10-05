@@ -52,3 +52,12 @@ export function getRetentionDays(): number {
 export function getMaxConcurrency(): number {
   return getBoundedIntegerEnv('HEALTH_MONITOR_MAX_CONCURRENCY', 5, 1, 50);
 }
+
+export function getWebhookEncryptionKey(): string | null {
+  const key = process.env.HEALTH_MONITOR_WEBHOOK_ENCRYPTION_KEY?.trim();
+  return key && key.length >= 32 ? key : null;
+}
+
+export function hasWebhookEncryptionKey(): boolean {
+  return getWebhookEncryptionKey() !== null;
+}

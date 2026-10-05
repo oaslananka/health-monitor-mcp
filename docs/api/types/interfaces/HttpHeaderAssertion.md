@@ -6,7 +6,7 @@
 
 # Interface: HttpHeaderAssertion
 
-Defined in: [types.ts:563](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L563)
+Defined in: [types.ts:635](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L635)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:563](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **name**: `string`
 
-Defined in: [types.ts:564](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L564)
+Defined in: [types.ts:636](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L636)
 
 ***
 
@@ -22,4 +22,4 @@ Defined in: [types.ts:564](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **equals**: `string`
 
-Defined in: [types.ts:565](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L565)
+Defined in: [types.ts:637](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L637)

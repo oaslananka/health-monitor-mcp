@@ -6,7 +6,7 @@
 
 # Interface: AlertFinding
 
-Defined in: [types.ts:710](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L710)
+Defined in: [types.ts:782](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L782)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:710](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **type**: `"down"` \| `"response_time"` \| `"uptime"` \| `"consecutive_failures"`
 
-Defined in: [types.ts:711](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L711)
+Defined in: [types.ts:783](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L783)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:711](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **message**: `string`
 
-Defined in: [types.ts:712](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L712)
+Defined in: [types.ts:784](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L784)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:712](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **actual**: `string` \| `number`
 
-Defined in: [types.ts:713](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L713)
+Defined in: [types.ts:785](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L785)
 
 ***
 
@@ -38,4 +38,4 @@ Defined in: [types.ts:713](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **threshold**: `string` \| `number`
 
-Defined in: [types.ts:714](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L714)
+Defined in: [types.ts:786](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L786)

@@ -6,7 +6,7 @@
 
 # Interface: HttpTlsDetails
 
-Defined in: [types.ts:584](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L584)
+Defined in: [types.ts:656](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L656)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:584](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **subject\_cn**: `string` \| `null`
 
-Defined in: [types.ts:585](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L585)
+Defined in: [types.ts:657](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L657)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:585](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **issuer\_cn**: `string` \| `null`
 
-Defined in: [types.ts:586](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L586)
+Defined in: [types.ts:658](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L658)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:586](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **valid\_from**: `string`
 
-Defined in: [types.ts:587](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L587)
+Defined in: [types.ts:659](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L659)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.ts:587](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **valid\_to**: `string`
 
-Defined in: [types.ts:588](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L588)
+Defined in: [types.ts:660](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L660)
 
 ***
 
@@ -46,4 +46,4 @@ Defined in: [types.ts:588](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **days\_remaining**: `number`
 
-Defined in: [types.ts:589](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L589)
+Defined in: [types.ts:661](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L661)

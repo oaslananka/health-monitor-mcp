@@ -6,7 +6,7 @@
 
 # Interface: GitHubActionsJobDiagnostic
 
-Defined in: [types.ts:422](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L422)
+Defined in: [types.ts:494](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L494)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:422](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **name**: `string`
 
-Defined in: [types.ts:423](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L423)
+Defined in: [types.ts:495](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L495)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:423](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **url**: `string`
 
-Defined in: [types.ts:424](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L424)
+Defined in: [types.ts:496](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L496)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:424](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **status**: `string`
 
-Defined in: [types.ts:425](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L425)
+Defined in: [types.ts:497](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L497)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.ts:425](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **conclusion**: `string` \| `null`
 
-Defined in: [types.ts:426](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L426)
+Defined in: [types.ts:498](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L498)
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: [types.ts:426](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **started\_at**: `string` \| `null`
 
-Defined in: [types.ts:427](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L427)
+Defined in: [types.ts:499](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L499)
 
 ***
 
@@ -54,7 +54,7 @@ Defined in: [types.ts:427](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **completed\_at**: `string` \| `null`
 
-Defined in: [types.ts:428](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L428)
+Defined in: [types.ts:500](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L500)
 
 ***
 
@@ -62,4 +62,4 @@ Defined in: [types.ts:428](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **failed\_steps**: [`GitHubActionsStepDiagnostic`](GitHubActionsStepDiagnostic.md)[]
 
-Defined in: [types.ts:429](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L429)
+Defined in: [types.ts:501](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L501)

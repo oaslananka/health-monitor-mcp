@@ -6,7 +6,7 @@
 
 # Interface: HealthRecord
 
-Defined in: [types.ts:650](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L650)
+Defined in: [types.ts:722](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L722)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:650](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **id**: `number`
 
-Defined in: [types.ts:651](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L651)
+Defined in: [types.ts:723](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L723)
 
 ***
 
@@ -22,7 +22,7 @@ Defined in: [types.ts:651](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **server\_name**: `string`
 
-Defined in: [types.ts:652](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L652)
+Defined in: [types.ts:724](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L724)
 
 ***
 
@@ -30,7 +30,7 @@ Defined in: [types.ts:652](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **timestamp**: `number`
 
-Defined in: [types.ts:653](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L653)
+Defined in: [types.ts:725](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L725)
 
 ***
 
@@ -38,7 +38,7 @@ Defined in: [types.ts:653](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **status**: `"up"` \| `"down"` \| `"timeout"` \| `"error"`
 
-Defined in: [types.ts:654](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L654)
+Defined in: [types.ts:726](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L726)
 
 ***
 
@@ -46,7 +46,7 @@ Defined in: [types.ts:654](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **response\_time\_ms**: `number` \| `null`
 
-Defined in: [types.ts:655](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L655)
+Defined in: [types.ts:727](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L727)
 
 ***
 
@@ -54,7 +54,7 @@ Defined in: [types.ts:655](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **tool\_count**: `number` \| `null`
 
-Defined in: [types.ts:656](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L656)
+Defined in: [types.ts:728](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L728)
 
 ***
 
@@ -62,7 +62,7 @@ Defined in: [types.ts:656](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **error\_message**: `string` \| `null`
 
-Defined in: [types.ts:657](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L657)
+Defined in: [types.ts:729](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L729)
 
 ***
 
@@ -70,4 +70,4 @@ Defined in: [types.ts:657](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **tools\_snapshot**: `string` \| `null`
 
-Defined in: [types.ts:658](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L658)
+Defined in: [types.ts:730](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L730)

@@ -32,6 +32,7 @@ import {
   type HttpTargetDashboardEntry
 } from './http-target-registry.js';
 import { registerHttpTargetTools } from './http-target-tools.js';
+import { registerWebhookTools } from './webhook-tools.js';
 import {
   createRuntimePolicy,
   STDIO_DISABLED_MESSAGE,
@@ -468,6 +469,7 @@ export function registerMonitoringTools(
   registerGitHubActionsTools(server);
   registerGitLabPipelineTools(server);
   registerHttpTargetTools(server, policy);
+  registerWebhookTools(server);
 
   server.registerTool(
     'register_server',

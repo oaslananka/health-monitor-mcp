@@ -8,6 +8,9 @@
 
 ## Interfaces
 
+- [WebhookDeliveryResult](interfaces/WebhookDeliveryResult.md)
+- [RegisteredWebhookTarget](interfaces/RegisteredWebhookTarget.md)
+- [WebhookDeliveryRecord](interfaces/WebhookDeliveryRecord.md)
 - [GitHubActionsStepDiagnostic](interfaces/GitHubActionsStepDiagnostic.md)
 - [GitHubActionsJobDiagnostic](interfaces/GitHubActionsJobDiagnostic.md)
 - [GitHubActionsRunDetails](interfaces/GitHubActionsRunDetails.md)
@@ -62,6 +65,10 @@
 - [ListHttpTargetsInput](type-aliases/ListHttpTargetsInput.md)
 - [UnregisterHttpTargetInput](type-aliases/UnregisterHttpTargetInput.md)
 - [AlertFindingType](type-aliases/AlertFindingType.md)
+- [RegisterWebhookInput](type-aliases/RegisterWebhookInput.md)
+- [TestWebhookInput](type-aliases/TestWebhookInput.md)
+- [ListWebhooksInput](type-aliases/ListWebhooksInput.md)
+- [UnregisterWebhookInput](type-aliases/UnregisterWebhookInput.md)
 - [HttpAssertionValue](type-aliases/HttpAssertionValue.md)
 
 ## Variables
@@ -92,3 +99,7 @@
 - [ListHttpTargetsSchema](variables/ListHttpTargetsSchema.md)
 - [UnregisterHttpTargetSchema](variables/UnregisterHttpTargetSchema.md)
 - [EmptySchema](variables/EmptySchema.md)
+- [RegisterWebhookSchema](variables/RegisterWebhookSchema.md)
+- [TestWebhookSchema](variables/TestWebhookSchema.md)
+- [ListWebhooksSchema](variables/ListWebhooksSchema.md)
+- [UnregisterWebhookSchema](variables/UnregisterWebhookSchema.md)

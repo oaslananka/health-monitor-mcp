@@ -2,10 +2,11 @@ import { createHmac } from 'node:crypto';
 
 import { getWebhookTimeoutMs } from './config.js';
 import { fetchWithTimeout, RequestTimeoutError } from './network.js';
+import type { RegisteredWebhookTarget, WebhookDeliveryResult } from './types.js';
 
 export interface WebhookTarget {
   url: string;
-  secret?: string;
+  secret: string | undefined;
   events: Array<'down' | 'up' | 'alert'>;
 }
 
@@ -26,8 +27,7 @@ function getFetchImpl(): FetchLike {
 }
 
 /**
- * Webhook transport helper for future alert delivery.
- * Public webhook tools are still planned for v1.1.
+ * Webhook transport helper for alert delivery.
  */
 export async function sendWebhook(target: WebhookTarget, payload: unknown): Promise<void> {
   const body = JSON.stringify(payload) ?? 'null';
@@ -65,6 +65,43 @@ export async function sendWebhook(target: WebhookTarget, payload: unknown): Prom
 
   if (!response.ok) {
     throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+  }
+}
+
+/**
+ * Send a test webhook and return delivery diagnostics.
+ */
+export async function testWebhook(target: RegisteredWebhookTarget): Promise<WebhookDeliveryResult> {
+  const start = Date.now();
+  const testPayload = {
+    test: true,
+    timestamp: new Date().toISOString(),
+    target: target.name
+  };
+
+  try {
+    await sendWebhook(
+      {
+        url: target.url,
+        secret: target.secret ?? undefined,
+        events: target.events
+      },
+      testPayload
+    );
+
+    return {
+      status: 'delivered',
+      latency_ms: Date.now() - start,
+      status_code: 200,
+      error_message: null
+    };
+  } catch (error) {
+    return {
+      status: 'failed',
+      latency_ms: Date.now() - start,
+      status_code: null,
+      error_message: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 }
 

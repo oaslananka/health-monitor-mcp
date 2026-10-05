@@ -8,4 +8,4 @@
 
 > **HttpAssertionValue** = `string` \| `number` \| `boolean` \| `null`
 
-Defined in: [types.ts:568](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L568)
+Defined in: [types.ts:640](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L640)
