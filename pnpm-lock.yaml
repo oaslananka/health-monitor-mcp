@@ -18,7 +18,7 @@ overrides:
   '@babel/core': 7.29.7
 
 patchedDependencies:
-  '@modelcontextprotocol/sdk@1.29.0': d6ecaeeeb706d03c1429444e6f82f912c4c3a19a7b8d26f528124ba54857f6ff
+  '@modelcontextprotocol/sdk@1.29.0': cc4f4eedf476f97afa53b4fbc035a24af538f4f0d2e30fdf47e72fef3d148dcd
 
 importers:
 
@@ -26,7 +26,7 @@ importers:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
-        version: 1.29.0(patch_hash=d6ecaeeeb706d03c1429444e6f82f912c4c3a19a7b8d26f528124ba54857f6ff)(zod@3.25.76)
+        version: 1.29.0(patch_hash=cc4f4eedf476f97afa53b4fbc035a24af538f4f0d2e30fdf47e72fef3d148dcd)(zod@3.25.76)
       better-sqlite3:
         specifier: 12.8.0
         version: 12.8.0
@@ -2727,7 +2727,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@modelcontextprotocol/sdk@1.29.0(patch_hash=d6ecaeeeb706d03c1429444e6f82f912c4c3a19a7b8d26f528124ba54857f6ff)(zod@3.25.76)':
+  '@modelcontextprotocol/sdk@1.29.0(patch_hash=cc4f4eedf476f97afa53b4fbc035a24af538f4f0d2e30fdf47e72fef3d148dcd)(zod@3.25.76)':
     dependencies:
       '@hono/node-server': 2.0.10(hono@4.12.27)
       ajv: 8.20.0
