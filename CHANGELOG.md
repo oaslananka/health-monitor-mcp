@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [1.5.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.4.0...health-monitor-mcp-v1.5.0) (2026-10-06)
+
+
+### Features
+
+* add webhook target CRUD tools with encrypted secret storage ([#112](https://github.com/oaslananka/health-monitor-mcp/issues/112)) ([77e4dcc](https://github.com/oaslananka/health-monitor-mcp/commit/77e4dcc6699eeed289beac83bb1a5c0a4141c481))
+
+
+### Bug Fixes
+
+* transitive Dependabot alerts and restore default-branch gate ([#110](https://github.com/oaslananka/health-monitor-mcp/issues/110)) ([6986d0d](https://github.com/oaslananka/health-monitor-mcp/commit/6986d0dc3187212e018aa3d332acc53e90cc1b90))
+
 ## [1.4.0](https://github.com/oaslananka/health-monitor-mcp/compare/health-monitor-mcp-v1.3.0...health-monitor-mcp-v1.4.0) (2026-07-22)
 
 

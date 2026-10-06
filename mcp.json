@@ -1,6 +1,6 @@
 {
   "name": "health-monitor-mcp",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
   "description": "Monitor MCP, CI, and HTTP targets with health history, TLS expiry, assertions, and diagnostics",
   "transport": "stdio",
