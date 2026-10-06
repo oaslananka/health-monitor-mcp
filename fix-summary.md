@@ -10,7 +10,7 @@
 ### 2. Updated consumer-package validation for MCP SDK contract change
 - **File**: `scripts/check-consumer-package.mjs`
 - **Issue**: The bundled MCP SDK (@modelcontextprotocol/sdk@1.31.0) now declares `@hono/node-server` range as `^1.19.9 || ^2.0.5`, but the validation expected exactly `^2.0.5`
-- **Fix**: 
+- **Fix**:
   - Added `EXPECTED_NODE_SERVER_RANGE = '^1.19.9 || ^2.0.5'` constant
   - Updated validation to use the new expected range
   - Added `stripWarnings()` function to handle pnpm warning output in `--json` mode

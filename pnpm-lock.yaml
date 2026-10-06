@@ -19,7 +19,7 @@ overrides:
   braces: 3.0.3
 
 patchedDependencies:
-  sprintf-js@1.0.3: 21120cc71bf019d384c8d10f82fac79c49aa8a257093f0010e7831a6db768b85
+  sprintf-js@1.0.3: 7d03e50300c872f96e485c717a5d7262ac8cfd2eb32a28d28cb37c30c22be6b1
   sprintf-js@1.1.3: 3ca76f7d7e57bb0debf0af2afb544bab003dd2160a1226f94649a1c2cca8b356
 
 importers:
@@ -3030,7 +3030,7 @@ snapshots:
 
   argparse@1.0.10:
     dependencies:
-      sprintf-js: 1.0.3(patch_hash=21120cc71bf019d384c8d10f82fac79c49aa8a257093f0010e7831a6db768b85)
+      sprintf-js: 1.0.3(patch_hash=7d03e50300c872f96e485c717a5d7262ac8cfd2eb32a28d28cb37c30c22be6b1)
 
   argparse@2.0.1: {}
 
@@ -4562,7 +4562,7 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  sprintf-js@1.0.3(patch_hash=21120cc71bf019d384c8d10f82fac79c49aa8a257093f0010e7831a6db768b85): {}
+  sprintf-js@1.0.3(patch_hash=7d03e50300c872f96e485c717a5d7262ac8cfd2eb32a28d28cb37c30c22be6b1): {}
 
   sprintf-js@1.1.3(patch_hash=3ca76f7d7e57bb0debf0af2afb544bab003dd2160a1226f94649a1c2cca8b356): {}
 

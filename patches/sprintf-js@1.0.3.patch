@@ -44,11 +44,11 @@ index c0fc7c08b2e6fe38de2883034b8d28c8f34e9866..8706d3a9eb585674ce45819861672476
              }
 @@ -182,7 +183,8 @@
      }
- 
+
      function str_repeat(input, multiplier) {
 -        return Array(multiplier + 1).join(input)
 +        var capped = multiplier > 10000 ? 10000 : multiplier
 +        return Array(capped + 1).join(input)
      }
- 
+
      /**
