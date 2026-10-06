@@ -81,11 +81,11 @@ importers:
         specifier: 10.9.2
         version: 10.9.2(@types/node@20.19.0)(typescript@5.8.3)
       typedoc:
-        specifier: 0.28.19
-        version: 0.28.19(typescript@5.8.3)
+        specifier: 0.28.20
+        version: 0.28.20(typescript@5.8.3)
       typedoc-plugin-markdown:
         specifier: 4.11.0
-        version: 4.11.0(typedoc@0.28.19(typescript@5.8.3))
+        version: 4.11.0(typedoc@0.28.20(typescript@5.8.3))
       typescript:
         specifier: 5.8.3
         version: 5.8.3
@@ -2152,8 +2152,8 @@ packages:
     peerDependencies:
       typedoc: 0.28.x
 
-  typedoc@0.28.19:
-    resolution: {integrity: sha512-wKh+lhdmMFivMlc6vRRcMGXeGEHGU2g8a2CkPTJjJlwRf1iXbimWIPcFolCqe4E0d/FRtGszpIrsp3WLpDB8Pw==}
+  typedoc@0.28.20:
+    resolution: {integrity: sha512-uSKqkh8Cr48vllnEy+jdaAgOeR6Y+QCBW7usgUsKj7gJEfR7stw9U/fE49LBnj2tPRKPY0c0EBJSWe9Appmplg==}
     engines: {node: '>= 18', pnpm: '>= 10'}
     hasBin: true
     peerDependencies:
@@ -4701,11 +4701,11 @@ snapshots:
       media-typer: 1.1.1
       mime-types: 3.0.2
 
-  typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@5.8.3)):
+  typedoc-plugin-markdown@4.11.0(typedoc@0.28.20(typescript@5.8.3)):
     dependencies:
-      typedoc: 0.28.19(typescript@5.8.3)
+      typedoc: 0.28.20(typescript@5.8.3)
 
-  typedoc@0.28.19(typescript@5.8.3):
+  typedoc@0.28.20(typescript@5.8.3):
     dependencies:
       '@gerrit0/mini-shiki': 3.23.0
       lunr: 2.3.9
