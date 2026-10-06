@@ -22,7 +22,8 @@ describe('migrations', () => {
       { version: 4, description: 'remove retired Azure DevOps monitoring data' },
       { version: 5, description: 'add GitHub Actions monitoring provider' },
       { version: 6, description: 'add GitLab pipeline monitoring provider' },
-      { version: 7, description: 'add generic HTTP monitoring provider' }
+      { version: 7, description: 'add generic HTTP monitoring provider' },
+      { version: 8, description: 'add webhook targets with encrypted secret storage' }
     ]);
     expect(columns.map((column) => column.name)).toContain('response_time_updated_at');
 
@@ -114,7 +115,7 @@ describe('migrations', () => {
       }
     ).count;
 
-    expect(count).toBe(7);
+    expect(count).toBe(8);
   });
 
   it('removes retired Azure tables during an upgrade while preserving monitor data', () => {
@@ -209,5 +210,57 @@ describe('migrations', () => {
       count: number;
     };
     expect(count.count).toBe(0);
+  });
+
+  it('creates webhook targets and deliveries tables with cascading deletes', () => {
+    const db = getDb();
+
+    db.prepare(
+      `
+      INSERT INTO webhook_targets (
+        name, url, secret_encrypted, events, tags, check_interval_minutes, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `
+    ).run(
+      'alert-webhook',
+      'https://hooks.example/alert',
+      'encrypted-secret',
+      '["down","alert"]',
+      '["ops"]',
+      5,
+      1
+    );
+    db.prepare(
+      `
+      INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `
+    ).run('alert-webhook', 1, 'delivered', 150, 200, null);
+
+    expect(
+      db
+        .prepare('SELECT COUNT(*) AS count FROM webhook_targets WHERE name = ?')
+        .get('alert-webhook')
+    ).toEqual(expect.objectContaining({ count: 1 }));
+    expect(
+      db
+        .prepare('SELECT COUNT(*) AS count FROM webhook_deliveries WHERE target_name = ?')
+        .get('alert-webhook')
+    ).toEqual(expect.objectContaining({ count: 1 }));
+
+    db.prepare('DELETE FROM webhook_targets WHERE name = ?').run('alert-webhook');
+
+    const targetCount = db
+      .prepare('SELECT COUNT(*) AS count FROM webhook_targets WHERE name = ?')
+      .get('alert-webhook') as {
+      count: number;
+    };
+    const deliveryCount = db
+      .prepare('SELECT COUNT(*) AS count FROM webhook_deliveries WHERE target_name = ?')
+      .get('alert-webhook') as {
+      count: number;
+    };
+    expect(targetCount.count).toBe(0);
+    expect(deliveryCount.count).toBe(0);
   });
 });

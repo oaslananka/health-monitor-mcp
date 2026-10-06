@@ -118,15 +118,19 @@ describe('app tool registration', () => {
       'list_gitlab_pipelines',
       'list_http_targets',
       'list_servers',
+      'list_webhooks',
       'register_github_actions',
       'register_gitlab_pipeline',
       'register_http_target',
       'register_server',
+      'register_webhook',
       'set_alert',
+      'test_webhook',
       'unregister_github_actions',
       'unregister_gitlab_pipeline',
       'unregister_http_target',
-      'unregister_server'
+      'unregister_server',
+      'unregister_webhook'
     ]);
     expect(names.some((name) => name.includes('azure'))).toBe(false);
 

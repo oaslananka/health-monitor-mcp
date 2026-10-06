@@ -20,3 +20,5 @@
 - [getWebhookTimeoutMs](functions/getWebhookTimeoutMs.md)
 - [getRetentionDays](functions/getRetentionDays.md)
 - [getMaxConcurrency](functions/getMaxConcurrency.md)
+- [getWebhookEncryptionKey](functions/getWebhookEncryptionKey.md)
+- [hasWebhookEncryptionKey](functions/hasWebhookEncryptionKey.md)

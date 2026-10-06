@@ -410,6 +410,78 @@ export type ListHttpTargetsInput = z.infer<typeof ListHttpTargetsSchema>;
 export type UnregisterHttpTargetInput = z.infer<typeof UnregisterHttpTargetSchema>;
 export type AlertFindingType = z.infer<typeof AlertFindingTypeSchema>;
 
+const WebhookEventSchema = z.enum(['down', 'up', 'alert']);
+const WebhookEventsSchema = z
+  .array(WebhookEventSchema)
+  .min(1)
+  .max(3)
+  .default(['down', 'up', 'alert']);
+
+export const RegisterWebhookSchema = z.object({
+  name: SafeNameSchema.describe('Unique local name for this webhook target'),
+  url: HttpTargetUrlSchema.describe('Webhook endpoint URL (HTTPS recommended)'),
+  secret: z
+    .string()
+    .max(512)
+    .optional()
+    .describe(
+      'Optional secret for HMAC-SHA256 signing; stored encrypted when HEALTH_MONITOR_WEBHOOK_ENCRYPTION_KEY is set'
+    ),
+  events: WebhookEventsSchema.describe('Event types that trigger webhook delivery'),
+  tags: z.array(SafeTagSchema).max(20).default([]).describe('Tags for grouping'),
+  check_interval_minutes: z.number().int().min(1).max(60).default(5)
+});
+
+export const TestWebhookSchema = z.object({
+  name: SafeNameSchema.describe('Webhook target name to test'),
+  timeout_ms: z.number().int().min(1000).max(30000).default(5000)
+});
+
+export const ListWebhooksSchema = z.object({
+  tags: z.array(SafeTagSchema).max(20).optional(),
+  status: ListableStatusSchema.optional()
+});
+
+export const UnregisterWebhookSchema = z.object({
+  name: SafeNameSchema
+});
+
+export type RegisterWebhookInput = z.infer<typeof RegisterWebhookSchema>;
+export type TestWebhookInput = z.infer<typeof TestWebhookSchema>;
+export type ListWebhooksInput = z.infer<typeof ListWebhooksSchema>;
+export type UnregisterWebhookInput = z.infer<typeof UnregisterWebhookSchema>;
+
+export interface WebhookDeliveryResult {
+  status: 'delivered' | 'failed';
+  latency_ms: number | null;
+  status_code: number | null;
+  error_message: string | null;
+}
+
+export interface RegisteredWebhookTarget {
+  name: string;
+  url: string;
+  secret: string | null;
+  events: Array<'down' | 'up' | 'alert'>;
+  tags: string[];
+  check_interval_minutes: number;
+  created_at: number;
+  last_tested: number | null;
+  last_test_status: WebhookDeliveryResult['status'] | null;
+  last_test_latency_ms: number | null;
+  last_test_error: string | null;
+}
+
+export interface WebhookDeliveryRecord {
+  id: number;
+  target_name: string;
+  timestamp: number;
+  status: WebhookDeliveryResult['status'];
+  latency_ms: number | null;
+  status_code: number | null;
+  error_message: string | null;
+}
+
 export interface GitHubActionsStepDiagnostic {
   number: number;
   name: string;

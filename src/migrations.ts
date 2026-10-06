@@ -291,6 +291,43 @@ const MIGRATIONS: Migration[] = [
           ON http_checks(timestamp DESC);
       `);
     }
+  },
+  {
+    version: 8,
+    description: 'add webhook targets with encrypted secret storage',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS webhook_targets (
+          name TEXT PRIMARY KEY,
+          url TEXT NOT NULL,
+          secret_encrypted TEXT,
+          events TEXT NOT NULL DEFAULT '["down","up","alert"]',
+          tags TEXT NOT NULL DEFAULT '[]',
+          check_interval_minutes INTEGER NOT NULL DEFAULT 5,
+          created_at INTEGER NOT NULL,
+          last_tested INTEGER,
+          last_test_status TEXT,
+          last_test_latency_ms INTEGER,
+          last_test_error TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS webhook_deliveries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          target_name TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          latency_ms INTEGER,
+          status_code INTEGER,
+          error_message TEXT,
+          FOREIGN KEY (target_name) REFERENCES webhook_targets(name) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_target_time
+          ON webhook_deliveries(target_name, timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_timestamp
+          ON webhook_deliveries(timestamp DESC);
+      `);
+    }
   }
 ];
 

@@ -57,6 +57,8 @@ Example MCP client configuration:
 | `check_gitlab_pipeline`      | Check latest pipeline and bounded failed-job traces     | `Check gitlab-ci now`                   |
 | `register_http_target`       | Register a GET-only HTTP/HTTPS endpoint                 | `Monitor the public health endpoint`    |
 | `check_http_target`          | Check response assertions and TLS expiry                | `Check service-health now`              |
+| `register_webhook`           | Register a webhook target for alert delivery            | `Register alert-webhook for notifications` |
+| `test_webhook`               | Send a test payload and return delivery diagnostics     | `Test alert-webhook delivery`           |
 | `check_all`                  | Check all target kinds with bounded concurrency         | `Check all production targets`          |
 | `get_uptime`                 | Return MCP uptime and latency history                   | `Show 24h uptime for inventory-prod`    |
 | `get_dashboard`              | Return a cross-provider JSON dashboard                  | `Give me a 24h dashboard`               |
@@ -65,14 +67,16 @@ Example MCP client configuration:
 | `list_github_actions`        | List registered GitHub workflow targets                 | `List monitored workflows`              |
 | `list_gitlab_pipelines`      | List registered GitLab pipeline targets                 | `List monitored GitLab pipelines`       |
 | `list_http_targets`          | List registered HTTP targets                            | `List monitored HTTP endpoints`         |
+| `list_webhooks`              | List registered webhook targets                         | `List webhook targets`                  |
 | `unregister_server`          | Remove an MCP target                                    | `Stop monitoring local-debugger`        |
 | `unregister_github_actions`  | Remove a GitHub target and its history                  | `Stop monitoring repo-ci`               |
 | `unregister_gitlab_pipeline` | Remove a GitLab target and its history                  | `Stop monitoring gitlab-ci`             |
 | `unregister_http_target`     | Remove an HTTP target and its history                   | `Stop monitoring service-health`        |
+| `unregister_webhook`         | Remove a webhook target and its history                 | `Stop monitoring alert-webhook`         |
 | `set_alert`                  | Configure MCP health thresholds                         | `Alert if inventory-prod exceeds 500ms` |
 | `get_monitor_stats`          | Inspect cross-provider monitor activity                 | `How many checks are stored?`           |
 
-Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `HTTP_TARGET_NOT_FOUND`, `HTTP_TARGET_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, and `STDIO_COMMAND_REJECTED`.
+Expected configuration mistakes return stable error codes and remediation hints, including `SERVER_NOT_FOUND`, `GITHUB_ACTIONS_TARGET_NOT_FOUND`, `GITLAB_PIPELINE_TARGET_NOT_FOUND`, `GITLAB_BASE_URL_NOT_ALLOWED`, `HTTP_TARGET_NOT_FOUND`, `HTTP_TARGET_URL_NOT_ALLOWED`, `NO_SERVERS_REGISTERED`, `STDIO_DISABLED`, `STDIO_COMMAND_REJECTED`, `WEBHOOK_ENCRYPTION_KEY_REQUIRED`, `WEBHOOK_REGISTRATION_FAILED`, and `WEBHOOK_NOT_FOUND`.
 
 ## Register Targets
 
@@ -158,6 +162,17 @@ export HEALTH_MONITOR_HTTP_TARGET_ALLOWLIST=https://status.internal.example:8443
 
 Every DNS answer and every redirect destination is revalidated. Responses are capped at 262144 bytes; full response bodies and certificate chains are never stored or returned.
 
+## Register Webhook Targets
+
+Webhook targets receive alert notifications via HTTPS POST with optional HMAC-SHA256 signing. Secrets are encrypted at rest when `HEALTH_MONITOR_WEBHOOK_ENCRYPTION_KEY` is configured (32+ characters); otherwise secret registration is rejected.
+
+```text
+register_webhook name="alert-webhook" url="https://hooks.example/alerts" secret="webhook-secret" events=["down","alert"] tags=["production","alerts"]
+test_webhook name="alert-webhook"
+```
+
+Secrets are never returned in listings or diagnostics—always redacted. Delivery diagnostics include status, latency, HTTP status code, and error message.
+
 ## Health Checks and Reports
 
 ```text
@@ -176,7 +191,7 @@ get_report hours=24
 set_alert name="inventory-prod" max_response_time_ms=500 min_uptime_percent=99 consecutive_failures_before_alert=2
 ```
 
-Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`. Outbound webhook delivery is not yet exposed as a public MCP tool.
+Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`. Configure webhook targets with `register_webhook` to receive alert notifications.
 
 ## Configuration
 
@@ -199,6 +214,8 @@ Alert findings are evaluated by `check_server`, `check_all`, and `get_dashboard`
 | `HEALTH_MONITOR_HTTP_STATEFUL_SESSIONS`    | `0`                               | Enable stateful Streamable HTTP sessions        |
 | `HEALTH_MONITOR_HTTP_SESSION_TTL_MS`       | `1800000`                         | Stateful session TTL                            |
 | `HEALTH_MONITOR_HTTP_MAX_SESSIONS`         | `100`                             | Stateful session cap                            |
+| `HEALTH_MONITOR_WEBHOOK_ENCRYPTION_KEY`    | unset                             | 32+ char key for encrypting webhook secrets     |
+| `HEALTH_MONITOR_WEBHOOK_TIMEOUT_MS`        | `5000`                            | Webhook delivery timeout in milliseconds        |
 
 ## HTTP Deployment
 

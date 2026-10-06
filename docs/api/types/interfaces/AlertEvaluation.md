@@ -6,7 +6,7 @@
 
 # Interface: AlertEvaluation
 
-Defined in: [types.ts:717](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L717)
+Defined in: [types.ts:789](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L789)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [types.ts:717](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **has\_alerts**: `boolean`
 
-Defined in: [types.ts:718](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L718)
+Defined in: [types.ts:790](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L790)
 
 ***
 
@@ -22,4 +22,4 @@ Defined in: [types.ts:718](https://github.com/oaslananka/health-monitor-mcp/blob
 
 > **findings**: [`AlertFinding`](AlertFinding.md)[]
 
-Defined in: [types.ts:719](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L719)
+Defined in: [types.ts:791](https://github.com/oaslananka/health-monitor-mcp/blob/main/src/types.ts#L791)
