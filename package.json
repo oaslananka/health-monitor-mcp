@@ -143,11 +143,5 @@
   },
   "bundleDependencies": [
     "@modelcontextprotocol/sdk"
-  ],
-  "pnpm": {
-    "patchedDependencies": {
-      "sprintf-js@1.0.3": "patches/sprintf-js@1.0.3.patch",
-      "sprintf-js@1.1.3": "patches/sprintf-js@1.1.3.patch"
-    }
-  }
+  ]
 }

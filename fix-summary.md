@@ -1,45 +1,41 @@
-All 7 actionable findings from PR #112 have been resolved:
+# Fix Summary for ENG-986 (PR #114 Remediation)
 
-## Summary of Changes
+## Changes Made
 
-### 1. Prevent leaking ciphertext (`src/webhook-registry.ts:41-42`)
-- `mapTarget()` now explicitly destructures and omits `secret_encrypted` from the returned public object
-- The internal `secret_encrypted` field is no longer spread into `RegisteredWebhookTarget` objects exposed via MCP tools
+### 1. Removed deprecated `pnpm.patchedDependencies` from `package.json`
+- **File**: `package.json`
+- **Issue**: pnpm v11 no longer reads the `pnpm` field from `package.json`, causing `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` and warnings
+- **Fix**: Removed the `pnpm.patchedDependencies` section (lines 147-152). The patched dependencies are already correctly defined in `pnpm-workspace.yaml` with proper hashes in the lockfile.
 
-### 2. Safe decryption failure handling (`src/webhook-registry.ts:34-38`)
-- Removed the placeholder `'[decryption-failed]'` secret string
-- Decryption failures now propagate as thrown errors (via `decryptSecret()`) instead of silently returning a placeholder that could be used for HMAC signing
-- When encryption key is not configured, returns `'[encrypted]'` as before (indicating secret exists but cannot be decrypted)
+### 2. Updated consumer-package validation for MCP SDK contract change
+- **File**: `scripts/check-consumer-package.mjs`
+- **Issue**: The bundled MCP SDK (@modelcontextprotocol/sdk@1.31.0) now declares `@hono/node-server` range as `^1.19.9 || ^2.0.5`, but the validation expected exactly `^2.0.5`
+- **Fix**: 
+  - Added `EXPECTED_NODE_SERVER_RANGE = '^1.19.9 || ^2.0.5'` constant
+  - Updated validation to use the new expected range
+  - Added `stripWarnings()` function to handle pnpm warning output in `--json` mode
 
-### 3. Non-blocking key derivation (`src/crypto.ts:8-10`)
-- Replaced `scryptSync` (blocking) with HMAC-SHA256 based key derivation (HKDF-like)
-- `deriveKey()` now uses `createHmac('sha256', masterKey).update(salt).digest()` which is fast and non-blocking
-- Removed unused `KEY_LENGTH` constant
+## Verification Results
 
-### 4. Accurate HTTP status reporting (`src/webhooks.ts:108-118`)
-- `testWebhook()` now captures and returns the actual HTTP response status code (`response.status`) instead of hardcoding `200`
-- On failure, returns the actual error status code when available (`response?.status ?? null`)
+All repository-prescribed checks pass:
 
-### 5. Retention-aligned pruning (`src/webhook-registry.ts:179-190`)
-- `pruneWebhookDeliveries()` now uses the passed `now` timestamp and `getRetentionDays()` (which reads `HEALTH_MONITOR_RETENTION_DAYS`)
-- Deletes records older than the retention window instead of hardcoding a limit of 1000 records
+| Check | Status |
+|-------|--------|
+| `pnpm install --frozen-lockfile` | ✅ Pass (no config mismatch) |
+| `pnpm run ci:static` (build, typecheck, lint, format, docs) | ✅ Pass |
+| `pnpm run test:ci` (206 tests) | ✅ Pass |
+| `pnpm run check:metadata` | ✅ Pass |
+| `pnpm run check:package` (consumer-package) | ✅ Pass |
+| `pnpm run security` (audit) | ✅ Pass (2 ignored vulns per policy) |
+| `pnpm run security:licenses` | ✅ Pass |
+| `pnpm run release:dry-run` | ✅ Pass (expected blockers: uncommitted changes, existing npm package) |
 
-### 6. Fix status mapping (`src/webhook-registry.ts:51-57`)
-- `listableStatus()` now correctly maps:
-  - `'delivered'` → `'up'`
-  - `'failed'` → `'down'`
-  - All others (including `null`) → `'unknown'`
+**Note**: `pnpm run security:reuse` fails due to missing `reuse` Python module in the environment — a pre-existing issue unrelated to these changes.
 
-### 7. Tests and verification
-- Updated test expectations in `test/unit/webhooks.test.ts` to match new behavior (actual status codes)
-- All verification commands pass:
-  - `pnpm run build` ✓
-  - `pnpm run typecheck` ✓
-  - `pnpm run lint` ✓
-  - `pnpm run lint:test` ✓
-  - `pnpm run format:check` ✓
-  - `pnpm run docs:api:check` ✓
-  - `pnpm test` ✓ (203 tests passing)
-  - `pnpm run ci:check` ✓
+## Scope
 
-Working tree changes are left in place for the trusted publisher to update PR #112.
+Changes are narrowly scoped to exactly address the two root causes identified in the issue:
+1. pnpm patched-dependency configuration reconciliation
+2. Consumer-package expectation update for current MCP SDK contract
+
+No frozen-lockfile, repository policy, dependency/security checks, or tests were weakened.
