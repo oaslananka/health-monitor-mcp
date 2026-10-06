@@ -1,18 +1,24 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, hkdf, randomBytes } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
 const TAG_LENGTH = 16;
+const KEY_LENGTH = 32;
 
-function deriveKey(masterKey: string, salt: Buffer): Buffer {
-  return createHmac('sha256', masterKey).update(salt).digest();
+async function deriveKey(masterKey: string, salt: Buffer): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    hkdf('sha256', Buffer.from(masterKey, 'utf8'), salt, Buffer.alloc(0), KEY_LENGTH, (err, key) => {
+      if (err) reject(err);
+      else resolve(Buffer.from(key));
+    });
+  });
 }
 
-export function encryptSecret(plaintext: string, masterKey: string): string {
+export async function encryptSecret(plaintext: string, masterKey: string): Promise<string> {
   const salt = randomBytes(SALT_LENGTH);
   const iv = randomBytes(IV_LENGTH);
-  const key = deriveKey(masterKey, salt);
+  const key = await deriveKey(masterKey, salt);
 
   const cipher = createCipheriv(ALGORITHM, key, iv);
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
@@ -22,7 +28,7 @@ export function encryptSecret(plaintext: string, masterKey: string): string {
   return result.toString('base64');
 }
 
-export function decryptSecret(encrypted: string, masterKey: string): string {
+export async function decryptSecret(encrypted: string, masterKey: string): Promise<string> {
   const data = Buffer.from(encrypted, 'base64');
 
   if (data.length < SALT_LENGTH + IV_LENGTH + TAG_LENGTH) {
@@ -34,7 +40,7 @@ export function decryptSecret(encrypted: string, masterKey: string): string {
   const ciphertext = data.subarray(SALT_LENGTH + IV_LENGTH, data.length - TAG_LENGTH);
   const authTag = data.subarray(data.length - TAG_LENGTH);
 
-  const key = deriveKey(masterKey, salt);
+  const key = await deriveKey(masterKey, salt);
 
   const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: TAG_LENGTH });
   decipher.setAuthTag(authTag);

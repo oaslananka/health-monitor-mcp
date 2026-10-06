@@ -25,14 +25,14 @@ function parseArray<T>(raw: string | null | undefined): T[] {
   }
 }
 
-function mapTarget(row: TargetRow | undefined): RegisteredWebhookTarget | null {
+async function mapTarget(row: TargetRow | undefined): Promise<RegisteredWebhookTarget | null> {
   if (!row) return null;
 
   let secret: string | null = null;
   if (row.secret_encrypted) {
     const masterKey = getWebhookEncryptionKey();
     if (masterKey) {
-      secret = decryptSecret(row.secret_encrypted, masterKey);
+      secret = await decryptSecret(row.secret_encrypted, masterKey);
     } else {
       secret = '[encrypted]';
     }
@@ -56,7 +56,7 @@ function listableStatus(
   return 'unknown';
 }
 
-export function registerWebhook(input: RegisterWebhookInput): { registered: true; name: string } {
+export async function registerWebhook(input: RegisterWebhookInput): Promise<{ registered: true; name: string }> {
   const masterKey = getWebhookEncryptionKey();
   if (input.secret && !masterKey) {
     throw new Error(
@@ -65,7 +65,7 @@ export function registerWebhook(input: RegisterWebhookInput): { registered: true
   }
 
   const now = Date.now();
-  const secretEncrypted = input.secret && masterKey ? encryptSecret(input.secret, masterKey) : null;
+  const secretEncrypted = input.secret && masterKey ? await encryptSecret(input.secret, masterKey) : null;
 
   getDb()
     .prepare(
@@ -99,21 +99,22 @@ export function unregisterWebhook(name: string): { unregistered: true; name: str
   return { unregistered: true, name };
 }
 
-export function getWebhookTarget(name: string): RegisteredWebhookTarget | null {
+export async function getWebhookTarget(name: string): Promise<RegisteredWebhookTarget | null> {
   const row = getDb().prepare('SELECT * FROM webhook_targets WHERE name = ?').get(name) as
     | TargetRow
     | undefined;
   return mapTarget(row);
 }
 
-export function listWebhooks(options: ListWebhooksInput = {}): RegisteredWebhookTarget[] {
+export async function listWebhooks(options: ListWebhooksInput = {}): Promise<RegisteredWebhookTarget[]> {
   const rows = getDb()
     .prepare('SELECT * FROM webhook_targets ORDER BY name ASC')
     .all() as TargetRow[];
 
-  return rows
-    .map((row) => mapTarget(row))
-    .filter((row): row is RegisteredWebhookTarget => row !== null)
+  const targets = await Promise.all(rows.map((row) => mapTarget(row)));
+
+  return targets
+    .filter((target): target is RegisteredWebhookTarget => target !== null)
     .filter((target) => {
       if (options.tags?.length && !options.tags.some((tag) => target.tags.includes(tag))) {
         return false;

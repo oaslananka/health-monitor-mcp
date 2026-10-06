@@ -77,7 +77,7 @@ export function registerWebhookTools(server: ToolRegistrar): void {
         openWorldHint: true
       }
     },
-    (input: RegisterWebhookInput) => {
+    async (input: RegisterWebhookInput) => {
       if (input.secret && !hasWebhookEncryptionKey()) {
         return formatResponse(
           toolError(
@@ -89,7 +89,7 @@ export function registerWebhookTools(server: ToolRegistrar): void {
       }
 
       try {
-        const result = registerWebhook(input);
+        const result = await registerWebhook(input);
         return formatResponse({
           ...result,
           message: `${input.name} registered. Run test_webhook to validate delivery.`
@@ -120,7 +120,7 @@ export function registerWebhookTools(server: ToolRegistrar): void {
       }
     },
     async (input: TestWebhookInput) => {
-      const target = getWebhookTarget(input.name);
+      const target = await getWebhookTarget(input.name);
       if (!target) {
         return formatResponse(
           toolError(
@@ -157,8 +157,8 @@ export function registerWebhookTools(server: ToolRegistrar): void {
         openWorldHint: false
       }
     },
-    (input: ListWebhooksInput) => {
-      const targets = listWebhooks(input);
+    async (input: ListWebhooksInput) => {
+      const targets = await listWebhooks(input);
       const redactedTargets = targets.map(redactSecret);
       return formatResponse({ count: redactedTargets.length, targets: redactedTargets });
     }
