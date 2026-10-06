@@ -56,7 +56,9 @@ function listableStatus(
   return 'unknown';
 }
 
-export async function registerWebhook(input: RegisterWebhookInput): Promise<{ registered: true; name: string }> {
+export async function registerWebhook(
+  input: RegisterWebhookInput
+): Promise<{ registered: true; name: string }> {
   const masterKey = getWebhookEncryptionKey();
   if (input.secret && !masterKey) {
     throw new Error(
@@ -65,7 +67,8 @@ export async function registerWebhook(input: RegisterWebhookInput): Promise<{ re
   }
 
   const now = Date.now();
-  const secretEncrypted = input.secret && masterKey ? await encryptSecret(input.secret, masterKey) : null;
+  const secretEncrypted =
+    input.secret && masterKey ? await encryptSecret(input.secret, masterKey) : null;
 
   getDb()
     .prepare(
@@ -106,7 +109,9 @@ export async function getWebhookTarget(name: string): Promise<RegisteredWebhookT
   return mapTarget(row);
 }
 
-export async function listWebhooks(options: ListWebhooksInput = {}): Promise<RegisteredWebhookTarget[]> {
+export async function listWebhooks(
+  options: ListWebhooksInput = {}
+): Promise<RegisteredWebhookTarget[]> {
   const rows = getDb()
     .prepare('SELECT * FROM webhook_targets ORDER BY name ASC')
     .all() as TargetRow[];

@@ -405,26 +405,34 @@ describe('webhook registry', () => {
 
     // Insert a test target first (required for FK constraint)
     const db = getDb();
-    db.prepare('INSERT INTO webhook_targets (name, url, secret_encrypted, events, tags, check_interval_minutes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run('target-1', 'https://example.com/webhook', null, '["down"]', '[]', 5, now);
+    db.prepare(
+      'INSERT INTO webhook_targets (name, url, secret_encrypted, events, tags, check_interval_minutes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run('target-1', 'https://example.com/webhook', null, '["down"]', '[]', 5, now);
 
     // Insert test deliveries with various timestamps
-    db.prepare('INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message) VALUES (?, ?, ?, ?, ?, ?)')
-      .run('target-1', now - 1000, 'delivered', 100, 200, null); // Recent
-    db.prepare('INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message) VALUES (?, ?, ?, ?, ?, ?)')
-      .run('target-1', cutoff - 1000, 'delivered', 100, 200, null); // Older than cutoff
-    db.prepare('INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message) VALUES (?, ?, ?, ?, ?, ?)')
-      .run('target-1', cutoff + 1000, 'failed', 200, 500, 'error'); // Within cutoff
+    db.prepare(
+      'INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run('target-1', now - 1000, 'delivered', 100, 200, null); // Recent
+    db.prepare(
+      'INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run('target-1', cutoff - 1000, 'delivered', 100, 200, null); // Older than cutoff
+    db.prepare(
+      'INSERT INTO webhook_deliveries (target_name, timestamp, status, latency_ms, status_code, error_message) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run('target-1', cutoff + 1000, 'failed', 200, 500, 'error'); // Within cutoff
 
     const deletedCount = pruneWebhookDeliveries(now);
     expect(deletedCount).toBe(1);
 
-    const remaining = db.prepare('SELECT COUNT(*) as count FROM webhook_deliveries').get() as { count: number };
+    const remaining = db.prepare('SELECT COUNT(*) as count FROM webhook_deliveries').get() as {
+      count: number;
+    };
     expect(remaining.count).toBe(2);
 
     // Verify the remaining records are the ones within the cutoff
-    const recentDeliveries = db.prepare('SELECT timestamp FROM webhook_deliveries ORDER BY timestamp').all() as { timestamp: number }[];
-    expect(recentDeliveries.every(d => d.timestamp >= cutoff)).toBe(true);
+    const recentDeliveries = db
+      .prepare('SELECT timestamp FROM webhook_deliveries ORDER BY timestamp')
+      .all() as { timestamp: number }[];
+    expect(recentDeliveries.every((d) => d.timestamp >= cutoff)).toBe(true);
   });
 
   it('listableStatus maps delivered to up, failed to down, others to unknown', () => {
@@ -433,21 +441,23 @@ describe('webhook registry', () => {
       { name: 'delivered-target', last_test_status: 'delivered' },
       { name: 'failed-target', last_test_status: 'failed' },
       { name: 'null-target', last_test_status: null },
-      { name: 'other-target', last_test_status: 'timeout' as const },
+      { name: 'other-target', last_test_status: 'timeout' as const }
     ];
 
     // We can't directly test the internal listableStatus function,
     // but we can verify the filtering behavior
-    const delivered = targets.filter(t => t.last_test_status === 'delivered');
-    const failed = targets.filter(t => t.last_test_status === 'failed');
-    const unknown = targets.filter(t => t.last_test_status !== 'delivered' && t.last_test_status !== 'failed');
+    const delivered = targets.filter((t) => t.last_test_status === 'delivered');
+    const failed = targets.filter((t) => t.last_test_status === 'failed');
+    const unknown = targets.filter(
+      (t) => t.last_test_status !== 'delivered' && t.last_test_status !== 'failed'
+    );
 
     expect(delivered).toHaveLength(1);
     expect(failed).toHaveLength(1);
     expect(unknown).toHaveLength(2);
     expect(delivered[0]!.name).toBe('delivered-target');
     expect(failed[0]!.name).toBe('failed-target');
-    expect(unknown.map(t => t.name).sort()).toEqual(['null-target', 'other-target']);
+    expect(unknown.map((t) => t.name).sort()).toEqual(['null-target', 'other-target']);
   });
 });
 

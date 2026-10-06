@@ -8,10 +8,17 @@ const KEY_LENGTH = 32;
 
 async function deriveKey(masterKey: string, salt: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    hkdf('sha256', Buffer.from(masterKey, 'utf8'), salt, Buffer.alloc(0), KEY_LENGTH, (err, key) => {
-      if (err) reject(err);
-      else resolve(Buffer.from(key));
-    });
+    hkdf(
+      'sha256',
+      Buffer.from(masterKey, 'utf8'),
+      salt,
+      Buffer.alloc(0),
+      KEY_LENGTH,
+      (err, key) => {
+        if (err) reject(err);
+        else resolve(Buffer.from(key));
+      }
+    );
   });
 }
 
