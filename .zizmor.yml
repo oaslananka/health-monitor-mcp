@@ -1,0 +1,4 @@
+rules:
+  self-repository:
+    ignore:
+      - publish-npm.yml:129:11

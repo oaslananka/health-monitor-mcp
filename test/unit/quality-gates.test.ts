@@ -351,7 +351,9 @@ describe('quality gate regression checks', () => {
     expect(preCommitConfig).toContain('repo: https://github.com/rhysd/actionlint');
     expect(preCommitConfig).toContain('rev: v1.7.12');
     expect(preCommitConfig).toContain('repo: https://github.com/zizmorcore/zizmor-pre-commit');
-    expect(preCommitConfig).toContain('rev: v1.24.1');
+    expect(preCommitConfig).toContain('rev: v1.30.1');
+    expect(preCommitConfig).toContain('--config, .zizmor.yml');
+    expect(ciWorkflow).toContain('zizmor" --config .zizmor.yml --offline --min-severity low');
   });
 
   it('keeps the runtime image on patched inputs without build-only package managers', () => {
