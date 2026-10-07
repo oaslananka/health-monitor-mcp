@@ -12,14 +12,16 @@ overrides:
   qs: 6.16.0
   hono: 4.13.13
   js-yaml@>=5.0.0 <5.2.1: 5.2.1
-  brace-expansion@<1.1.16: 1.1.21
-  brace-expansion@>=2.0.0 <2.1.2: 2.1.7
-  brace-expansion@>=3.0.0 <5.0.7: 5.0.7
+  brace-expansion@<1.1.21: 1.1.21
+  brace-expansion@>=2.0.0 <2.1.7: 2.1.7
+  brace-expansion@>=3.0.0 <5.0.12: 5.0.12
   '@babel/core': 7.29.7
   braces: 3.0.3
 
 patchedDependencies:
   '@modelcontextprotocol/sdk@1.29.0': d3ab3e18e2a225cc93875b3d409561afb6aeba6a5f6e3f14f283448a7e6b08eb
+  sprintf-js@1.0.3: 5b497763014757b5f2a3fdd184e8526c8056f2d5e75c8b40bc15dbc50481f99a
+  sprintf-js@1.1.3: 0b09602c9d91ddc1bd2880777ac70a4dbe6ac72d0bf2eb3024e92a46aec236f3
 
 importers:
 
@@ -3029,7 +3031,7 @@ snapshots:
 
   argparse@1.0.10:
     dependencies:
-      sprintf-js: 1.0.3
+      sprintf-js: 1.0.3(patch_hash=5b497763014757b5f2a3fdd184e8526c8056f2d5e75c8b40bc15dbc50481f99a)
 
   argparse@2.0.1: {}
 
@@ -4444,7 +4446,7 @@ snapshots:
       globalthis: 1.0.4
       json-stringify-safe: 5.0.1
       semver-compare: 1.0.0
-      sprintf-js: 1.1.3
+      sprintf-js: 1.1.3(patch_hash=0b09602c9d91ddc1bd2880777ac70a4dbe6ac72d0bf2eb3024e92a46aec236f3)
 
   router@2.2.0:
     dependencies:
@@ -4561,9 +4563,9 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  sprintf-js@1.0.3: {}
+  sprintf-js@1.0.3(patch_hash=5b497763014757b5f2a3fdd184e8526c8056f2d5e75c8b40bc15dbc50481f99a): {}
 
-  sprintf-js@1.1.3: {}
+  sprintf-js@1.1.3(patch_hash=0b09602c9d91ddc1bd2880777ac70a4dbe6ac72d0bf2eb3024e92a46aec236f3): {}
 
   stack-utils@2.0.6:
     dependencies:
