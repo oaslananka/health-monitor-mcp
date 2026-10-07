@@ -16,7 +16,7 @@ overrides:
   "@babel/core": 7.29.7
   braces: 3.0.3
 patchedDependencies:
-  '@modelcontextprotocol/sdk@1.29.0': patches/@modelcontextprotocol__sdk@1.29.0.patch
+  '@modelcontextprotocol/sdk@1.31.0': patches/@modelcontextprotocol__sdk@1.31.0.patch
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm

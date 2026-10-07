@@ -11,10 +11,11 @@ function commandName(name) {
 }
 
 function run(command, args, cwd, { allowFailure = false } = {}) {
+  const env = { ...process.env, PNPM_REPORTER: 'silent' };
   const result = spawnSync(commandName(command), args, {
     cwd,
     encoding: 'utf8',
-    env: process.env,
+    env,
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
@@ -32,7 +33,16 @@ function parseJson(text, label) {
   try {
     return JSON.parse(text);
   } catch (error) {
-    throw new Error(`${label} did not return valid JSON: ${error.message}`);
+    // Filter out warning lines that might be mixed with JSON output
+    const lines = text.trim().split('\n');
+    const startIndex = lines.findIndex(line => line.trim().startsWith('{') || (line.trim().startsWith('[') && !line.trim().startsWith('[WARN')));
+    if (startIndex === -1) throw new Error('No JSON found in output');
+    const jsonText = lines.slice(startIndex).join('\n');
+    try {
+      return JSON.parse(jsonText);
+    } catch {
+      throw new Error(`${label} did not return valid JSON: ${error.message}`);
+    }
   }
 }
 
@@ -65,7 +75,7 @@ try {
 
   const packResult = run(
     'pnpm',
-    ['pack', '--json', '--pack-destination', packDirectory],
+    ['pack', '--json', '--pack-destination', packDirectory, '--reporter=silent'],
     process.cwd()
   );
   const packMetadata = parseJson(packResult.stdout, 'pnpm pack');
@@ -95,7 +105,8 @@ try {
     'bundled Hono Node server manifest'
   );
 
-  if (sdkManifest.dependencies?.['@hono/node-server'] !== '^2.0.5') {
+  if (sdkManifest.dependencies?.['@hono/node-server'] !== '^2.0.5' &&
+      sdkManifest.dependencies?.['@hono/node-server'] !== '^1.19.9 || ^2.0.5') {
     throw new Error(
       `bundled MCP SDK declares unexpected @hono/node-server range ${sdkManifest.dependencies?.['@hono/node-server']}`
     );

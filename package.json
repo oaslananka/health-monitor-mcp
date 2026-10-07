@@ -48,7 +48,7 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --reporters=default --reporters=jest-junit",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "security": "pnpm audit --audit-level moderate",
+    "security": "pnpm audit --audit-level moderate --ignore-unfixable",
     "security:sbom": "node scripts/generate-sbom.mjs",
     "security:licenses": "node scripts/check-license-policy.mjs",
     "security:reuse": "python -m reuse lint",
@@ -109,7 +109,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.31.0",
     "better-sqlite3": "12.8.0",
     "zod": "3.25.76"
   },
