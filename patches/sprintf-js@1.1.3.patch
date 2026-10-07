@@ -1,0 +1,63 @@
+diff --git a/src/sprintf.js b/src/sprintf.js
+index 65d6324645ef1d0133614a71497751009dc5c912..e92a51ed6201ffe69178739e954348f8c06445b3 100644
+--- a/src/sprintf.js
++++ b/src/sprintf.js
+@@ -78,38 +78,38 @@
+                         arg = parseInt(arg, 10)
+                         break
+                     case 'j':
+-                        arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width) : 0)
++                        arg = JSON.stringify(arg, null, ph.width ? Math.min(parseInt(ph.width), 10000) : 0)
+                         break
+                     case 'e':
+-                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
++                        arg = ph.precision ? parseFloat(arg).toExponential(Math.min(parseInt(ph.precision), 10000)) : parseFloat(arg).toExponential()
+                         break
+                     case 'f':
+-                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
++                        arg = ph.precision ? parseFloat(arg).toFixed(Math.min(parseInt(ph.precision), 10000)) : parseFloat(arg)
+                         break
+                     case 'g':
+-                        arg = ph.precision ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
++                        arg = ph.precision ? String(Number(arg.toPrecision(Math.min(parseInt(ph.precision), 10000)))) : parseFloat(arg)
+                         break
+                     case 'o':
+                         arg = (parseInt(arg, 10) >>> 0).toString(8)
+                         break
+                     case 's':
+                         arg = String(arg)
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision ? arg.substring(0, Math.min(parseInt(ph.precision), 10000)) : arg)
+                         break
+                     case 't':
+                         arg = String(!!arg)
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision ? arg.substring(0, Math.min(parseInt(ph.precision), 10000)) : arg)
+                         break
+                     case 'T':
+                         arg = Object.prototype.toString.call(arg).slice(8, -1).toLowerCase()
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision ? arg.substring(0, Math.min(parseInt(ph.precision), 10000)) : arg)
+                         break
+                     case 'u':
+                         arg = parseInt(arg, 10) >>> 0
+                         break
+                     case 'v':
+                         arg = arg.valueOf()
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision ? arg.substring(0, Math.min(parseInt(ph.precision), 10000)) : arg)
+                         break
+                     case 'x':
+                         arg = (parseInt(arg, 10) >>> 0).toString(16)
+@@ -130,8 +130,9 @@
+                         sign = ''
+                     }
+                     pad_character = ph.pad_char ? ph.pad_char === '0' ? '0' : ph.pad_char.charAt(1) : ' '
+-                    pad_length = ph.width - (sign + arg).length
+-                    pad = ph.width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
++                    var width = ph.width ? Math.min(parseInt(ph.width), 10000) : 0
++                    pad_length = width - (sign + arg).length
++                    pad = width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
+                     output += ph.align ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
+                 }
+             }

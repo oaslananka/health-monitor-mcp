@@ -5,9 +5,17 @@ import path from 'node:path';
 
 const PACKAGE_NAME = 'health-monitor-mcp';
 const PATCHED_NODE_SERVER_FLOOR = '2.0.5';
+const EXPECTED_NODE_SERVER_RANGE = '^1.19.9 || ^2.0.5';
 
 function commandName(name) {
   return process.platform === 'win32' ? `${name}.cmd` : name;
+}
+
+function stripWarnings(output) {
+  return output
+    .split('\n')
+    .filter((line) => !line.startsWith('[WARN]'))
+    .join('\n');
 }
 
 function run(command, args, cwd, { allowFailure = false } = {}) {
@@ -68,7 +76,7 @@ try {
     ['pack', '--json', '--pack-destination', packDirectory],
     process.cwd()
   );
-  const packMetadata = parseJson(packResult.stdout, 'pnpm pack');
+  const packMetadata = parseJson(stripWarnings(packResult.stdout), 'pnpm pack');
   const packEntry = Array.isArray(packMetadata) ? packMetadata[0] : packMetadata;
   if (!packEntry?.filename) throw new Error('pnpm pack did not report a package filename');
 
@@ -95,7 +103,7 @@ try {
     'bundled Hono Node server manifest'
   );
 
-  if (sdkManifest.dependencies?.['@hono/node-server'] !== '^2.0.5') {
+  if (sdkManifest.dependencies?.['@hono/node-server'] !== EXPECTED_NODE_SERVER_RANGE) {
     throw new Error(
       `bundled MCP SDK declares unexpected @hono/node-server range ${sdkManifest.dependencies?.['@hono/node-server']}`
     );

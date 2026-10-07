@@ -1,0 +1,54 @@
+diff --git a/src/sprintf.js b/src/sprintf.js
+index c0fc7c08b2e6fe38de2883034b8d28c8f34e9866..8706d3a9eb585674ce45819861672476567cb5e7 100644
+--- a/src/sprintf.js
++++ b/src/sprintf.js
+@@ -70,22 +70,22 @@
+                         arg = parseInt(arg, 10)
+                     break
+                     case "j":
+-                        arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
++                        arg = JSON.stringify(arg, null, match[6] ? Math.min(parseInt(match[6]), 10000) : 0)
+                     break
+                     case "e":
+-                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
++                        arg = match[7] ? arg.toExponential(Math.min(parseInt(match[7]), 10000)) : arg.toExponential()
+                     break
+                     case "f":
+-                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
++                        arg = match[7] ? parseFloat(arg).toFixed(Math.min(parseInt(match[7]), 10000)) : parseFloat(arg)
+                     break
+                     case "g":
+-                        arg = match[7] ? parseFloat(arg).toPrecision(match[7]) : parseFloat(arg)
++                        arg = match[7] ? parseFloat(arg).toPrecision(Math.min(parseInt(match[7]), 10000)) : parseFloat(arg)
+                     break
+                     case "o":
+                         arg = arg.toString(8)
+                     break
+                     case "s":
+-                        arg = ((arg = String(arg)) && match[7] ? arg.substring(0, match[7]) : arg)
++                        arg = ((arg = String(arg)) && match[7] ? arg.substring(0, Math.min(parseInt(match[7]), 10000)) : arg)
+                     break
+                     case "u":
+                         arg = arg >>> 0
+@@ -109,8 +109,9 @@
+                         sign = ""
+                     }
+                     pad_character = match[4] ? match[4] === "0" ? "0" : match[4].charAt(1) : " "
+-                    pad_length = match[6] - (sign + arg).length
+-                    pad = match[6] ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
++                    var width = match[6] ? Math.min(parseInt(match[6]), 10000) : 0
++                    pad_length = width - (sign + arg).length
++                    pad = width ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
+                     output[output.length] = match[5] ? sign + arg + pad : (pad_character === "0" ? sign + pad + arg : pad + sign + arg)
+                 }
+             }
+@@ -182,7 +183,8 @@
+     }
+
+     function str_repeat(input, multiplier) {
+-        return Array(multiplier + 1).join(input)
++        var capped = multiplier > 10000 ? 10000 : multiplier
++        return Array(capped + 1).join(input)
+     }
+
+     /**
