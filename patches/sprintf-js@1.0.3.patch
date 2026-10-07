@@ -1,0 +1,44 @@
+diff --git a/src/sprintf.js b/src/sprintf.js
+index 1234567..abcdefg 100644
+--- a/src/sprintf.js
++++ b/src/sprintf.js
+@@ -73,13 +73,25 @@
+                         arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
+                     break
+                     case "e":
+-                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
++                        var precision_e = match[7] === undefined ? undefined : parseInt(match[7], 10)
++                        if (precision_e !== undefined && (precision_e < 0 || precision_e > 100)) {
++                            throw new RangeError('[sprintf] precision must be between 0 and 100')
++                        }
++                        arg = precision_e !== undefined ? arg.toExponential(precision_e) : arg.toExponential()
+                     break
+                     case "f":
+-                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
++                        var precision_f = match[7] === undefined ? undefined : parseInt(match[7], 10)
++                        if (precision_f !== undefined && (precision_f < 0 || precision_f > 100)) {
++                            throw new RangeError('[sprintf] precision must be between 0 and 100')
++                        }
++                        arg = precision_f !== undefined ? parseFloat(arg).toFixed(precision_f) : parseFloat(arg)
+                     break
+                     case "g":
+-                        arg = match[7] ? parseFloat(arg).toPrecision(match[7]) : parseFloat(arg)
++                        var precision_g = match[7] === undefined ? undefined : parseInt(match[7], 10)
++                        if (precision_g !== undefined && (precision_g < 0 || precision_g > 100)) {
++                            throw new RangeError('[sprintf] precision must be between 0 and 100')
++                        }
++                        arg = precision_g !== undefined ? parseFloat(arg).toPrecision(precision_g || 1) : parseFloat(arg)
+                     break
+                     case "o":
+                         arg = arg.toString(8)
+@@ -158,6 +170,10 @@
+                 if (arg_names === 3) {
+                     throw new Error("[sprintf] mixing positional and named placeholders is not (yet) supported")
+                 }
++                var precision_val = match[7] === undefined ? undefined : parseInt(match[7], 10)
++                if (precision_val !== undefined && (precision_val < 0 || precision_val > 100)) {
++                    throw new RangeError('[sprintf] precision must be between 0 and 100')
++                }
+                 parse_tree[parse_tree.length] = match
+             }
+             else {
