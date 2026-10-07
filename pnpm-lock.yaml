@@ -20,6 +20,8 @@ overrides:
 
 patchedDependencies:
   '@modelcontextprotocol/sdk@1.32.1': 3ad4df867e68785d38fa573862b57aa5afe01090bcf2732eb82dc0cc77eb3bd9
+  sprintf-js@1.0.3: f45b9527fde6f1807b8779ce2ca0d84126b93c6d90f4d0ae72489d06964cd608
+  sprintf-js@1.1.3: 66f59be8574be785f2adc60a384a0fe278336e46f5ff5591072a902df46776f5
 
 importers:
 
@@ -3029,7 +3031,7 @@ snapshots:
 
   argparse@1.0.10:
     dependencies:
-      sprintf-js: 1.0.3
+      sprintf-js: 1.0.3(patch_hash=f45b9527fde6f1807b8779ce2ca0d84126b93c6d90f4d0ae72489d06964cd608)
 
   argparse@2.0.1: {}
 
@@ -4444,7 +4446,7 @@ snapshots:
       globalthis: 1.0.4
       json-stringify-safe: 5.0.1
       semver-compare: 1.0.0
-      sprintf-js: 1.1.3
+      sprintf-js: 1.1.3(patch_hash=66f59be8574be785f2adc60a384a0fe278336e46f5ff5591072a902df46776f5)
 
   router@2.2.0:
     dependencies:
@@ -4561,9 +4563,9 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  sprintf-js@1.0.3: {}
+  sprintf-js@1.0.3(patch_hash=f45b9527fde6f1807b8779ce2ca0d84126b93c6d90f4d0ae72489d06964cd608): {}
 
-  sprintf-js@1.1.3: {}
+  sprintf-js@1.1.3(patch_hash=66f59be8574be785f2adc60a384a0fe278336e46f5ff5591072a902df46776f5): {}
 
   stack-utils@2.0.6:
     dependencies:
