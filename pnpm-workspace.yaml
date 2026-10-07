@@ -20,3 +20,4 @@ patchedDependencies:
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-hp3w-g68c-fv3c

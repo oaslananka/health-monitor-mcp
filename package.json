@@ -48,7 +48,7 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --reporters=default --reporters=jest-junit",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "security": "pnpm audit --audit-level moderate --ignore-unfixable",
+    "security": "pnpm audit --audit-level moderate",
     "security:sbom": "node scripts/generate-sbom.mjs",
     "security:licenses": "node scripts/check-license-policy.mjs",
     "security:reuse": "python -m reuse lint",
