@@ -22,7 +22,7 @@ index 1234567..abcdefg 100644
 @@ -184,6 +184,11 @@
                      throw new Error('[sprintf] mixing positional and named placeholders is not (yet) supported')
                  }
- 
+
 +                var precision = match[7] === undefined ? undefined : parseInt(match[7], 10)
 +                if (precision !== undefined && (precision < 0 || precision > 100)) {
 +                    throw new RangeError('[sprintf] precision must be between 0 and 100')
