@@ -15,8 +15,7 @@ overrides:
   "brace-expansion@>=3.0.0 <5.0.7": 5.0.7
   "@babel/core": 7.29.7
   braces: 3.0.3
-patchedDependencies:
-  '@modelcontextprotocol/sdk@1.29.0': patches/@modelcontextprotocol__sdk@1.29.0.patch
 auditConfig:
   ignoreGhsas:
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-hp3w-g68c-fv3c

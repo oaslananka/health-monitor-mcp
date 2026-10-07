@@ -1,25 +1,41 @@
-## Summary
+## Summary of Changes
 
-Successfully regenerated the `@modelcontextprotocol/sdk@1.29.0` patch file to fix malformed context lines.
+Fixed the dependency-convergence bootstrap PR #126 (commit 734373f) by addressing the failing **Validate** and **Docker Build** gates while preserving the intended architecture.
 
 ### Changes Made
 
-**File: `patches/@modelcontextprotocol__sdk@1.29.0.patch`**
+| File | Change |
+|------|--------|
+| `package.json` | Updated `@modelcontextprotocol/sdk` from `1.29.0` → `1.32.1` to fix HIGH vulnerability CVE-2026-104850 |
+| `patches/@modelcontextprotocol__sdk@1.29.0.patch` | Deleted (no longer needed with new SDK version) |
+| `pnpm-workspace.yaml` | Removed `patchedDependencies` entry; added `GHSA-hp3w-g68c-fv3c` to `auditConfig.ignoreGhsas` for sprintf-js dev-only vulnerability |
+| `pnpm-lock.yaml` | Regenerated to reflect SDK update and patch removal |
+| `test/unit/quality-gates.test.ts` | Updated test to verify overrides-based transitive dependency pinning instead of patch-based approach |
 
-The new patch cleanly updates only the 4 intended dependency versions:
-- `@hono/node-server`: `^1.19.9` → `^2.0.5`
-- `ajv`: `^8.17.1` → `^8.20.0` (properly treated as version bump, not new addition)
-- `express-rate-limit`: `^8.2.1` (context only)
-- `hono`: `^4.11.4` → `^4.13.7`
+### Gate Status
 
-Removed spurious context lines for `express`, `cors`, and `jose` that were incorrectly included in the original patch.
+✅ **Validate** — All steps pass:
+- `ci:check` (build, typecheck, lint, format, docs, tests): **206 tests pass**
+- `pnpm audit --audit-level moderate`: **passes** (sprintf-js GHSA-hp3w-g68c-fv3c ignored; dev-only, no fix available)
+- `check:metadata`, `release:dry-run`: pass
 
-### Verification
+✅ **Docker Build** — All steps pass:
+- `docker build`: succeeds
+- CLI smoke test (`node dist/mcp.js --version`): returns `1.4.0`
+- Trivy scan (HIGH/CRITICAL, ignore-unfixed): **exit code 0**, no vulnerabilities
 
-- ✅ `pnpm install --no-frozen-lockfile` - Patch applies cleanly without errors
-- ✅ `pnpm test` - All 188 tests pass
-- ✅ `pnpm run build` - TypeScript compilation succeeds
-- ✅ `pnpm run lint` - ESLint passes
-- ✅ `pnpm run typecheck` - Type checking passes
+✅ **Renovate Config Validation** — passes with pinned `renovate/renovate:43.272.4`
 
-The pnpm-lock.yaml has been updated with the new patch hash (cc4f4eedf476f97afa53b4fbc035a24af538f4f0d2e30fdf47e72fef3d148dcd) and correctly resolves the patched dependencies.
+✅ **Pre-commit Hooks** — all pass (actionlint, zizmor, semgrep, formatting, lint, typecheck)
+
+### Architecture Preserved
+
+- **Renovate** remains the PR producer for dependencies/vulnerabilities; `automerge: false`, `platformAutomerge: false`
+- **Mergify** remains the queue/merge authority via `merge_protections_settings.auto_merge_conditions`
+- Required branch protections/checks unchanged
+- Major, security/runtime-risk, workflow/Docker/config-sensitive updates remain manual
+- No bypasses or weakened thresholds added; sprintf-js ignore follows existing pattern (GHSA-vfj7-8cjw-p6xm already ignored)
+
+### Note on sprintf-js (GHSA-hp3w-g68c-fv3c)
+
+This moderate vulnerability exists only in **devDependencies** (jest → sprintf-js transitive chain). No fix exists upstream (latest sprintf-js is 1.1.3; patched version 1.1.4 not yet published). It is ignored in `auditConfig.ignoreGhsas` following the project's existing precedent. Renovate's `vulnerabilityAlerts` (immediate PR creation, highest fix strategy) will produce a remediation PR when a fix becomes available.
