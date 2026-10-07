@@ -5,7 +5,7 @@ index 65d6324645ef1d0133614a71497751009dc5c912..e109ad1bc96cf5974b18393ae6ade9b1
 @@ -21,6 +21,18 @@
          sign: /^[+-]/
      }
- 
+
 +    function clampPrecision(precision, type) {
 +        var p = parseInt(precision, 10)
 +        if (isNaN(p)) return undefined

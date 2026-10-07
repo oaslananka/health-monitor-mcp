@@ -5,7 +5,7 @@ index c0fc7c08b2e6fe38de2883034b8d28c8f34e9866..68ad3b537d785502b165925336cd925b
 @@ -21,6 +21,18 @@
          return sprintf.format.call(null, cache[key], arguments)
      }
- 
+
 +    function clampPrecision(precision, type) {
 +        var p = parseInt(precision, 10)
 +        if (isNaN(p)) return undefined
