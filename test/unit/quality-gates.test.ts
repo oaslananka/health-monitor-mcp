@@ -205,18 +205,17 @@ describe('quality gate regression checks', () => {
     expect(lockfile).not.toContain('linkify-it@5.0.1');
   });
 
-  it('ships the patched MCP SDK graph to downstream npm consumers', () => {
+  it('ships the MCP SDK graph with pinned transitive dependencies to downstream npm consumers', () => {
     const packageJson = readProjectJson<PackageJson>('package.json');
     const workspaceConfig = readProjectText('pnpm-workspace.yaml');
-    const sdkPatch = readProjectText('patches/@modelcontextprotocol__sdk@1.29.0.patch');
     const dockerfile = readProjectText('Dockerfile');
 
     expect(packageJson.bundleDependencies).toContain('@modelcontextprotocol/sdk');
     expect(packageJson.scripts['check:package']).toContain('check:consumer-package');
     expect(workspaceConfig).toContain('nodeLinker: hoisted');
-    expect(workspaceConfig).toContain('patchedDependencies:');
-    expect(workspaceConfig).toContain("'@modelcontextprotocol/sdk@1.29.0':");
-    expect(sdkPatch).toContain('"@hono/node-server": "^2.0.5"');
+    expect(workspaceConfig).toContain('overrides:');
+    expect(workspaceConfig).toContain('"@hono/node-server": 2.1.3');
+    expect(workspaceConfig).toContain('hono: 4.13.13');
     expect(dockerfile).toContain('COPY patches ./patches');
     expect(dockerfile.indexOf('COPY patches ./patches')).toBeLessThan(
       dockerfile.indexOf('RUN pnpm install --frozen-lockfile')

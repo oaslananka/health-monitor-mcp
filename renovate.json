@@ -12,110 +12,221 @@
     "enabled": true
   },
   "timezone": "Europe/Istanbul",
-  "labels": ["dependencies", "area:dependencies"],
-  "dependencyDashboardLabels": ["dependencies", "area:dependencies"],
+  "labels": [
+    "dependencies",
+    "area:dependencies"
+  ],
+  "dependencyDashboardLabels": [
+    "dependencies",
+    "area:dependencies"
+  ],
   "dependencyDashboardTitle": "Dependency Dashboard",
   "dependencyDashboardOSVVulnerabilitySummary": "unresolved",
-  "assignees": ["oaslananka"],
+  "assignees": [
+    "oaslananka"
+  ],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 8,
   "branchConcurrentLimit": 8,
   "commitHourlyLimit": 4,
   "rangeStrategy": "bump",
   "rebaseWhen": "conflicted",
-  "ignorePaths": ["**/node_modules/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/.worktrees/**"],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.worktrees/**"
+  ],
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am on monday"],
+    "schedule": [
+      "before 6am on monday"
+    ],
     "automerge": false,
-    "addLabels": ["area:dependencies", "type:task", "risk:low"]
+    "addLabels": [
+      "area:dependencies",
+      "type:task",
+      "risk:low",
+      "automerge:enabled"
+    ]
   },
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["dependencies", "area:security", "type:security", "priority:P0", "risk:high"],
+    "labels": [
+      "dependencies",
+      "area:security",
+      "type:security",
+      "priority:P0",
+      "risk:high"
+    ],
     "prCreation": "immediate",
     "vulnerabilityFixStrategy": "highest"
   },
-  "osvVulnerabilityAlerts": true,
+  "osvVulnerabilityAlerts": false,
   "customManagers": [
     {
       "customType": "regex",
       "description": "Update the Renovate validator image embedded in the CI shell command.",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/ci\\.yml$/"],
-      "matchStrings": ["# renovate: datasource=(?<datasource>docker) depName=(?<depName>renovate/renovate)[\\s\\S]*?'renovate/renovate:(?<currentValue>[^@'\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)'"],
+      "managerFilePatterns": [
+        "/^\\.github\\/workflows\\/ci\\.yml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>docker) depName=(?<depName>renovate/renovate)[\\s\\S]*?'renovate/renovate:(?<currentValue>[^@'\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)'"
+      ],
       "versioningTemplate": "docker"
     }
   ],
   "packageRules": [
     {
+      "description": "Delegate low-risk dependency merging to Mergify.",
+      "matchUpdateTypes": [
+        "patch",
+        "digest",
+        "pin"
+      ],
+      "automerge": false,
+      "addLabels": [
+        "automerge:enabled",
+        "risk:low"
+      ]
+    },
+    {
       "description": "Require explicit approval for major version changes.",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "dependencyDashboardApproval": true,
-      "addLabels": ["priority:P1", "risk:high", "needs:decision"],
+      "addLabels": [
+        "priority:P1",
+        "risk:high",
+        "needs:decision"
+      ],
       "prPriority": -5,
       "automerge": false
     },
     {
       "description": "Apply npm release-age guard to reduce supply-chain churn.",
-      "matchDatasources": ["npm"],
+      "matchDatasources": [
+        "npm"
+      ],
       "minimumReleaseAge": "3 days",
       "internalChecksFilter": "strict",
-      "addLabels": ["area:dependencies"]
+      "addLabels": [
+        "area:dependencies"
+      ]
     },
     {
       "description": "Pin and group non-major GitHub Actions updates.",
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "minimumReleaseAge": "3 days",
       "internalChecksFilter": "strict",
       "pinDigests": true,
       "groupName": "GitHub Actions",
       "groupSlug": "github-actions",
-      "addLabels": ["area:ci", "area:dependencies"]
+      "addLabels": [
+        "area:ci",
+        "area:dependencies"
+      ]
     },
     {
       "description": "Group TypeScript quality toolchain updates.",
-      "matchPackageNames": ["typescript", "ts-node", "tsx", "eslint", "eslint-*", "@eslint/**", "@typescript-eslint/**", "typescript-eslint", "prettier", "@types/**"],
+      "matchPackageNames": [
+        "typescript",
+        "ts-node",
+        "tsx",
+        "eslint",
+        "eslint-*",
+        "@eslint/**",
+        "@typescript-eslint/**",
+        "typescript-eslint",
+        "prettier",
+        "@types/**"
+      ],
       "groupName": "TypeScript quality toolchain",
       "groupSlug": "typescript-quality-toolchain",
-      "addLabels": ["area:ci", "area:dx"]
+      "addLabels": [
+        "area:ci",
+        "area:dx"
+      ]
     },
     {
       "description": "Group container image updates.",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "minimumReleaseAge": "3 days",
       "internalChecksFilter": "strict",
       "groupName": "Container images",
       "groupSlug": "container-images",
-      "addLabels": ["area:docker", "area:dependencies"]
+      "addLabels": [
+        "area:docker",
+        "area:dependencies"
+      ]
     },
     {
       "description": "Automerge digest-only updates after checks pass.",
-      "matchUpdateTypes": ["digest"],
-      "automerge": true,
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "automerge": false,
       "automergeType": "pr",
-      "platformAutomerge": false,
-      "addLabels": ["risk:low"]
+      "addLabels": [
+        "risk:low",
+        "automerge:enabled"
+      ]
     },
     {
       "description": "Monitoring runtime and MCP dependencies require manual review.",
-      "matchPackageNames": ["@modelcontextprotocol/sdk", "better-sqlite3", "zod"],
+      "matchPackageNames": [
+        "@modelcontextprotocol/sdk",
+        "better-sqlite3",
+        "zod"
+      ],
       "dependencyDashboardApproval": true,
       "automerge": false,
-      "addLabels": ["area:mcp-runtime", "risk:medium", "needs:decision"]
+      "addLabels": [
+        "area:mcp-runtime",
+        "risk:medium",
+        "needs:decision"
+      ]
     },
     {
       "description": "Keep Node runtime jumps explicit.",
-      "matchPackageNames": ["node", "@types/node"],
+      "matchPackageNames": [
+        "node",
+        "@types/node"
+      ],
       "dependencyDashboardApproval": true,
-      "addLabels": ["area:node-runtime", "risk:medium", "needs:decision"]
+      "addLabels": [
+        "area:node-runtime",
+        "risk:medium",
+        "needs:decision"
+      ]
     },
     {
       "description": "Group repository security tool updates.",
-      "matchManagers": ["pre-commit", "pip_requirements"],
+      "matchManagers": [
+        "pre-commit",
+        "pip_requirements"
+      ],
       "groupName": "Repository security tooling",
       "groupSlug": "repository-security-tooling",
-      "addLabels": ["area:security", "area:dependencies", "risk:medium"]
+      "addLabels": [
+        "area:security",
+        "area:dependencies",
+        "risk:medium"
+      ]
     }
-  ]
+  ],
+  "automerge": false,
+  "automergeType": "pr",
+  "platformAutomerge": false
 }
