@@ -363,9 +363,9 @@ describe('quality gate regression checks', () => {
     expect(dockerfile).toContain(
       'node:24-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf9295400527b9b1270fd37b7e9a7285cf83b6951452d'
     );
-    expect(packageJson.packageManager).toBe('pnpm@11.14.0');
-    expect(miseConfig).toContain('pnpm = "11.14.0"');
-    expect(dockerfile).toContain('corepack prepare pnpm@11.14.0 --activate');
+    expect(packageJson.packageManager).toBe('pnpm@11.28.5');
+    expect(miseConfig).toContain('pnpm = "11.28.5"');
+    expect(dockerfile).toContain('corepack prepare pnpm@11.28.5 --activate');
     expect(dockerfile).toContain('RUN pnpm prune --prod --ignore-scripts');
     expect(runtimeStage).toContain('COPY --from=builder /app/node_modules ./node_modules');
     expect(runtimeStage).not.toContain('corepack enable');
