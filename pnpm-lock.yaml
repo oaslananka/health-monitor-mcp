@@ -19,7 +19,7 @@ overrides:
   braces: 3.0.3
 
 patchedDependencies:
-  '@modelcontextprotocol/sdk@1.31.0': db9bc19e13ad9e6693acad7cdd9ff6b2a4455e1da8dff13e88781ade5d455f72
+  '@modelcontextprotocol/sdk@1.31.0': 3ad4df867e68785d38fa573862b57aa5afe01090bcf2732eb82dc0cc77eb3bd9
 
 importers:
 
@@ -27,7 +27,7 @@ importers:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: 1.31.0
-        version: 1.31.0(patch_hash=db9bc19e13ad9e6693acad7cdd9ff6b2a4455e1da8dff13e88781ade5d455f72)(zod@3.25.76)
+        version: 1.31.0(patch_hash=3ad4df867e68785d38fa573862b57aa5afe01090bcf2732eb82dc0cc77eb3bd9)(zod@3.25.76)
       better-sqlite3:
         specifier: 12.8.0
         version: 12.8.0
@@ -2728,7 +2728,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@modelcontextprotocol/sdk@1.31.0(patch_hash=db9bc19e13ad9e6693acad7cdd9ff6b2a4455e1da8dff13e88781ade5d455f72)(zod@3.25.76)':
+  '@modelcontextprotocol/sdk@1.31.0(patch_hash=3ad4df867e68785d38fa573862b57aa5afe01090bcf2732eb82dc0cc77eb3bd9)(zod@3.25.76)':
     dependencies:
       '@hono/node-server': 2.1.3(hono@4.13.13)
       ajv: 8.20.0
