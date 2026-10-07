@@ -1,0 +1,40 @@
+diff --git a/src/sprintf.js b/src/sprintf.js
+index c0fc7c08b2e6fe38de2883034b8d28c8f34e9866..68ad3b537d785502b165925336cd925bc36c77e1 100644
+--- a/src/sprintf.js
++++ b/src/sprintf.js
+@@ -21,6 +21,18 @@
+         return sprintf.format.call(null, cache[key], arguments)
+     }
+
++    function clampPrecision(precision, type) {
++        var p = parseInt(precision, 10)
++        if (isNaN(p)) return undefined
++        if (type === 'f' || type === 'e') {
++            return p < 0 ? 0 : p > 100 ? 100 : p
++        }
++        if (type === 'g') {
++            return p < 1 ? 1 : p > 100 ? 100 : p
++        }
++        return p
++    }
++
+     sprintf.format = function(parse_tree, argv) {
+         var cursor = 1, tree_length = parse_tree.length, node_type = "", arg, output = [], i, k, match, pad, pad_character, pad_length, is_positive = true, sign = ""
+         for (i = 0; i < tree_length; i++) {
+@@ -73,13 +85,13 @@
+                         arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
+                     break
+                     case "e":
+-                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
++                        arg = match[7] ? arg.toExponential(clampPrecision(match[7], 'e')) : arg.toExponential()
+                     break
+                     case "f":
+-                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
++                        arg = match[7] ? parseFloat(arg).toFixed(clampPrecision(match[7], 'f')) : parseFloat(arg)
+                     break
+                     case "g":
+-                        arg = match[7] ? parseFloat(arg).toPrecision(match[7]) : parseFloat(arg)
++                        arg = match[7] ? parseFloat(arg).toPrecision(clampPrecision(match[7], 'g')) : parseFloat(arg)
+                     break
+                     case "o":
+                         arg = arg.toString(8)

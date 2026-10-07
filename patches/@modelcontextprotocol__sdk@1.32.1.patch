@@ -6,7 +6,7 @@ index 22d26ca56e0d3611f8865c476b604791967de173..356b5ead44e0a5ba5b35f2ad8a0e5349
          "test:conformance:client:all": "npx @modelcontextprotocol/conformance client --command 'npx tsx test/conformance/src/everythingClient.ts' --suite all --expected-failures test/conformance/conformance-baseline.yml"
      },
      "dependencies": {
--        "@hono/node-server": "^1.19.9",
+-        "@hono/node-server": "^1.19.9 || ^2.0.5",
 -        "ajv": "^8.17.1",
 +        "@hono/node-server": "^2.0.5",
 +        "ajv": "^8.20.0",
