@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 
 const PACKAGE_NAME = 'health-monitor-mcp';
 const PATCHED_NODE_SERVER_FLOOR = '2.0.5';
@@ -11,10 +12,11 @@ function commandName(name) {
 }
 
 function run(command, args, cwd, { allowFailure = false } = {}) {
+  const env = { ...process.env, PNPM_REPORTER: 'silent' };
   const result = spawnSync(commandName(command), args, {
     cwd,
     encoding: 'utf8',
-    env: process.env,
+    env,
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
@@ -31,8 +33,19 @@ function run(command, args, cwd, { allowFailure = false } = {}) {
 function parseJson(text, label) {
   try {
     return JSON.parse(text);
-  } catch (error) {
-    throw new Error(`${label} did not return valid JSON: ${error.message}`);
+  } catch {
+    const lines = text.trim().split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          return JSON.parse(lines.slice(i).join('\n'));
+        } catch {
+          continue;
+        }
+      }
+    }
+    throw new Error(`${label} did not return valid JSON`);
   }
 }
 
@@ -65,7 +78,7 @@ try {
 
   const packResult = run(
     'pnpm',
-    ['pack', '--json', '--pack-destination', packDirectory],
+    ['pack', '--json', '--pack-destination', packDirectory, '--reporter=silent'],
     process.cwd()
   );
   const packMetadata = parseJson(packResult.stdout, 'pnpm pack');
