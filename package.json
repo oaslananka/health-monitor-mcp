@@ -3,7 +3,7 @@
   "version": "1.4.0",
   "description": "Monitor MCP servers, CI workflows, and HTTP endpoints with health history, TLS expiry, response assertions, and diagnostics",
   "type": "module",
-  "packageManager": "pnpm@11.14.0",
+  "packageManager": "pnpm@11.28.5",
   "main": "./dist/mcp.js",
   "types": "./dist/mcp.d.ts",
   "mcpName": "io.github.oaslananka/health-monitor-mcp",
